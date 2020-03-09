@@ -26,7 +26,7 @@ Miro's specs can be found [here](http://labs.consequentialrobotics.com/miro-e/do
 
 Miro comes with ROS installed (kinetic) which is the best for development. ROS can be run on- or offboard the robot, as can code controlling the robot. There is also a simulation environment using Gazebo.
 
-Here are some basic steps to setup the development environment:
+Here are some basic steps to setup the development environment. I've provided a more detailed guide [here](Installation.md).
 
 1. Install [Ubuntu](https://ubuntu.com/download/desktop) 16.04 or 18.04. (Installing in a VM can apparently cause issue with the simulator, so best not to)
 2. Install ROS [Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu) with 16.04 or [Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) with 18.04 (best to choose the desktop install)
