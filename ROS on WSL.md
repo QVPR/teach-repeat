@@ -35,7 +35,7 @@ echo "export DISPLAY=:0" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 5. Installing ROS
+## 5. Installing ROS (Robot Operating System)
 
 In Ubuntu, run the following commands in order. **Note:** In the Ubuntu terminal, right click = paste.
 
@@ -68,13 +68,72 @@ rviz
 
 ## 6. Install Gazebo (the simulator)
 
-Now that ROS is installed, Gazebo is a bit easier to install. Just run the following command and wait a few minutes.
+As with ROS, run the following commands in the terminal to install Gazebo.
 
 ```bash
+sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+sudo apt update
 sudo apt install ros-melodic-gazebo-dev
+# Wait a bit (~5 min)
 ```
 
-After installation, you can run gazebo by typing the following command. **Note:** the first time you start gazebo it will take a while to start because it;s downloading some basic model files.
+After installation, you can run gazebo by typing the following command.
 
-TODO
-This is currently broken - install the new version 9.14 instead from the osrf repo
+```bash
+gazebo
+```
+
+## 7. Install the MDK
+
+First, install the dependencies for the MDK.
+
+```bash
+sudo apt install python-matplotlib python-tk python-gi python-gi-cairo
+```
+
+Now, download the MDK by running the following command in the terminal (you can change the name parameter after `--data` if you want).
+
+```bash
+curl 'http://labs.consequentialrobotics.com/download.php?file=mdk_2-200131.tgz' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: http://labs.consequentialrobotics.com/download.php?file=mdk_2-200131.tgz' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Origin: http://labs.consequentialrobotics.com' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1' --data 'name=test&org=QUT&email=&agree=on' --output mdk.tgz
+```
+
+Now unzip the MDK.
+
+```bash
+tar -xzf mdk.tgz
+```
+
+Modify one of the configuration files for our ROS version.
+
+```bash
+nano mdk-200131/share/config/user_setup.bash
+# scroll down with the down arrow and change the following line
+export MIRO_ROS_RELEASE=kinetic
+# to
+export MIRO_ROS_RELEASE=melodic
+# Press Ctrl+o, ENTER, Ctrl+x
+```
+
+Now install the MDK with the following commands.
+
+```bash
+cd mdk-200131/bin/deb64
+mv libmiro_gazebo.so libmiro_gazebo7.so
+mv libmiro_gazebo9.so libmiro_gazebo.so
+./install_mdk.sh
+```
+
+It should end with:
+
+```bash
+All operations completed successfully.
+```
+
+You can test the installation by running the following command.
+
+```bash
+~/mdk/sim/launch_sim.sh
+```
+
+You should see a simulation of Miro and a blue ball open in Gazebo. Unfortunately, the performance is likely to be very slow because WSL isn't able to access the GPU for improved rendering performance.

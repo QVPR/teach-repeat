@@ -6,7 +6,7 @@ Info about how to setup and use the Miro robot, and some code examples.
 
 ## Overview
 
-Documentation about Miro can be found at [this](http://labs.consequentialrobotics.com/miro-e/docs/index.php?page=Introduction) website. For the most part it's quite detailed and covers everything. 
+Documentation about Miro can be found at [this](http://labs.consequentialrobotics.com/miro-e/docs/index.php?page=Introduction) website. For the most part it's quite detailed and covers everything.
 
 ### Specs
 
