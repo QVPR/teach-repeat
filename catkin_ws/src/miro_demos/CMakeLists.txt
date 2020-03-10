@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 		std_msgs
 		geometry_msgs
 		sensor_msgs
+		message_filters
 )
 
 ## System dependencies are found with CMake's conventions
@@ -162,7 +163,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
 	src/touch_control.py
-	src/ball_detection.py
+	src/ball_detection_single_cam.py
+	src/ball_detection_double_cam.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
