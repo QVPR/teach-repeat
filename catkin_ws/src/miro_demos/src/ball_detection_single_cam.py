@@ -14,10 +14,10 @@ import miro2 as miro
 class miro_ball_detection:
 
 	def __init__(self):
-		self.bridge = cv_bridge.CvBridge()
 		# subscribe to the image from the camera
-		
-		self.sub_image = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.got_image_data, queue_size=1)
+		self.sub_image = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data, queue_size=1)
+		# needed for converting the image
+		self.bridge = cv_bridge.CvBridge()
 		# publish the processed image
 		self.pub_image = rospy.Publisher("/miro/filtered_image", Image, queue_size=0)
 
@@ -29,61 +29,68 @@ class miro_ball_detection:
 
 		# publish motor commands
 		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=0)
-		
 
-	def got_image_data(self, msg):
+	def process_image_data(self, msg):
 		try:
 			image = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
 		except cv_bridge.CvBridgeError as e:
 			print(e)
 			return
 
-		image = self.filter_image(image)
+		ballX, ballY = self.detect_ball_in_image(image)
+
+		# draw the median in the image
+		cv2.line(image, (ballX-5,ballY), (ballX+5,ballY), (255,0,0))
+		cv2.line(image, (ballX,ballY-5), (ballX,ballY+5), (255,0,0))
+
+		# send motor commands to turn to the ball
+		turn_signal = TwistStamped()
+		turn_signal.header.stamp = rospy.Time.now()
+		if ballX < (0.7 * image.shape[1]):
+			turn_signal.twist.angular.z = 1.0
+		elif ballX > (0.9 * image.shape[1]):
+			turn_signal.twist.angular.z = -1.0
+		if ballY < (0.6 * image.shape[0]):
+			turn_signal.twist.linear.x = 0.1
+		self.pub_cmd_vel.publish(turn_signal)
 		
 		try:
 			self.pub_image.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
 		except cv_bridge.CvBridgeError as e:
 			print(e)
 
-	def filter_image(self, image):
+	def detect_ball_in_image(self, image):
+		# convert image from 8 bit uint (0->255) to 32 bit float (0.0 -> 1.0)
 		image = np.float32(image)
+		image = image / 255.0
 
 		# gamma correction
-		image = image * 1/255
-		cv2.pow(image, 2.2, image)
+		image = cv2.pow(image, 2.2)
 
+		# split into colour channels
 		blue, green, red = cv2.split(image)
-		combined = blue + green + red
 
 		# chromacity
+		combined = blue + green + red
 		red = cv2.divide(red, combined)
 		green = cv2.divide(green, combined)
 		blue = cv2.divide(blue, combined)
 
+		# threshold red and blue channels
 		_, redT = cv2.threshold(red, 180.0/255.0, 1.0, cv2.THRESH_BINARY)
 		_, blueT = cv2.threshold(blue, 30.0/255.0, 1.0, cv2.THRESH_BINARY)
+		# combine the masks
 		mask = redT * blueT
 
+		# fill in holes and remove noise
 		mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE,np.ones((5,5),np.float))
 		mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,np.ones((3,3),np.float))
 
-		chroma = cv2.merge([blue*mask, green*mask, red*mask])
-
+		# find the median location of points in the mask
 		points = np.argwhere(mask == 1.0)[:,::-1] # need to reverse x and y
 		medXY = np.uint32(np.median(points,0))
 
-		cv2.line(image, (medXY[0]-5,medXY[1]), (medXY[0]+5,medXY[1]), (1,0,0))
-		cv2.line(image, (medXY[0],medXY[1]-5), (medXY[0],medXY[1]+5), (1,0,0))
-
-		turn_signal = TwistStamped()
-		turn_signal.header.stamp = rospy.Time.now()
-		if medXY[0] < (0.7 * image.shape[1]):
-			turn_signal.twist.angular.z = 1.0
-		elif medXY[0] > (0.9 * image.shape[1]):
-			turn_signal.twist.angular.z = -1.0
-		self.pub_cmd_vel.publish(turn_signal)
-
-		return np.uint8(image * 255)
+		return (medXY[0], medXY[1])
 
 	def publish_joint_state(self):
 		self.joint_states.header.stamp = rospy.Time.now()
