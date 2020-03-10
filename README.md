@@ -78,7 +78,7 @@ With Miro powered on and connected to the network, you can also run code on your
 ```bash
 source ~/mdk/setup.bash
 export ROS_MASTER_URI=http://172.19.x.x:11311
-# check that ROS_IP matches your computer's IP on the QUT network
+# check that ROS_IP matches your computer's IP on the QUT network (can find by running ifconfig command)
 echo $ROS_IP
 # if it doesn't match, export the correct IP
 export ROS_IP=172.19.y.y
@@ -93,3 +93,5 @@ You can then run the onboard demos as we did above, but running offboard allows 
 cd ~/mdk/bin/shared
 ./client_gui.py
 ```
+
+More info about writing and running code for Miro is provided [here](Writing%20and%20running%20code.md).

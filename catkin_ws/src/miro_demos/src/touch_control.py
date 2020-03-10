@@ -6,6 +6,7 @@ import rospy
 from std_msgs.msg import UInt16
 from geometry_msgs.msg import TwistStamped
 
+# this enum just provides a convenient way of storing the indices for each touch sensor
 class BodyTouchSensor(Enum):
 	mid_front = 0
 	mid_front_mid = 1
