@@ -8,10 +8,10 @@ project(miro_demos)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    rospy
-    std_msgs
-    geometry_msgs
-    sensor_msgs
+		rospy
+		std_msgs
+		geometry_msgs
+		sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -161,9 +161,9 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  src/touch_control.py
-  src/ball_detection.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+	src/touch_control.py
+	src/ball_detection.py
+	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Mark executables and/or libraries for installation
