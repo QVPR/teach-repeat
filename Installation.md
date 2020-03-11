@@ -72,7 +72,7 @@ gazebo
 First, install the dependencies for the MDK.
 
 ```bash
-sudo apt install python-matplotlib python-tk python-gi python-gi-cairo
+sudo apt install python-matplotlib python-tk python-gi python-gi-cairo gir1.2-gtk-3.0 gobject-introspection python-catkin-tools
 ```
 
 Now, download the MDK by running the following command in the terminal (you can change the name parameter after `--data` if you want). You can alternatively download the file in the browser [here](http://labs.consequentialrobotics.com/download.php?file=mdk_2-200131.tgz).
@@ -98,6 +98,17 @@ export MIRO_ROS_RELEASE=melodic
 # Press Ctrl+o, ENTER, Ctrl+x
 ```
 
+Now rebuild the provided catkin workspace to link to ROS melodic
+
+```bash
+cd mdk-200131/catkin_ws/
+rm -r install/
+rm makefile
+catkin config --install --extend /opt/ros/melodic
+catkin build
+cd ~
+```
+
 Now install the MDK with the following commands (setting up for gazebo9).
 
 ```bash
@@ -105,6 +116,7 @@ cd mdk-200131/bin/deb64
 mv libmiro_gazebo.so libmiro_gazebo7.so
 mv libmiro_gazebo9.so libmiro_gazebo.so
 ./install_mdk.sh
+source ~/mdk/setup.bash
 ```
 
 It should end with:
@@ -113,9 +125,12 @@ It should end with:
 All operations completed successfully.
 ```
 
-You can test the installation by running the following command.
+You can test the installation by running the simulation. You will need to open a second terminal to do so.
 
 ```bash
+# in terminal 1
+roscore
+# in terminal 2
 ~/mdk/sim/launch_sim.sh
 ```
 
