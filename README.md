@@ -71,12 +71,27 @@ Some basic demos are provided you can run on the robot (`mdk/bin/shared` folder)
 ~/mdk/bin/shared/client_stream.py _1234.321
 ```
 
-### Running Code Remotely
+### Running Code Remotely (through ROS)
 
-With Miro powered on and connected to the network, you can also run code on your local machine to control Miro. For example, the GUI lets you view most of Miro's sensors and control the various actuators.
+With Miro powered on and connected to the network, you can also run code on your local machine to control Miro. First, make sure that you've sourced the MDK setup file, then you need to set the `ROS_MASTER_IP` to Miro's IP so ROS can connect to it.
+
+```bash
+source ~/mdk/setup.bash
+export ROS_MASTER_URI=http://172.19.x.x:11311
+# check that ROS_IP matches your computer's IP on the QUT network (can find by running ifconfig command)
+echo $ROS_IP
+# if it doesn't match, export the correct IP
+export ROS_IP=172.19.y.y
+# now, check that ROS is connected - this should return all Miro's ROS topics
+rostopic list
+```
+
+You can then run the onboard demos as we did above, but running offboard allows some extra demos. For example, the GUI lets you view most of Miro's sensors and control the various actuators.
 
 ```bash
 # change this location if you didn't install the MDK to your home directory
 cd ~/mdk/bin/shared
 ./client_gui.py
 ```
+
+More info about writing and running code for Miro is provided [here](Writing%20and%20running%20code.md).
