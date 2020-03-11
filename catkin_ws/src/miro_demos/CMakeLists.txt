@@ -165,6 +165,7 @@ install(PROGRAMS
 	src/touch_control.py
 	src/ball_detection_single_cam.py
 	src/ball_detection_double_cam.py
+	src/cliff_detection.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

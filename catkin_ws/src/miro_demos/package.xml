@@ -54,6 +54,9 @@
 	<depend>std_msgs</depend>
 	<depend>geometry_msgs</depend>
 	<depend>message_filters</depend>
+	<depend>cv_bridge</depend>
+
+	<exec_depend>python-numpy</exec_depend>
 
 
 	<!-- The export tag contains other, unspecified, tags -->
