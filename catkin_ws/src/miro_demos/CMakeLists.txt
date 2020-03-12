@@ -166,6 +166,7 @@ install(PROGRAMS
 	src/ball_detection_single_cam.py
 	src/ball_detection_double_cam.py
 	src/cliff_detection.py
+	src/twist_stamper.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

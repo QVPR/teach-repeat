@@ -57,6 +57,7 @@
 	<depend>cv_bridge</depend>
 
 	<exec_depend>python-numpy</exec_depend>
+	<exec_depend>teleop_twist_keyboard</exec_depend>
 
 
 	<!-- The export tag contains other, unspecified, tags -->
