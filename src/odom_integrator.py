@@ -38,6 +38,7 @@ class miro_integrate_odom:
 		self.odom_pose = tf_conversions.toMsg(pose_frame)
 
 		odom_to_publish = msg
+		odom_to_publish.header.frame_id = "odom"
 		odom_to_publish.pose.pose = self.odom_pose
 		self.pub_odom.publish(odom_to_publish)
 
