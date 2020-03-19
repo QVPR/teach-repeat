@@ -111,9 +111,41 @@ def mean_stdev_fast(array, axis=None):
 	sigma = np.sqrt(((array - mu)**2).mean(axis))
 	return mu, sigma
 
+def scan_horizontal_SAD_match(image, template, step_size):
+	positions = range(0,image.shape[1]-template.shape[1],step_size)
+	differences = [0] * len(positions)
+	for i,pos in enumerate(positions):
+		differences[i] = np.mean(np.abs(image[:,pos:pos+template.shape[1]] - template))
+	index = np.argmin(differences)
+	return positions[index], differences[index]
+
+def scan_horizontal_SAD_match_pad(image, template, step_size):
+	image_pad = np.pad(image, ((0,),(template.shape[1]-1,)), 'constant', constant_values=np.nan)
+	positions = range(0,image.shape[1],step_size)
+	differences = [0] * len(positions)
+	for i,pos in enumerate(positions):
+		differences[i] = np.nanmean(np.abs(image_pad[:,pos:pos+template.shape[1]] - template))
+	index = np.argmin(differences)
+	return positions[index], differences[index]
+
+def scan_horizontal_SAD_match_patches(image, template):
+	patches = get_patches(image, template.shape)
+	differences = np.mean(np.abs(patches - template.ravel().reshape(-1,1), 0))
+	index = np.argmin(differences)
+	return index, differences[index]
+
 if __name__ == "__main__":
 	img = np.random.randint(0,255,(180,320), dtype=np.uint8)
 	norm = patch_normalise_pad(img, (17,17))
-	cv2.imshow('img',img)
-	cv2.imshow('norm',norm)
-	cv2.waitKey()
+	# cv2.imshow('img',img)
+	# cv2.imshow('norm',norm)
+	# cv2.waitKey()
+
+	template_pos = 66
+	template = img[:,template_pos:template_pos+140]
+	template_norm = patch_normalise_pad(template, (17,17))
+
+	import time
+	t = time.time()
+	print(scan_horizontal_SAD_match(norm, template_norm, step_size=1))
+	print('%fs' % (time.time() - t))
