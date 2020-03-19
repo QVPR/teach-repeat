@@ -6,8 +6,14 @@
 	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" />
 
 	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" output="screen">
+	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect">
 		<rosparam param="distance_threshold">0.1</rosparam>
-		<rosparam param="angle_threshold_deg">90.0</rosparam>
+		<rosparam param="angle_threshold_deg">5.0</rosparam>
+	</node>
+
+	<!-- Save Images and pose in a directory -->
+	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
+		<rosparam param="save_dir">~/miro/data</rosparam>
+		<rosparam param="timestamp_folder">1</rosparam>
 	</node>
 </launch>

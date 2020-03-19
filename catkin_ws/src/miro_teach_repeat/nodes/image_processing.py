@@ -85,17 +85,19 @@ def patch_normalise_msg(msg, patch_size, compressed=False):
 
 def msg_to_image(msg):
 	try:
-		bridge.imgmsg_to_cv2(msg)
+		image = bridge.imgmsg_to_cv2(msg)
 	except cv_bridge.CvBridgeError as e:
 		print(e)
 		return
+	return image
 
 def compressed_msg_to_image(msg):
 	try:
-		bridge.compressed_imgmsg_to_cv2(msg)
+		image = bridge.compressed_imgmsg_to_cv2(msg)
 	except cv_bridge.CvBridgeError as e:
 		print(e)
 		return
+	return image
 
 def get_patches(image, patch_size):
 	nrows = image.shape[0] - patch_size[0] + 1
