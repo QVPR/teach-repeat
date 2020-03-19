@@ -160,9 +160,9 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-install(PROGRAMS
-	src/odom_integrator.py
-	src/data_collect.py
+catkin_install_python(PROGRAMS
+	nodes/odom_integrator.py
+	nodes/data_collect.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
