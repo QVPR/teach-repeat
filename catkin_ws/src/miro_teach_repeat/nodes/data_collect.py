@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import rospy
+from std_msgs.msg import String
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
@@ -22,6 +23,9 @@ class miro_data_collect:
 		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data, queue_size=1)
 		# publish image and pose pair
 		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
+		# publish camera settings
+		self.pub_camera_settings = rospy.Subscriber("/miro/control/command", String, queue_size=0)
+		self.pub_camera_settings(String(data="frame=180w@25"))
 
 		self.last_odom = None
 		self.current_odom = None
