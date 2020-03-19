@@ -5,6 +5,8 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 import tf_conversions
 
+import math
+
 class miro_integrate_odom:
 
 	def __init__(self):		
@@ -36,11 +38,20 @@ class miro_integrate_odom:
 		pose_frame.Integrate(velocity, 1/delta_time)
 
 		self.odom_pose = tf_conversions.toMsg(pose_frame)
+		self.normalise_quaternion(self.odom_pose.orientation)
 
 		odom_to_publish = msg
 		odom_to_publish.header.frame_id = "odom"
 		odom_to_publish.pose.pose = self.odom_pose
 		self.pub_odom.publish(odom_to_publish)
+	
+	def normalise_quaternion(self, q):
+		norm = math.sqrt(sum(val**2 for val in [q.x,q.y,q.z,q.w]))
+		q.x /= norm
+		q.y /= norm
+		q.z /= norm
+		q.w /= norm
+		return q
 
 
 
