@@ -1,7 +1,7 @@
 <launch>
 	<!-- Load image and pose files for matching -->
 	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen">
-		<rosparam param="save_dir">~/miro/data/2020-03-24_14:16:34</rosparam>
+		<rosparam param="save_dir">~/miro/data/2020-03-24_15:23:06</rosparam>
 	</node>
 
 	<!-- Teleop to control Miro -->
@@ -12,7 +12,7 @@
 
 	<!-- Localise using the images -->
 	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
-		<rosparam param="camera_setup_command">frame=180w@25</rosparam>
+		<rosparam param="camera_setup_command">frame=180w@15</rosparam>
 		<rosparam param="image_resize_width">160</rosparam>
 		<rosparam param="image_resize_height">90</rosparam>
 	</node>

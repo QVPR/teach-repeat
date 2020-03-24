@@ -9,7 +9,7 @@
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect">
 		<rosparam param="distance_threshold">0.1</rosparam>
 		<rosparam param="angle_threshold_deg">5.0</rosparam>
-		<rosparam param="camera_setup_command">frame=180w@25</rosparam>
+		<rosparam param="camera_setup_command">frame=180w@15</rosparam>
 	</node>
 
 	<!-- Save Images and pose in a directory -->
