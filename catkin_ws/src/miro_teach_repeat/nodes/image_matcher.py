@@ -5,12 +5,13 @@ import numpy as np
 import cv2
 import os
 import pickle
+import time
+import json
 from rospy_message_converter import message_converter
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Image
 import tf_conversions
 
-import json
 
 import image_processing
 from miro_teach_repeat.msg import ImageAndPose
@@ -41,7 +42,7 @@ class miro_image_matcher:
 		print('loading complete: %d images and %d poses' % (len(self.images), len(self.poses)))
 
 	def load_images(self, image_files):
-		return [pickle.loads(self.read_file(f)) for f in image_files]
+		return [cv2.resize(pickle.loads(self.read_file(f)), (45,80), interpolation=cv2.INTER_NEAREST) for f in image_files]
 
 	def load_poses(self, pose_files):
 		return [message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(self.read_file(f))) for f in pose_files]
@@ -53,7 +54,9 @@ class miro_image_matcher:
 
 	def match_image(self, request):
 		image = image_processing.msg_to_image(request.normalisedImage)
+		# t = time.time()
 		match_data = [image_processing.horizontal_SAD_match_images(ref_img, image) for ref_img in self.images]
+		# print('match time = %f s' % (time.time() - t))
 		best_index = np.argmin([m[1] for m in match_data])
 		if best_index == len(self.images)-1:
 			delta_pose = Pose()
@@ -69,6 +72,7 @@ class miro_image_matcher:
 		debug_image = cv2.merge((debug_image, debug_image, debug_image))
 		cv2.line(debug_image, (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),0), (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
 		cv2.line(debug_image, (int(self.images[best_index].shape[1]+image.shape[1]/2),0), (int(self.images[best_index].shape[1]+image.shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
+		cv2.line(debug_image, (0,60), (debug_image.shape[1]-1,60), (255,0,0))
 		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
 
 		return delta_pose

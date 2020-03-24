@@ -19,7 +19,7 @@ from miro_teach_repeat.srv import ImageMatch
 
 DEFAULT_CAMERA_SETTINGS = "frame=180w@25"
 
-class miro_data_save:
+class miro_localiser:
 
 	def __init__(self):
 		# connect to the image matcher service
@@ -46,6 +46,6 @@ class miro_data_save:
 
 if __name__ == "__main__":
 
-	rospy.init_node("miro_data_save")
-	integrator = miro_data_save()
+	rospy.init_node("miro_localiser")
+	integrator = miro_localiser()
 	rospy.spin()

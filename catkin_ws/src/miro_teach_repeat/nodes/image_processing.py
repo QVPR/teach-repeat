@@ -119,10 +119,16 @@ def mean_stdev_fast(array, axis=None):
 	sigma = np.sqrt(((array - mu)**2).mean(axis))
 	return mu, sigma
 
-def horizontal_SAD_match_images(image, template_image, template_proportion=0.5):
+def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, vertical_cutoff=0.66):
+	# horizontal proportion of template
 	template_width = int(template_image.shape[1]*template_proportion)
 	template_start = (template_image.shape[1]-template_width) // 2
 	template = template_image[:,template_start:template_start+template_width]
+
+	# vertical proportion of image and template
+	image = image[:int(image.shape[0]*vertical_cutoff)]
+	template = template[:int(template.shape[0]*vertical_cutoff)]
+
 	(offset, error) = scan_horizontal_SAD_match(image, template)
 	return offset-template_start, error
 
