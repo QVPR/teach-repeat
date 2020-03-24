@@ -29,11 +29,10 @@ class miro_data_save:
 			self.save_dir += datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S/')
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
-		if rospy.has_param('~image_resize_width') and rospy.has_param('~image_resize_height'):
-			self.resize = (rospy.get_param('~image_resize_height'), rospy.get_param('~image_resize_width'))
-		else:
+
+		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
+		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
-		
 		
 	def process_image_and_pose(self, msg):
 		image = msg.image

@@ -78,13 +78,21 @@ def grayscale(image):
 	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 def patch_normalise_msg(msg, patch_size, compressed=False, resize=None):
+	# resize should be height * width
 	if compressed:
 		image = compressed_msg_to_image(msg)
 	else:
 		image = msg_to_image(msg)
+	if len(image.shape) > 2 and image.shape[2] > 1:
+		image = grayscale(image)
 	if resize is not None:
+		# opencv sizes are the opposite of numpy (width*height)
+		resize = tuple(reversed(resize))
 		image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
-	return patch_normalise_pad(grayscale(image), patch_size)
+	return patch_normalise_pad(image, patch_size)
+
+def make_size(height, width):
+	return (height, width)
 
 def msg_to_image(msg):
 	try:

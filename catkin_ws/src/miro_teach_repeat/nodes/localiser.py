@@ -28,9 +28,8 @@ class miro_localiser:
 		# subscribe to image and pose pair
 		self.sub_image_pose = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image, queue_size=1)		
 
-		if rospy.has_param('~image_resize_width') and rospy.has_param('~image_resize_height'):
-			self.resize = (rospy.get_param('~image_resize_height'), rospy.get_param('~image_resize_width'))
-		else:
+		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
+		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 
 		# publish camera settings
