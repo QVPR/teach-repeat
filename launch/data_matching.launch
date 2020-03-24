@@ -13,7 +13,12 @@
 	<!-- Localise using the images -->
 	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
 		<rosparam param="camera_setup_command">frame=180w@25</rosparam>
-		<rosparam param="image_resize_width">160</rosparam>
-		<rosparam param="image_resize_height">90</rosparam>
+		<rosparam param="image_resize_width">80</rosparam>
+		<rosparam param="image_resize_height">45</rosparam>
+	</node>
+
+	<!-- Show image matching -->
+	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
+		<remap from="image" to="/miro/match_image_debug" />
 	</node>
 </launch>
