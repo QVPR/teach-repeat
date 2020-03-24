@@ -4,6 +4,7 @@ import cv_bridge
 import cv2
 import numpy as np
 import numpy.lib
+import scipy.signal
 
 bridge = cv_bridge.CvBridge()
 
@@ -131,6 +132,20 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 
 	(offset, error) = scan_horizontal_SAD_match(image, template)
 	return offset-template_start, error
+
+def xcorr_match_images(image, template_image, template_proportion=0.5, vertical_cutoff=0.66):
+	# horizontal proportion of template
+	template_width = int(template_image.shape[1]*template_proportion)
+	template_start = (template_image.shape[1]-template_width) // 2
+	template = template_image[:,template_start:template_start+template_width]
+
+	# vertical proportion of image and template
+	image = image[:int(image.shape[0]*vertical_cutoff)]
+	template = template[:int(template.shape[0]*vertical_cutoff)]
+
+	corr = scipy.signal.correlate2d(image, template, mode='valid')
+	offset = np.argmax(corr)
+	return offset-template_start, corr[0,offset]
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
