@@ -2,12 +2,13 @@
 
 import rospy
 from std_msgs.msg import String
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, JointState
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 import tf_conversions
 
 import math
+import time
 
 from miro_teach_repeat.msg import ImageAndPose
 
@@ -27,10 +28,17 @@ class miro_data_collect:
 		# publish camera settings
 		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
 
+		# publish the desired joint states of Miro (so it looks downwards to view the ball)
+		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
+		self.joint_states = JointState()
+		self.joint_states.name = ['tilt','lift','yaw','pitch']
+		self.joint_states.position = [0.0, math.radians(45), 0.0, math.radians(8)]
+
 		self.last_odom = None
 		self.current_odom = None
 		self.DISTANCE_THRESHOLD = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.ANGLE_THRESHOLD = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
+
 		self.camera_settings = rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS)
 		self.pub_camera_settings.publish(String(data=self.camera_settings))
 
@@ -61,10 +69,24 @@ class miro_data_collect:
 		img_pose.pose = pose
 		self.pub_image_pose.publish(img_pose)
 
+	def publish_joint_state(self):
+		self.joint_states.header.stamp = rospy.Time.now()
+		self.pub_joints.publish(self.joint_states)
+
+	def publish_camera_command(self):
+		self.pub_camera_settings.publish(self.camera_settings)
+
 
 
 if __name__ == "__main__":
 
 	rospy.init_node("miro_data_collect")
-	integrator = miro_data_collect()
-	rospy.spin()
+	collector = miro_data_collect()
+	# hacky but seems we need to sleep for a bit before sending this command
+	time.sleep(1)
+	collector.publish_camera_command()
+	rate = rospy.Rate(50)
+	while not rospy.is_shutdown():
+		collector.publish_joint_state()
+		rate.sleep()
+
