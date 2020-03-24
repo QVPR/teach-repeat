@@ -29,12 +29,17 @@ class miro_data_save:
 			self.save_dir += datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S/')
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
+		if rospy.has_param('~image_resize_width') and rospy.has_param('~image_resize_height'):
+			self.resize = (rospy.get_param('~image_resize_height'), rospy.get_param('~image_resize_width'))
+		else:
+			self.resize = None
+		
 		
 	def process_image_and_pose(self, msg):
 		image = msg.image
 		pose = msg.pose
 		id = "%06d" % (self.save_id)
-		normalised_image = image_processing.patch_normalise_msg(image, (17,17), compressed=True)
+		normalised_image = image_processing.patch_normalise_msg(image, (9,9), compressed=True, resize=self.resize)
 		message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 		image_as_text = pickle.dumps(normalised_image)
 

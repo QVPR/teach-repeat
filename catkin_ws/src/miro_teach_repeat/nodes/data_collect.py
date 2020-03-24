@@ -13,6 +13,7 @@ from miro_teach_repeat.msg import ImageAndPose
 
 DEFAULT_DISTANCE_THRESHOLD = 0.1
 DEFAULT_ANGLE_THRESHOLD = 5.0
+DEFAULT_CAMERA_SETTINGS = "frame=180w@25"
 
 class miro_data_collect:
 
@@ -24,13 +25,14 @@ class miro_data_collect:
 		# publish image and pose pair
 		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
 		# publish camera settings
-		self.pub_camera_settings = rospy.Subscriber("/miro/control/command", String, queue_size=0)
-		self.pub_camera_settings(String(data="frame=180w@25"))
+		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
 
 		self.last_odom = None
 		self.current_odom = None
 		self.DISTANCE_THRESHOLD = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.ANGLE_THRESHOLD = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
+		self.camera_settings = rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS)
+		self.pub_camera_settings.publish(String(data=self.camera_settings))
 
 	def process_odom_data(self, msg):
 		self.current_odom = msg

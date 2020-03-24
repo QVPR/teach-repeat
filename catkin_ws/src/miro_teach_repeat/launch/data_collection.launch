@@ -9,11 +9,14 @@
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect">
 		<rosparam param="distance_threshold">0.1</rosparam>
 		<rosparam param="angle_threshold_deg">5.0</rosparam>
+		<rosparam param="camera_setup_command">frame=180w@25</rosparam>
 	</node>
 
 	<!-- Save Images and pose in a directory -->
 	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
+		<rosparam param="image_resize_width">160</rosparam>
+		<rosparam param="image_resize_height">90</rosparam>
 	</node>
 </launch>
