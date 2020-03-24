@@ -1,7 +1,7 @@
 <launch>
 	<!-- Load image and pose files for matching -->
 	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen">
-		<rosparam param="save_dir">~/miro/data/2020-03-24_10:14:27</rosparam>
+		<rosparam param="save_dir">~/miro/data/2020-03-24_14:16:34</rosparam>
 	</node>
 
 	<!-- Teleop to control Miro -->

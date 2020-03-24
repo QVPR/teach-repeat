@@ -43,7 +43,7 @@ class miro_image_matcher:
 
 	def load_images(self, image_files):
 		return [pickle.loads(self.read_file(f)) for f in image_files]
-		# return [cv2.resize(pickle.loads(self.read_file(f)), (45,80), interpolation=cv2.INTER_NEAREST) for f in image_files]
+		# return [cv2.resize(pickle.loads(self.read_file(f)), (80,45), interpolation=cv2.INTER_NEAREST) for f in image_files]
 
 	def load_poses(self, pose_files):
 		return [message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(self.read_file(f))) for f in pose_files]
@@ -56,7 +56,7 @@ class miro_image_matcher:
 	def match_image(self, request):
 		image = image_processing.msg_to_image(request.normalisedImage)
 		vertical_cutoff = 0.8
-		match_data = [image_processing.xcorr_match_images(ref_img, image, vertical_cutoff=vertical_cutoff) for ref_img in self.images]
+		match_data = [image_processing.xcorr_match_images(ref_img, image, template_proportion=0.7, vertical_cutoff=vertical_cutoff) for ref_img in self.images]
 		best_index = np.argmax([m[1] for m in match_data])
 		if best_index == len(self.images)-1:
 			delta_pose = Pose()
