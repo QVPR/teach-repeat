@@ -1,0 +1,19 @@
+<launch>
+	<!-- Load image and pose files for matching -->
+	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen">
+		<rosparam param="save_dir">~/miro/data/2020-03-24_10:14:27</rosparam>
+	</node>
+
+	<!-- Teleop to control Miro -->
+	<include file="$(find miro_demos)/launch/teleop.launch" />
+
+	<!-- Integrate odometry -->
+	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" />
+
+	<!-- Localise using the images -->
+	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
+		<rosparam param="camera_setup_command">frame=180w@25</rosparam>
+		<rosparam param="image_resize_width">160</rosparam>
+		<rosparam param="image_resize_height">90</rosparam>
+	</node>
+</launch>

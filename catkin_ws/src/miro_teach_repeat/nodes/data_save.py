@@ -19,7 +19,7 @@ class miro_data_save:
 
 	def __init__(self):		
 		# subscribe to image and pose pair
-		self.pub_image_pose = rospy.Subscriber("/miro/image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
+		self.sub_image_pose = rospy.Subscriber("/miro/image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
 		self.save_id = 0
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
 		self.timestamp_dir = rospy.get_param('~timestamp_folder', False)
