@@ -5,11 +5,11 @@ import numpy as np
 import cv2
 import os
 import pickle
-import datetime
 from rospy_message_converter import message_converter
 from geometry_msgs.msg import Pose
+from sensor_msgs.msg import Image
+import tf_conversions
 
-import math
 import json
 
 import image_processing
@@ -17,11 +17,13 @@ from miro_teach_repeat.msg import ImageAndPose
 from miro_teach_repeat.srv import ImageMatch
 
 
-class miro_image_match:
+class miro_image_matcher:
 
 	def __init__(self):		
 		# setup the service listener for other nodes to get images matched
-		self.service = rospy.Service('match_image', ImageMatch, self.match_image)
+		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
+
+		self.pub_image_match_debug = rospy.Publisher('/miro/match_image_debug', Image, queue_size=0)
 
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
 		if self.save_dir[-1] != '/':
@@ -50,9 +52,10 @@ class miro_image_match:
 		return data
 
 	def match_image(self, request):
-		match_data = [image_processing.scan_horizontal_SAD_match(ref_img, request.normalisedImage, step_size=1) for ref_img in self.images]
-		best_index = np.argmin([m[0] for m in match_data])
-		if best_index == len(images)-1:
+		image = image_processing.msg_to_image(request.normalisedImage)
+		match_data = [image_processing.horizontal_SAD_match_images(ref_img, image) for ref_img in self.images]
+		best_index = np.argmin([m[1] for m in match_data])
+		if best_index == len(self.images)-1:
 			delta_pose = Pose()
 			delta_pose.orientation.w = 1
 		else:
@@ -60,11 +63,19 @@ class miro_image_match:
 			next_frame = tf_conversions.fromMsg(self.poses[best_index+1])
 			delta_pose = tf_conversions.toMsg(img_frame.Inverse() * next_frame)
 		# TODO - offset this pose difference by the relative orientation found in the image
+
+		debug_image = np.concatenate((image, self.images[best_index]), axis=1)
+		debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
+		debug_image = cv2.merge((debug_image, debug_image, debug_image))
+		cv2.line(debug_image, (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),0), (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
+		cv2.line(debug_image, (int(self.images[best_index].shape[1]+image.shape[1]/2),0), (int(self.images[best_index].shape[1]+image.shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
+		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
+
 		return delta_pose
 
 
 if __name__ == "__main__":
 
-	rospy.init_node("miro_image_match")
-	integrator = miro_image_match()
+	rospy.init_node("miro_image_matcher")
+	integrator = miro_image_matcher()
 	rospy.spin()

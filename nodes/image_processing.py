@@ -101,6 +101,14 @@ def compressed_msg_to_image(msg):
 		return
 	return image
 
+def image_to_msg(image, encoding='passthrough'):
+	try:
+		msg = bridge.cv2_to_imgmsg(image, encoding=encoding)
+	except cv_bridge.CvBridgeError as e:
+		print(e)
+		return
+	return msg
+
 def get_patches(image, patch_size):
 	nrows = image.shape[0] - patch_size[0] + 1
 	ncols = image.shape[1] - patch_size[1] + 1
@@ -110,6 +118,13 @@ def mean_stdev_fast(array, axis=None):
 	mu = np.mean(array, axis)
 	sigma = np.sqrt(((array - mu)**2).mean(axis))
 	return mu, sigma
+
+def horizontal_SAD_match_images(image, template_image, template_proportion=0.5):
+	template_width = int(template_image.shape[1]*template_proportion)
+	template_start = (template_image.shape[1]-template_width) // 2
+	template = template_image[:,template_start:template_start+template_width]
+	(offset, error) = scan_horizontal_SAD_match(image, template)
+	return offset-template_start, error
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)

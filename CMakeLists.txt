@@ -160,8 +160,12 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-	nodes/odom_integrator.py
 	nodes/data_collect.py
+	nodes/data_save.py
+	nodes/image_matcher.py
+	nodes/image_processing.py
+	nodes/localiser.py
+	nodes/odom_integrator.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
