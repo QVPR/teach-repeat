@@ -197,11 +197,11 @@ def stitch_stereo_image(image_left, image_right):
 	if len(image_left.shape) > 2 and image_left.shape[2] > 1:
 		image_left = grayscale(image_left)
 		image_right = grayscale(image_right)
-		
+
 	stitched_image = np.zeros((image_left.shape[0],full_width))
-	stitched_image[:,:non_overlap_pixels] = image_left[:,:non_overlap_pixels]
-	stitched_image[:,-non_overlap_pixels:] = image_right[:,-non_overlap_pixels:]
-	stitched_image[:,non_overlap_pixels:-non_overlap_pixels] = 0.5 * image_left[:,non_overlap_pixels:] + 0.5 * image_right[:,:-non_overlap_pixels]
+	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:]))
+	stitched_image[:,:image_left.shape[1]] += image_left * blend_map_linear
+	stitched_image[:,-image_right.shape[1]:] += image_right * np.flip(blend_map_linear)
 
 	return stitched_image
 
