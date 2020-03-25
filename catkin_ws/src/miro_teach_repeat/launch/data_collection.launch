@@ -19,7 +19,7 @@
 	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
-		<!-- <rosparam param="image_resize_width">160</rosparam> -->
-		<!-- <rosparam param="image_resize_height">90</rosparam> -->
+		<!-- <rosparam param="image_resize_width">115</rosparam> -->
+		<!-- <rosparam param="image_resize_height">44</rosparam> -->
 	</node>
 </launch>

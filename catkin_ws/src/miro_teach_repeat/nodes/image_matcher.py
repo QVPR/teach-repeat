@@ -27,6 +27,10 @@ class miro_image_matcher:
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 
+		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
+		if self.resize[0] is None and self.resize[1] is None:
+			self.resize = None
+
 		image_files = [self.save_dir+f for f in os.listdir(self.save_dir) if f[-10:] == '_image.pkl']
 		image_files.sort()
 		pose_files = [self.save_dir+f for f in os.listdir(self.save_dir) if f[-9:] == '_pose.txt']
@@ -42,8 +46,12 @@ class miro_image_matcher:
 		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
 
 	def load_images(self, image_files):
-		return [pickle.loads(self.read_file(f)) for f in image_files]
-		# return [cv2.resize(pickle.loads(self.read_file(f)), (80,45), interpolation=cv2.INTER_NEAREST) for f in image_files]
+		images = [pickle.loads(self.read_file(f)) for f in image_files]
+		if self.resize is None or self.resize == images[0].shape[:2]:
+			return images
+		else:
+			# need to flip the order of resize for opencv
+			return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_NEAREST) for image in images]
 
 	def load_poses(self, pose_files):
 		return [message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(self.read_file(f))) for f in pose_files]

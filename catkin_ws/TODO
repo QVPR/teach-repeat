@@ -13,4 +13,4 @@ Development:
   Localisation:
 	 ☐ Assume the robot is at the same place at startup
    ☐ Use a "sliding window" to cull the possible image matches
-   ☐ Downsample the matching resolution significantly (should lead to more robust performance)
+   ✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
