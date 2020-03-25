@@ -6,6 +6,13 @@
 		<rosparam param="image_resize_height">44</rosparam>
 	</node>
 
+	<!-- Hold head in place -->
+	<node pkg="miro_teach_repeat" type="joint_controller.py" name="miro_joint_controller">
+		<rosparam param="lift">30</rosparam>
+		<rosparam param="yaw">0</rosparam>
+		<rosparam param="pitch">8</rosparam>
+	</node>
+
 	<!-- Teleop to control Miro -->
 	<include file="$(find miro_demos)/launch/teleop.launch" />
 

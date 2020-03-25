@@ -35,13 +35,8 @@ class miro_localiser:
 		
 		self.camera_settings = String(data=rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS))
 
-		self.joint_states = JointState()
-		self.joint_states.name = ['tilt','lift','yaw','pitch']
-		self.joint_states.position = [0.0, math.radians(30+1), 0.0, math.radians(8)]
-
 	def setup_publishers(self):	
 		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
-		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
 
 	def setup_subscribers(self):	
 		rospy.wait_for_service('/miro/match_image')
@@ -59,10 +54,6 @@ class miro_localiser:
 		delta_pose = self.match_image(image_processing.image_to_msg(normalised_image))
 		# TODO: steer based on this pose difference
 
-	def publish_joint_state(self):
-		self.joint_states.header.stamp = rospy.Time.now()
-		self.pub_joints.publish(self.joint_states)
-
 	def publish_camera_command(self):
 		self.pub_camera_settings.publish(self.camera_settings)
 
@@ -76,8 +67,5 @@ if __name__ == "__main__":
 	localiser.publish_camera_command()
 	localiser.setup_subscribers()
 	
-	rate = rospy.Rate(50)
-	while not rospy.is_shutdown():
-		localiser.publish_joint_state()
-		rate.sleep()
+	rospy.spin()
 

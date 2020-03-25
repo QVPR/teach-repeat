@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import String
-from sensor_msgs.msg import CompressedImage, JointState
+from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 import tf_conversions
@@ -32,13 +32,8 @@ class miro_data_collect:
 
 		self.camera_settings = String(data=rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS))
 
-		self.joint_states = JointState()
-		self.joint_states.name = ['tilt','lift','yaw','pitch']
-		self.joint_states.position = [0.0, math.radians(30), 0.0, math.radians(8)]
-
 	def setup_publishers(self):	
 		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
-		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
 		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
 
 	def setup_subscribers(self):
@@ -78,10 +73,6 @@ class miro_data_collect:
 		img_pose.pose = pose
 		self.pub_image_pose.publish(img_pose)
 
-	def publish_joint_state(self):
-		self.joint_states.header.stamp = rospy.Time.now()
-		self.pub_joints.publish(self.joint_states)
-
 	def publish_camera_command(self):
 		self.pub_camera_settings.publish(self.camera_settings)
 
@@ -96,8 +87,5 @@ if __name__ == "__main__":
 	collector.publish_camera_command()
 	collector.setup_subscribers()
 	
-	rate = rospy.Rate(50)
-	while not rospy.is_shutdown():
-		collector.publish_joint_state()
-		rate.sleep()
+	rospy.spin()
 

@@ -24,4 +24,4 @@ Bugs:
 
 	Miro:
 		☐ When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
-		☐ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively)
+		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
