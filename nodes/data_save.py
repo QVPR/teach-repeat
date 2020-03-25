@@ -36,10 +36,10 @@ class miro_data_save:
 		self.sub_image_pose = rospy.Subscriber("/miro/image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
 		
 	def process_image_and_pose(self, msg):
-		image = msg.image
+		image = image_processing.stitch_stereo_image(image_processing.compressed_msg_to_image(msg.image_left), image_processing.compressed_msg_to_image(msg.image_right))
 		pose = msg.pose
 		id = "%06d" % (self.save_id)
-		normalised_image = image_processing.patch_normalise_msg(image, (9,9), compressed=True, resize=self.resize)
+		normalised_image = image_processing.patch_normalise_image(image, (9,9), resize=self.resize)
 		message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 		image_as_text = pickle.dumps(normalised_image)
 

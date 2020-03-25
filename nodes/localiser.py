@@ -10,6 +10,7 @@ import time
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import CompressedImage, JointState
 from std_msgs.msg import String
+import message_filters
 
 import math
 import json
@@ -26,8 +27,11 @@ class miro_localiser:
 		# connect to the image matcher service
 		rospy.wait_for_service('/miro/match_image')
 		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
-		# subscribe to image and pose pair
-		self.sub_image_pose = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image, queue_size=1)		
+		# subscribe to the images from both cameras
+		self.sub_image_left = message_filters.Subscriber("/miro/sensors/caml_stamped/compressed", CompressedImage, queue_size=1)
+		self.sub_image_right = message_filters.Subscriber("/miro/sensors/camr_stamped/compressed", CompressedImage, queue_size=1)
+		self.sub_images = message_filters.ApproximateTimeSynchronizer((self.sub_image_left, self.sub_image_right), 5, 1.0/30.0)
+		self.sub_images.registerCallback(self.process_image_data)
 
 		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
@@ -43,8 +47,9 @@ class miro_localiser:
 		self.joint_states.name = ['tilt','lift','yaw','pitch']
 		self.joint_states.position = [0.0, math.radians(45), 0.0, math.radians(8)]
 		
-	def process_image(self, msg):
-		normalised_image = image_processing.patch_normalise_msg(msg, (9,9), compressed=True, resize=self.resize)
+	def process_image_data(self, msg_left, msg_right):
+		image = image_processing.stitch_stereo_image(image_processing.compressed_msg_to_image(msg_left), image_processing.compressed_msg_to_image(msg_right))
+		normalised_image = image_processing.patch_normalise_image(image, (9,9), resize=self.resize)
 		delta_pose = self.match_image(image_processing.image_to_msg(normalised_image))
 		# TODO - steer based on this pose difference
 

@@ -6,6 +6,7 @@ from sensor_msgs.msg import CompressedImage, JointState
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 import tf_conversions
+import message_filters
 
 import math
 import time
@@ -19,15 +20,6 @@ DEFAULT_CAMERA_SETTINGS = "frame=180w@25"
 class miro_data_collect:
 
 	def __init__(self):		
-		# subscribe to integrated odometry
-		self.sub_odom = rospy.Subscriber("/miro/odom_integrated", Odometry, self.process_odom_data, queue_size=1)
-		# subscribe to image
-		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data, queue_size=1)
-		# publish image and pose pair
-		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
-		# publish camera settings
-		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
-
 		# publish the desired joint states of Miro (so it looks downwards to view the ball)
 		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
 		self.joint_states = JointState()
@@ -39,16 +31,27 @@ class miro_data_collect:
 		self.DISTANCE_THRESHOLD = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.ANGLE_THRESHOLD = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
 
-		self.camera_settings = rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS)
-		self.pub_camera_settings.publish(String(data=self.camera_settings))
+		self.camera_settings = String(data=rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS))
+
+		# subscribe to integrated odometry
+		self.sub_odom = rospy.Subscriber("/miro/odom_integrated", Odometry, self.process_odom_data, queue_size=1)
+		# subscribe to the images from both cameras
+		self.sub_image_left = message_filters.Subscriber("/miro/sensors/caml_stamped/compressed", CompressedImage, queue_size=1)
+		self.sub_image_right = message_filters.Subscriber("/miro/sensors/camr_stamped/compressed", CompressedImage, queue_size=1)
+		self.sub_images = message_filters.ApproximateTimeSynchronizer((self.sub_image_left, self.sub_image_right), 5, 1.0/30.0)
+		self.sub_images.registerCallback(self.process_image_data)
+		# publish image and pose pair
+		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
+		# publish camera settings
+		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
 
 	def process_odom_data(self, msg):
 		self.current_odom = msg
 
-	def process_image_data(self, msg):
+	def process_image_data(self, msg_left, msg_right):
 		if self.last_odom is None:
 			if self.current_odom is not None:
-				self.publish_image_and_pose(msg, self.current_odom.pose.pose)
+				self.publish_image_and_pose(msg_left, msg_right, self.current_odom.pose.pose)
 				self.last_odom = self.current_odom
 			return
 
@@ -60,12 +63,13 @@ class miro_data_collect:
 		delta_theta = abs(difference.M.GetRPY()[2])
 
 		if delta_distance > self.DISTANCE_THRESHOLD or delta_theta > self.ANGLE_THRESHOLD:
-			self.publish_image_and_pose(msg, self.current_odom.pose.pose)
+			self.publish_image_and_pose(msg_left, msg_right, self.current_odom.pose.pose)
 			self.last_odom = self.current_odom
 		
-	def publish_image_and_pose(self, img, pose):
+	def publish_image_and_pose(self, img_left, img_right, pose):
 		img_pose = ImageAndPose()
-		img_pose.image = img
+		img_pose.image_left = img_left
+		img_pose.image_right = img_right
 		img_pose.pose = pose
 		self.pub_image_pose.publish(img_pose)
 
