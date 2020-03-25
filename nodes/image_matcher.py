@@ -75,10 +75,9 @@ class miro_image_matcher:
 
 	def match_image(self, request):
 		image = image_processing.msg_to_image(request.normalisedImage)
-		vertical_cutoff = 1.0
 		start_search_range = max(0, self.current_position - SEARCH_SIZE)
 		end_search_range = min(len(self.images), self.current_position + SEARCH_SIZE)
-		match_data = [image_processing.xcorr_match_images(ref_img, image, template_proportion=0.5, vertical_cutoff=vertical_cutoff) for ref_img in self.images[start_search_range:end_search_range]]
+		match_data = [image_processing.xcorr_match_images(ref_img, image) for ref_img in self.images[start_search_range:end_search_range]]
 		best_index = np.argmax([m[1] for m in match_data])
 
 		offset_theta = -math.radians(match_data[best_index][0] / image.shape[0] * 175.2)
@@ -101,7 +100,6 @@ class miro_image_matcher:
 		debug_image = cv2.merge((debug_image, debug_image, debug_image))
 		cv2.line(debug_image, (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),0), (int(match_data[best_index][0]+self.images[best_index].shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
 		cv2.line(debug_image, (int(self.images[best_index].shape[1]+image.shape[1]/2),0), (int(self.images[best_index].shape[1]+image.shape[1]/2),self.images[best_index].shape[0]), (0,255,0))
-		cv2.line(debug_image, (0,int(vertical_cutoff*debug_image.shape[0])), (debug_image.shape[1]-1,int(vertical_cutoff*debug_image.shape[0])), (255,0,0))
 		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
 
 		self.current_position = best_index + start_search_range
