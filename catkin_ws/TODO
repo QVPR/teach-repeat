@@ -1,6 +1,8 @@
 
 Testing:
-	☐ Test the system driving in a straight line instead of spinning
+	✔ Test the system driving in a straight line instead of spinning @30m @started(20-03-25 13:41) @done(20-03-25 14:14) @lasted(33m17s)
+		Localises better when going in a straight line, but the matching is still a bit dodgy...
+		There's a bug with the motor code it seems - the jitters when going straight are coming from commanded motor speeds
 
 Development:
 	Setup:
@@ -12,9 +14,12 @@ Development:
 	
 	Localisation:
 	 ☐ Assume the robot is at the same place at startup
-	 ☐ Use a "sliding window" to cull the possible image matches
+	 ✔ Use a "sliding window" to cull the possible image matches @20m @started(20-03-25 14:33) @done(20-03-25 14:44) @lasted(11m59s)
 	 ✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
 
 Bugs: 
 	ROS:
 		✔ Subscribing to camera before setting camera options results in receiving empty message @20m @started(20-03-25 13:12) @done(20-03-25 13:28) @lasted(16m57s)
+
+	Miro:
+		☐ When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
