@@ -37,7 +37,7 @@ class miro_localiser:
 
 		self.joint_states = JointState()
 		self.joint_states.name = ['tilt','lift','yaw','pitch']
-		self.joint_states.position = [0.0, math.radians(30), 0.0, math.radians(8)]
+		self.joint_states.position = [0.0, math.radians(30+1), 0.0, math.radians(8)]
 
 	def setup_publishers(self):	
 		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)

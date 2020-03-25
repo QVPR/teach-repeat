@@ -151,19 +151,11 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 	(offset, error) = scan_horizontal_SAD_match(image, template)
 	return offset-template_start, error
 
-def xcorr_match_images(image, template_image, template_proportion=0.5, vertical_cutoff=0.66):
-	# horizontal proportion of template
-	template_width = int(template_image.shape[1]*template_proportion)
-	template_start = (template_image.shape[1]-template_width) // 2
-	template = template_image[:,template_start:template_start+template_width]
-
-	# vertical proportion of image and template
-	image = image[:int(image.shape[0]*vertical_cutoff)]
-	template = template[:int(template.shape[0]*vertical_cutoff)]
-
-	corr = scipy.signal.correlate2d(image, template, mode='valid')
+def xcorr_match_images(image, template_image):
+	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
+	corr = scipy.signal.correlate2d(image, template_image, mode='valid')
 	offset = np.argmax(corr)
-	return offset-template_start, corr[0,offset]
+	return offset - image.shape[1]/2, corr[0,offset]
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
