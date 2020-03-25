@@ -91,6 +91,16 @@ def patch_normalise_msg(msg, patch_size, compressed=False, resize=None):
 		image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
 	return patch_normalise_pad(image, patch_size)
 
+def patch_normalise_image(image, patch_size, resize=None):
+	# resize should be height * width
+	if len(image.shape) > 2 and image.shape[2] > 1:
+		image = grayscale(image)
+	if resize is not None:
+		# opencv sizes are the opposite of numpy (width*height)
+		resize = tuple(reversed(resize))
+		image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
+	return patch_normalise_pad(image, patch_size)
+
 def make_size(height, width):
 	return (height, width)
 
@@ -177,6 +187,24 @@ def scan_horizontal_SAD_match_patches(image, template):
 	differences = np.mean(np.abs(patches - template.ravel().reshape(-1,1)), 0)
 	index = np.argmin(differences)
 	return index, differences[index]
+
+def stitch_stereo_image(image_left, image_right):
+	overlap_proportion = 67.2 / 121.2
+	overlap_pixels = int(round(image_left.shape[1] * overlap_proportion))
+	non_overlap_pixels = image_left.shape[1] - overlap_pixels
+	full_width = image_left.shape[1] + image_right.shape[1] - overlap_pixels
+
+	if len(image_left.shape) > 2 and image_left.shape[2] > 1:
+		image_left = grayscale(image_left)
+		image_right = grayscale(image_right)
+		
+	stitched_image = np.zeros((image_left.shape[0],full_width))
+	stitched_image[:,:non_overlap_pixels] = image_left[:,:non_overlap_pixels]
+	stitched_image[:,-non_overlap_pixels:] = image_right[:,-non_overlap_pixels:]
+	stitched_image[:,non_overlap_pixels:-non_overlap_pixels] = 0.5 * image_left[:,non_overlap_pixels:] + 0.5 * image_right[:,:-non_overlap_pixels]
+
+	return stitched_image
+
 
 if __name__ == "__main__":
 	np.random.seed(0)

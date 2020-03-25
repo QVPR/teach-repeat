@@ -5,6 +5,9 @@
 	<!-- Integrate odometry -->
 	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" />
 
+	<!-- Timestamp images for matching -->
+	<node pkg="miro_teach_repeat" type="image_stamper.py" name="miro_image_stamper" />
+
 	<!-- Collect image data -->
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect">
 		<rosparam param="distance_threshold">0.1</rosparam>
@@ -16,7 +19,7 @@
 	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
-		<rosparam param="image_resize_width">160</rosparam>
-		<rosparam param="image_resize_height">90</rosparam>
+		<!-- <rosparam param="image_resize_width">160</rosparam> -->
+		<!-- <rosparam param="image_resize_height">90</rosparam> -->
 	</node>
 </launch>
