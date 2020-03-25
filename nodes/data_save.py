@@ -18,6 +18,11 @@ from miro_teach_repeat.msg import ImageAndPose
 class miro_data_save:
 
 	def __init__(self):	
+		self.setup_parameters()
+		self.setup_publishers()
+		self.setup_subscribers()
+
+	def setup_parameters(self):
 		self.save_id = 0
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
 		self.timestamp_dir = rospy.get_param('~timestamp_folder', False)
@@ -32,7 +37,10 @@ class miro_data_save:
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 
-		# subscribe to image and pose pair
+	def setup_publishers(self):
+		pass
+
+	def setup_subscribers(self):
 		self.sub_image_pose = rospy.Subscriber("/miro/image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
 		
 	def process_image_and_pose(self, msg):

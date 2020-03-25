@@ -19,13 +19,12 @@ DEFAULT_CAMERA_SETTINGS = "frame=180w@25"
 
 class miro_data_collect:
 
-	def __init__(self):		
-		# publish the desired joint states of Miro (so it looks downwards to view the ball)
-		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
-		self.joint_states = JointState()
-		self.joint_states.name = ['tilt','lift','yaw','pitch']
-		self.joint_states.position = [0.0, math.radians(30), 0.0, math.radians(8)]
+	def __init__(self):
+		self.setup_parameters()
+		self.setup_publishers()
+		# defer setting up subscribers until camera options are set to avoid receiving an empty image
 
+	def setup_parameters(self):	
 		self.last_odom = None
 		self.current_odom = None
 		self.DISTANCE_THRESHOLD = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
@@ -33,18 +32,24 @@ class miro_data_collect:
 
 		self.camera_settings = String(data=rospy.get_param('~camera_setup_command', DEFAULT_CAMERA_SETTINGS))
 
-		# subscribe to integrated odometry
+		self.joint_states = JointState()
+		self.joint_states.name = ['tilt','lift','yaw','pitch']
+		self.joint_states.position = [0.0, math.radians(30), 0.0, math.radians(8)]
+
+	def setup_publishers(self):	
+		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
+		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
+		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
+
+	def setup_subscribers(self):
 		self.sub_odom = rospy.Subscriber("/miro/odom_integrated", Odometry, self.process_odom_data, queue_size=1)
+
 		# subscribe to the images from both cameras
 		self.sub_image_left = message_filters.Subscriber("/miro/sensors/caml_stamped/compressed", CompressedImage, queue_size=1)
 		self.sub_image_right = message_filters.Subscriber("/miro/sensors/camr_stamped/compressed", CompressedImage, queue_size=1)
 		self.sub_images = message_filters.ApproximateTimeSynchronizer((self.sub_image_left, self.sub_image_right), 5, 1.0/30.0)
 		self.sub_images.registerCallback(self.process_image_data)
-		# publish image and pose pair
-		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
-		# publish camera settings
-		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
-
+		
 	def process_odom_data(self, msg):
 		self.current_odom = msg
 
@@ -89,6 +94,8 @@ if __name__ == "__main__":
 	# hacky but seems we need to sleep for a bit before sending this command
 	time.sleep(1)
 	collector.publish_camera_command()
+	collector.setup_subscribers()
+	
 	rate = rospy.Rate(50)
 	while not rospy.is_shutdown():
 		collector.publish_joint_state()
