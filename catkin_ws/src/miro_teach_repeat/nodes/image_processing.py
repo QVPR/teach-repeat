@@ -118,10 +118,6 @@ def compressed_msg_to_image(msg):
 	except cv_bridge.CvBridgeError as e:
 		print(e)
 		return 
-	except cv2.error as e:
-		print(msg)
-		# print(e)
-		return
 	return image
 
 def image_to_msg(image, encoding='passthrough'):

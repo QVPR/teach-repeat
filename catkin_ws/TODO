@@ -1,16 +1,20 @@
 
 Testing:
-  ☐ Test the system driving in a straight line instead of spinning
+	☐ Test the system driving in a straight line instead of spinning
 
 Development:
-  Setup:
-    ✔ Stitch the camera images together @done(20-03-25 10:52)
-      ✔ Sync the camera images by approximately stamping them @started(20-03-25 09:34) @done(20-03-25 10:27) @lasted(53m10s)
-      ✔ Use 50% blending for the image stitching @done(20-03-25 10:28)
-      ✔ Use linear blending @started(20-03-25 10:45) @done(20-03-25 10:52) @lasted(7m16s)
-    ☐ Calibrate the cameras to do proper stereo registration
-  
-  Localisation:
+	Setup:
+		✔ Stitch the camera images together @done(20-03-25 10:52)
+			✔ Sync the camera images by approximately stamping them @started(20-03-25 09:34) @done(20-03-25 10:27) @lasted(53m10s)
+			✔ Use 50% blending for the image stitching @done(20-03-25 10:28)
+			✔ Use linear blending @started(20-03-25 10:45) @done(20-03-25 10:52) @lasted(7m16s)
+		☐ Calibrate the cameras to do proper stereo registration
+	
+	Localisation:
 	 ☐ Assume the robot is at the same place at startup
-   ☐ Use a "sliding window" to cull the possible image matches
-   ✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
+	 ☐ Use a "sliding window" to cull the possible image matches
+	 ✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
+
+Bugs: 
+	ROS:
+		✔ Subscribing to camera before setting camera options results in receiving empty message @20m @started(20-03-25 13:12) @done(20-03-25 13:28) @lasted(16m57s)

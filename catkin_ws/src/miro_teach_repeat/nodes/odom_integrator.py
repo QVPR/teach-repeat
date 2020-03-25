@@ -10,15 +10,20 @@ import math
 class miro_integrate_odom:
 
 	def __init__(self):		
-		# subscribe to instantaneous odometry
-		self.sub_odom = rospy.Subscriber("/miro/sensors/odom", Odometry, self.process_odom_data, queue_size=1)
-
-		# publish integrated odometry
-		self.pub_odom = rospy.Publisher("/miro/odom_integrated", Odometry, queue_size=0)
-
+		self.setup_parameters()
+		self.setup_publishers()
+		self.setup_subscribers()
+	
+	def setup_parameters(self):
 		self.last_odom_time = None
 		self.odom_pose = Pose()
 		self.odom_pose.orientation.w = 1
+
+	def setup_publishers(self):
+		self.pub_odom = rospy.Publisher("/miro/odom_integrated", Odometry, queue_size=0)
+
+	def setup_subscribers(self):
+		self.sub_odom = rospy.Subscriber("/miro/sensors/odom", Odometry, self.process_odom_data, queue_size=1)
 
 	def process_odom_data(self, msg):
 		if self.last_odom_time is None:
@@ -52,8 +57,6 @@ class miro_integrate_odom:
 		q.z /= norm
 		q.w /= norm
 		return q
-
-
 
 if __name__ == "__main__":
 	rospy.init_node("miro_integrate_odom")

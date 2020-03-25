@@ -21,6 +21,11 @@ from miro_teach_repeat.srv import ImageMatch
 class miro_image_matcher:
 
 	def __init__(self):		
+		self.setup_parameters()
+		self.setup_publishers()
+		self.setup_subscribers()
+
+	def setup_parameters(self):
 		self.pub_image_match_debug = rospy.Publisher('/miro/match_image_debug', Image, queue_size=0)
 
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
@@ -42,7 +47,10 @@ class miro_image_matcher:
 		self.poses = self.load_poses(pose_files)
 		print('loading complete: %d images and %d poses' % (len(self.images), len(self.poses)))
 
-		# setup the service listener for other nodes to get images matched
+	def setup_publishers(self):
+		pass
+
+	def setup_subscribers(self):
 		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
 
 	def load_images(self, image_files):
@@ -73,7 +81,7 @@ class miro_image_matcher:
 			img_frame = tf_conversions.fromMsg(self.poses[best_index])
 			next_frame = tf_conversions.fromMsg(self.poses[best_index+1])
 			delta_pose = tf_conversions.toMsg(img_frame.Inverse() * next_frame)
-		# TODO - offset this pose difference by the relative orientation found in the image
+		# TODO: offset this pose difference by the relative orientation found in the image
 
 		debug_image = np.concatenate((image, self.images[best_index]), axis=1)
 		debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
@@ -89,5 +97,5 @@ class miro_image_matcher:
 if __name__ == "__main__":
 
 	rospy.init_node("miro_image_matcher")
-	integrator = miro_image_matcher()
+	matcher = miro_image_matcher()
 	rospy.spin()
