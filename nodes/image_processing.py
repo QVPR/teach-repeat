@@ -117,6 +117,10 @@ def compressed_msg_to_image(msg):
 		image = bridge.compressed_imgmsg_to_cv2(msg)
 	except cv_bridge.CvBridgeError as e:
 		print(e)
+		return 
+	except cv2.error as e:
+		print(msg)
+		# print(e)
 		return
 	return image
 

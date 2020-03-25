@@ -13,7 +13,7 @@
 	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" />
 
 	<!-- Timestamp images for matching -->
-	<node pkg="miro_teach_repeat" type="image_stamper.py" name="miro_image_stamper" />
+	<node pkg="miro_teach_repeat" type="image_stamper.py" name="miro_image_stamper" output="screen"/>
 
 	<!-- Localise using the images -->
 	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">

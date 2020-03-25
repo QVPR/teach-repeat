@@ -3,7 +3,6 @@
 import rospy
 from sensor_msgs.msg import CompressedImage
 
-
 class miro_image_stamper:
 
 	def __init__(self):
@@ -16,10 +15,16 @@ class miro_image_stamper:
 
 	def process_image_data_left(self, msg):
 		msg.header.stamp = rospy.Time.now()
+		if len(msg.data) == 0:
+			rospy.logwarn("[Image Stamper] received empty compressed image - dropping message")
+			return
 		self.pub_image_left.publish(msg)
 
 	def process_image_data_right(self, msg):
 		msg.header.stamp = rospy.Time.now()
+		if len(msg.data) == 0:
+			rospy.logwarn("[Image Stamper] received empty compressed image - dropping message")
+			return
 		self.pub_image_right.publish(msg)
 
 if __name__ == "__main__":
