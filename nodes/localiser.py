@@ -45,7 +45,7 @@ class miro_localiser:
 		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=0)
 		self.joint_states = JointState()
 		self.joint_states.name = ['tilt','lift','yaw','pitch']
-		self.joint_states.position = [0.0, math.radians(45), 0.0, math.radians(8)]
+		self.joint_states.position = [0.0, math.radians(30), 0.0, math.radians(8)]
 		
 	def process_image_data(self, msg_left, msg_right):
 		image = image_processing.stitch_stereo_image(image_processing.compressed_msg_to_image(msg_left), image_processing.compressed_msg_to_image(msg_right))
