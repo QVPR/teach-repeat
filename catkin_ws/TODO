@@ -4,8 +4,8 @@ Testing:
 		Localises better when going in a straight line, but the matching is still a bit dodgy...
 		There's a bug with the motor code it seems - the jitters when going straight are coming from commanded motor speeds
 	✔ Do a couple of runs and make a confusion matrix to test the raw matching (maybe need normxcorr?) @45m @started(20-03-26 8:14) @done(20-03-26 09:02) @lasted(48m34s)
-		Matching looks OK, but the offsets all come out as ~ -60. Should investigate this
-	☐ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05)
+		Matching looks OK, but the offsets all come out as ~ -60. Should investigate this. Bug fixed!
+	
 
 Development:
 	Setup:
@@ -22,12 +22,15 @@ Development:
 	 ✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
 
 	Control:
-		☐ Make a basic controller to drive Miro straight
+		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
 
 Bugs: 
 	ROS:
 		✔ Subscribing to camera before setting camera options results in receiving empty message @20m @started(20-03-25 13:12) @done(20-03-25 13:28) @lasted(16m57s)
 
 	Miro:
-		☐ When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
+		☐ @low When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
+
+	Image Processing:
+		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)
