@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
 	nodes/data_collect.py
 	nodes/data_save.py
+	nodes/drive_straight_controller.py
 	nodes/image_matcher.py
 	nodes/image_processing.py
 	nodes/image_stamper.py
