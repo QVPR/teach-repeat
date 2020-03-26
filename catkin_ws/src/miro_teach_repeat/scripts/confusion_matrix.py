@@ -44,11 +44,17 @@ for i,image1 in enumerate(images1):
 		correlations[i,j] = correlation
 		offsets[i,j] = offset
 
-correlations /= np.reshape(np.max(correlations, axis=1), (-1,1))
+correlations /= np.reshape(np.max(correlations, axis=0), (1,-1))
 
-for i,image1 in enumerate(images1):
-	for j,image2 in enumerate(images2):
+for i in range(len(images1)):
+	for j in range(len(images2)):
 		confusion_image[(i+1)*images1[0].shape[0]:(i+2)*images1[0].shape[0],(j+1)*images1[0].shape[1]:(j+2)*images1[0].shape[1]] = 255.0 * correlations[i,j]
+		num = "%.2f" % correlations[i,j]
+		textsize = cv2.getTextSize(num, cv2.FONT_HERSHEY_SIMPLEX, 1, 1)[0]
+		colour = (255,255,255)
+		if correlations[i,j] >= 0.8:
+			colour = (0,0,0)
+		cv2.putText(confusion_image, num, (int((j+1.5)*images1[0].shape[1]-textsize[0]/2), int((i+2)*images1[0].shape[0]-textsize[1]/2)), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 1 )
 
 print(correlations)
 print(offsets)

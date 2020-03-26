@@ -5,6 +5,8 @@ Testing:
 		There's a bug with the motor code it seems - the jitters when going straight are coming from commanded motor speeds
 	✔ Do a couple of runs and make a confusion matrix to test the raw matching (maybe need normxcorr?) @45m @started(20-03-26 8:14) @done(20-03-26 09:02) @lasted(48m34s)
 		Matching looks OK, but the offsets all come out as ~ -60. Should investigate this. Bug fixed!
+	✔ Testing while actually driving straight thanks to the new controller @15m @started(20-03-26 10:45) @done(20-03-26 10:58) @lasted(13m25s)
+		Again, matching looks OK (not perfect - sometimes it matches crazy images at big offsets...) Controller isn't great though - bad odom drift
 	
 
 Development:
@@ -16,13 +18,16 @@ Development:
 		☐ Calibrate the cameras to do proper stereo registration
 	
 	Localisation:
-	 ✔ Assume the robot is at the same place at startup 
-	 ✔ Use a "sliding window" to cull the possible image matches @20m @started(20-03-25 14:33) @done(20-03-25 14:44) @lasted(11m59s)
-	 ✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
-	 ✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
+		✔ Assume the robot is at the same place at startup 
+		✔ Use a "sliding window" to cull the possible image matches @20m @started(20-03-25 14:33) @done(20-03-25 14:44) @lasted(11m59s)
+		✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
+		✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
+
+	ROS:
+		☐ Make a nicer ordering for starting nodes (wait until camera is set and joints in position)
 
 Bugs: 
 	ROS:
@@ -30,6 +35,7 @@ Bugs:
 
 	Miro:
 		☐ @low When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
+			Partly alleviated by using a controller to set the speeds based on integrated odometry - odometry drifts significantly though
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
 
 	Image Processing:
