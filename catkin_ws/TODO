@@ -25,7 +25,7 @@ Development:
 		✔ Use a "sliding window" to cull the possible image matches @20m @started(20-03-25 14:33) @done(20-03-25 14:44) @lasted(11m59s)
 		✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
 		✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
-		☐ Implement normxcorr2
+		✔ Implement normxcorr2 @done(20-03-30 18:37)
 		☐ Use pose estimates to get rough ground truth data to test image matching
 
 	Control:
