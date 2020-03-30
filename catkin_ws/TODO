@@ -27,6 +27,7 @@ Development:
 		✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
 		✔ Implement normxcorr2 @done(20-03-30 18:37)
 		☐ Use pose estimates to get rough ground truth data to test image matching
+		✔ Use basic scanline matching to determine rotation from images @1h @started(20-03-31 08:22) @done(20-03-31 09:18) @lasted(56m42s)
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
