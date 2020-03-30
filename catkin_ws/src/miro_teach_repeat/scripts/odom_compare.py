@@ -9,41 +9,46 @@ import json
 import math
 import sys
 import matplotlib.pyplot as plt
+from rospy_message_converter import message_converter
+import tf_conversions
 
 def read_file(filename):
 	with open(filename, 'r') as f:
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/manual_e1/')
-dir2 = os.path.expanduser('~/miro/data/manual_e2/')
+def get_pose_files(dir):
+	pose_files = [dir+f for f in os.listdir(dir) if f[-9:] == '_pose.txt']
+	pose_files.sort()
+	return pose_files
 
-pose_files1 = [dir1+f for f in os.listdir(dir1) if f[-9:] == '_pose.txt']
-pose_files1.sort()
-pose_files2 = [dir2+f for f in os.listdir(dir2) if f[-9:] == '_pose.txt']
-pose_files2.sort()
+def read_pose_files(pose_files):
+	return [tf_conversions.fromMsg(message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(read_file(p)))) for p in pose_files]
 
-poses1 = [json.loads(read_file(p)) for p in pose_files1]
-poses2 = [json.loads(read_file(p)) for p in pose_files2]
+def get_pose_x_y_theta(poses):
+	
+	x = np.array([pose.p.x() for pose in poses])
+	y = np.array([pose.p.y() for pose in poses])
+	theta = np.array([pose.M.GetRPY()[2] for pose in poses])
+	return x, y, theta
 
-xs1 = [p['position']['x'] for p in poses1]
-ys1 = [p['position']['y'] for p in poses1]
-xs2 = [p['position']['x'] for p in poses2]
-ys2 = [p['position']['y'] for p in poses2]
+#### #### ####
+base_dir = os.path.expanduser('~/miro/data/')
+dir_name = 'J-lino'
+odom_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(3)]
 
-SET_SAME_ORIGIN = True
-if SET_SAME_ORIGIN:
-	xo = xs2[0]
-	yo = ys2[0]
-	xs2 = [x - xo for x in xs2]
-	ys2 = [y - yo for y in ys2]
+pose_files = [get_pose_files(dir) for dir in odom_dirs]
+poses = [read_pose_files(p) for p in pose_files]
 
-fig,ax = plt.subplots()
-ax.scatter(xs1, ys1, c='#00ff00')
-ax.scatter(xs2, ys2, c='#0000ff')
+pose_data = [get_pose_x_y_theta(pose) for pose in poses]
 
-ax.scatter(xs1[0], ys1[0], s=100, c='#000000', marker='x')
-ax.scatter(xs2[0], ys2[0], s=100, c='#000000', marker='x')
+colours = ['#00ff00', '#0000ff', '#ff0000']
 
+for pose_data_list,colour in zip(pose_data,colours):
+	plt.quiver(pose_data_list[0],pose_data_list[1],np.cos(pose_data_list[2]),np.sin(pose_data_list[2]), scale=50, color=colour)
+
+# plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
+plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
 
 plt.show()
