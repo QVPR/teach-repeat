@@ -34,7 +34,7 @@ def patch_normalise_patch(image, patch_size):
 
 	nrows = image.shape[0] - patch_size[0] + 1
 	ncols = image.shape[1] - patch_size[1] + 1
-	patches = get_patches(image, patch_size)
+	patches = get_patches2D(image, patch_size)
 	mus, stds = mean_stdev_fast(patches, 0)
 
 	with np.errstate(divide='ignore', invalid='ignore'):
@@ -63,7 +63,7 @@ def patch_normalise_pad(image, patch_size):
 
 	nrows = image.shape[0]
 	ncols = image.shape[1]
-	patches = get_patches(image_pad, patch_size)
+	patches = get_patches2D(image_pad, patch_size)
 	mus = np.nanmean(patches, 0)
 	stds = np.nanstd(patches, 0)
 
@@ -129,10 +129,14 @@ def image_to_msg(image, encoding='passthrough'):
 		return
 	return msg
 
-def get_patches(image, patch_size):
+def get_patches2D(image, patch_size):
 	nrows = image.shape[0] - patch_size[0] + 1
 	ncols = image.shape[1] - patch_size[1] + 1
 	return numpy.lib.stride_tricks.as_strided(image, patch_size + (nrows, ncols), image.strides + image.strides).reshape(patch_size[0]*patch_size[1],-1)
+
+def get_patches1D(image, patch_size):
+	nrows = image.shape[0] - patch_size + 1
+	return numpy.lib.stride_tricks.as_strided(image, (nrows, patch_size), image.strides + image.strides)
 
 def mean_stdev_fast(array, axis=None):
 	mu = np.mean(array, axis)
@@ -156,7 +160,7 @@ def xcorr_match_images(image, template_image):
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	corr = normxcorr2(image, template_image, mode='valid')
 	offset = np.argmax(corr)
-	return offset - template_image.shape[1]/2, corr[0,offset]
+	return offset - int(template_image.shape[1]/2), corr[0,offset]
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
@@ -176,7 +180,7 @@ def scan_horizontal_SAD_match_pad(image, template, step_size=1):
 	return positions[index]-(template.shape[1]-1), differences[index]
 
 def scan_horizontal_SAD_match_patches(image, template):
-	patches = get_patches(image, template.shape)
+	patches = get_patches2D(image, template.shape)
 	differences = np.mean(np.abs(patches - template.ravel().reshape(-1,1)), 0)
 	index = np.argmin(differences)
 	return index, differences[index]
@@ -223,8 +227,8 @@ def normxcorr2(image, template, mode="full"):
 	else:
 		raise NotImplementedError('normxcorr2: mode should be one of "full", "valid" or "same".')
 
-	diff_local_sums = local_sum_image2 - local_sum_image**2/mn
-	denominator_image = np.maximum(0,diff_local_sums)
+	denominator_image = local_sum_image2 - local_sum_image**2/mn
+	denominator_image[denominator_image < 0.0] = 0.0
 	denominator_template = ((template - template.mean())**2).sum()
 	denominator = np.sqrt(denominator_image * denominator_template)
 	numerator = xcorr - local_sum_image * template.sum()/mn
@@ -256,12 +260,34 @@ def local_sum_valid(A, m, n):
 	s = c.cumsum(axis=1)
 	return s[:,n:] - s[:,:-n]
 
+def image_scanline_rotation(image1, image2):
+	scanline1 = image1.mean(axis=0)
+	scanline1 /= scanline1.sum()
+	scanline2 = image2.mean(axis=0)
+	scanline2 /= scanline2.sum()
+
+	min_overlap = 30
+	pad = image2.shape[1]-min_overlap
+
+	scanline1 = np.pad(scanline1, (pad,), 'constant', constant_values=np.nan)
+	patches = get_patches1D(scanline1, scanline2.shape[0])
+	diff = abs(patches - scanline2.reshape((1,-1)))
+	means = np.nanmean(diff, axis=1)
+	offset = np.argmin(means)
+	return offset - pad, means[offset]
+
+
+
 if __name__ == "__main__":
 	np.random.seed(0)
 	img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
 	norm = patch_normalise_pad(img, (9,9))
 
+	offset = 12
+	im1 = img[5:20,30:-30]
+	im2 = img[5:20,30+offset:-30+offset]
+	
 	import time
 	t = time.time()
-	print(xcorr_match_images(norm, norm))
+	print(image_scanline_rotation(im1, im2))
 	print('%fs' % (time.time() - t))
