@@ -2,6 +2,7 @@
 
 import cv_bridge
 import cv2
+import math
 import numpy as np
 import numpy.lib
 import scipy.signal
@@ -153,7 +154,7 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 
 def xcorr_match_images(image, template_image):
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
-	corr = scipy.signal.correlate2d(image, template_image, mode='valid')
+	corr = normxcorr2(image, template_image, mode='valid')
 	offset = np.argmax(corr)
 	return offset - template_image.shape[1]/2, corr[0,offset]
 
@@ -197,20 +198,70 @@ def stitch_stereo_image(image_left, image_right):
 
 	return stitched_image
 
+def normxcorr2(image, template, mode="full"):
+	image_min = image.min()
+	if image_min < 0:
+		image -= image_min
+	template_min = template.min()
+	if template_min < 0:
+		template -= template_min
+
+	xcorr = scipy.signal.correlate2d(image, template, mode=mode)
+
+	m,n = template.shape
+	mn = m*n
+
+	if mode == "full":
+		local_sum_image = local_sum_full(image,m,n)
+		local_sum_image2 = local_sum_full(image**2,m,n)
+	elif mode == "same":
+		local_sum_image = local_sum_same(image,m,n)
+		local_sum_image2 = local_sum_same(image**2,m,n)
+	elif mode == "valid":
+		local_sum_image = local_sum_valid(image,m,n)
+		local_sum_image2 = local_sum_valid(image**2,m,n)
+	else:
+		raise NotImplementedError('normxcorr2: mode should be one of "full", "valid" or "same".')
+
+	diff_local_sums = local_sum_image2 - local_sum_image**2/mn
+	denominator_image = np.maximum(0,diff_local_sums)
+	denominator_template = ((template - template.mean())**2).sum()
+	denominator = np.sqrt(denominator_image * denominator_template)
+	numerator = xcorr - local_sum_image * template.sum()/mn
+
+	correlated = np.zeros_like(numerator)
+	tolerance = math.sqrt(np.spacing(abs(denominator).max()))
+	nonzero_index = np.where(denominator > tolerance)
+	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
+	return correlated
+
+def local_sum_full(A, m, n):
+	B = np.pad(A, ((m,),(n,)), 'constant', constant_values=0)
+	s = np.cumsum(B, axis=0)
+	c = s[m:-1,:] - s[:-m-1,:]
+	s = np.cumsum(c, axis=1)
+	return s[:,n:-1] - s[:,:-n-1]
+
+def local_sum_same(A, m, n):
+	B = np.pad(A, ((m-1,1),(n-1,1)), 'constant', constant_values=0)
+	s = np.cumsum(B, axis=0)
+	c = s[m:,:] - s[:-m,:]
+	s = np.cumsum(c, axis=1)
+	return s[:,n:] - s[:,:-n]
+	
+def local_sum_valid(A, m, n):
+	B = np.pad(A, ((1,0),(1,0)), 'constant', constant_values=0)
+	s = B.cumsum(axis=0)
+	c = s[m:,:] - s[:-m,:]
+	s = c.cumsum(axis=1)
+	return s[:,n:] - s[:,:-n]
 
 if __name__ == "__main__":
 	np.random.seed(0)
-	img = np.random.randint(0,256,(180,320), dtype=np.uint8)
-	norm = patch_normalise_pad(img, (17,17))
-	# cv2.imshow('img',img)
-	# cv2.imshow('norm',norm)
-	# cv2.waitKey()
-
-	template_pos = 66
-	template = img[:,template_pos:template_pos+140]
-	template_norm = patch_normalise_pad(template, (17,17))
+	img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
+	norm = patch_normalise_pad(img, (9,9))
 
 	import time
 	t = time.time()
-	print(scan_horizontal_SAD_match(norm, template_norm))
+	print(xcorr_match_images(norm, norm))
 	print('%fs' % (time.time() - t))
