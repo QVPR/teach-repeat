@@ -13,6 +13,11 @@ Testing:
 		Odom on the lino floor also looks a lot better than odom on the carpet
 	✔ Test visual odometry for rotation @30m @started(20-03-31 9:50) @done(20-03-31 10:37) @lasted(47m38s)
 		Works ok but will need some tuning
+		Issues - 
+			* want to narrow the field of view so there's less movement at the sides when going straight
+			* but narrowing the field of view limits the max tracked turning speed
+			* so... need to capture at a higher frame rate for VO
+			* want to do better stereo unwarping so the centre of the image looks less crazy
 
 Development:
 	Setup:

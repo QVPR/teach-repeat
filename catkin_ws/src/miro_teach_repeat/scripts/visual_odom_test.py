@@ -47,7 +47,15 @@ def get_pose_x_y_theta(poses):
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
 
-GAIN = -0.006
+def unwrapFromPi(x):
+	diff = x[1:] - x[:-1]
+	for i in np.where(diff > math.pi)[0]:
+		x[i+1:] -= 2*math.pi
+	for i in np.where(diff < -math.pi)[0]:
+		x[i+1:] += 2*math.pi
+	return x
+
+GAIN = -2.778 # gain per image width (pixels)
 DEBUG = False
 
 def integrate_visual_odometry(images, poses):
@@ -59,7 +67,7 @@ def integrate_visual_odometry(images, poses):
 	for i in range(1,len(visual_data)):
 		prev_img = image_processing.grayscale(images[i-1][40:80,140:-140])
 		current_img = image_processing.grayscale(images[i][40:80,140:-140])
-		offset = image_processing.image_scanline_rotation(prev_img, current_img, prev_img.shape[1]/2)[0]
+		offset = image_processing.image_patch_rotation(prev_img, current_img, prev_img.shape[1]//2)[0]
 
 		if DEBUG:
 			debug_image = np.vstack((prev_img,current_img))
@@ -67,7 +75,7 @@ def integrate_visual_odometry(images, poses):
 			print('offset = ' + str(offset))
 			cv2.waitKey()
 
-		gain = -0.006
+		gain = GAIN / images[i].shape[1]
 		dtheta = gain * offset
 
 		dd = (poses[i].p - poses[i-1].p).Norm()
@@ -94,8 +102,10 @@ f1 = plt.figure(1)
 
 for i,(pose_data,visual_data,colour) in enumerate(zip(pose_data_list,visual_data_list,colours)):
 	plt.subplot(3,1,i+1)
-	plt.plot(pose_data[2], c=colour, alpha=0.5)
-	plt.plot(visual_data[:,2], '--', c=colour)
+	plt.plot(unwrapFromPi(pose_data[2]), c=colour, alpha=0.5, label='odom')
+	plt.plot(unwrapFromPi(visual_data[:,2]), '--', c=colour, label='visual odom')
+plt.subplot(3,1,1)
+plt.legend(loc='upper center', bbox_to_anchor=(0.5,1.5), ncol=2)
 
 f = plt.figure(2)
 for pose_data,visual_data,colour in zip(pose_data_list,visual_data_list,colours):
@@ -107,15 +117,15 @@ for pose_data,visual_data,colour in zip(pose_data_list,visual_data_list,colours)
 plt.subplot(1,2,1)
 plt.axis('equal')
 plt.title('odom')
-plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
+# plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
 plt.subplot(1,2,2)
 plt.axis('equal')
 plt.title('visual odom')
-plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
+# plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
 
 
 plt.show()
