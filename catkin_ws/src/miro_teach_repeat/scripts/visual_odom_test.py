@@ -27,7 +27,7 @@ def get_pose_files(dir):
 	return pose_files
 
 def get_image_files(dir):
-	image_files = [dir+f for f in os.listdir(dir) if f[-10:] == '_image.pkl']
+	image_files = [dir+f for f in os.listdir(dir) if f[-9:] == '_full.png']
 	image_files.sort()
 	return image_files
 
@@ -35,7 +35,7 @@ def read_pose_files(pose_files):
 	return [tf_conversions.fromMsg(message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(read_file(p)))) for p in pose_files]
 	
 def read_image_files(image_files):
-	return [pickle.loads(read_file(img)) for img in image_files]
+	return [cv2.imread(img) for img in image_files]
 
 def get_pose_x_y_theta(poses):
 	
@@ -47,42 +47,75 @@ def get_pose_x_y_theta(poses):
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
 
+GAIN = -0.006
+DEBUG = False
+
+def integrate_visual_odometry(images, poses):
+	visual_data = np.zeros((len(images),3))
+	visual_data[0][0] = poses[0].p.x()
+	visual_data[0][1] = poses[0].p.y()
+	visual_data[0][2] = poses[0].M.GetRPY()[2]
+
+	for i in range(1,len(visual_data)):
+		prev_img = image_processing.grayscale(images[i-1][40:80,140:-140])
+		current_img = image_processing.grayscale(images[i][40:80,140:-140])
+		offset = image_processing.image_scanline_rotation(prev_img, current_img, prev_img.shape[1]/2)[0]
+
+		if DEBUG:
+			debug_image = np.vstack((prev_img,current_img))
+			cv2.imshow('img',debug_image)
+			print('offset = ' + str(offset))
+			cv2.waitKey()
+
+		gain = -0.006
+		dtheta = gain * offset
+
+		dd = (poses[i].p - poses[i-1].p).Norm()
+		dx = dd * math.cos(visual_data[i-1,2])
+		dy = dd * math.sin(visual_data[i-1,2])
+
+		visual_data[i] = visual_data[i-1] + [dx,dy,dtheta]
+	return visual_data
+
+
 #### #### ####
 base_dir = os.path.expanduser('~/miro/data/')
-file_dir = base_dir + 'J-lino1/'
+dir_name = 'straight-lino'
+file_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(3)]
 
-poses = read_pose_files(get_pose_files(file_dir))
-images = read_image_files(get_image_files(file_dir))
-pose_data = get_pose_x_y_theta(poses)
-visual_data = np.zeros((len(images),3))
+poses_list = [read_pose_files(get_pose_files(file_dir)) for file_dir in file_dirs]
+images_list = [read_image_files(get_image_files(file_dir)) for file_dir in file_dirs]
+pose_data_list = [get_pose_x_y_theta(poses) for poses in poses_list]
+visual_data_list = [integrate_visual_odometry(images, poses) for (images,poses) in zip(images_list,poses_list)]
 
-visual_data[0][0] = pose_data[0][0]
-visual_data[0][1] = pose_data[1][0]
-visual_data[0][2] = pose_data[2][0]
-
-for i in range(1,len(visual_data)):
-	prev_img = images[i-1][5:20,30:-30]
-	current_img = images[i][5:20,30:-30]
-	offset = image_processing.image_scanline_rotation(prev_img, current_img)[1]
-	gain = -0.03
-	dtheta = gain * offset
-
-	dd = (poses[i].p - poses[i-1].p).Norm()
-	dx = dd * math.cos(visual_data[i-1,2])
-	dy = dd * math.sin(visual_data[i-1,2])
-
-	visual_data[i] = visual_data[i-1] + [dx,dy,dtheta]
+colours = ['#00ff00', '#0000ff', '#ff0000']
 
 f1 = plt.figure(1)
-plt.plot(pose_data[2], c='#00ff00')
-plt.plot(visual_data[:,2], c='#0000ff')
 
-f2 = plt.figure(2)
-plt.quiver(pose_data[0],pose_data[1],np.cos(pose_data[2]),np.sin(pose_data[2]), scale=50, color='#00ff00')
-plt.quiver(visual_data[:,0],visual_data[:,1],np.cos(visual_data[:,2]),np.sin(visual_data[:,2]), scale=50, color='#0000ff')
+for i,(pose_data,visual_data,colour) in enumerate(zip(pose_data_list,visual_data_list,colours)):
+	plt.subplot(3,1,i+1)
+	plt.plot(pose_data[2], c=colour, alpha=0.5)
+	plt.plot(visual_data[:,2], '--', c=colour)
 
-# plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
+f = plt.figure(2)
+for pose_data,visual_data,colour in zip(pose_data_list,visual_data_list,colours):
+	plt.subplot(1,2,1)
+	plt.quiver(pose_data[0],pose_data[1],np.cos(pose_data[2]),np.sin(pose_data[2]), scale=50, color=colour)
+	plt.subplot(1,2,2)
+	plt.quiver(visual_data[:,0],visual_data[:,1],np.cos(visual_data[:,2]),np.sin(visual_data[:,2]), scale=50, color=colour)
+
+plt.subplot(1,2,1)
+plt.axis('equal')
+plt.title('odom')
+plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+plt.subplot(1,2,2)
+plt.axis('equal')
+plt.title('visual odom')
+plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+
 
 plt.show()
