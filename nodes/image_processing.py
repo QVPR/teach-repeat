@@ -136,7 +136,7 @@ def get_patches2D(image, patch_size):
 
 def get_patches1D(image, patch_size):
 	nrows = image.shape[0] - patch_size + 1
-	return numpy.lib.stride_tricks.as_strided(image, (nrows, patch_size), image.strides + image.strides)
+	return numpy.lib.stride_tricks.as_strided(image, (patch_size, nrows), image.strides + image.strides)
 
 def mean_stdev_fast(array, axis=None):
 	mu = np.mean(array, axis)
@@ -270,8 +270,23 @@ def image_scanline_rotation(image1, image2, min_overlap):
 
 	scanline1 = np.pad(scanline1, (pad,), 'constant', constant_values=np.nan)
 	patches = get_patches1D(scanline1, scanline2.shape[0])
-	diff = abs(patches - scanline2.reshape((1,-1)))
-	means = np.nanmean(diff, axis=1)
+	diff = abs(patches - scanline2.reshape(-1,1))
+	means = np.nanmean(diff, axis=0)
+	offset = np.argmin(means)
+	return offset - pad, means[offset]
+
+def image_patch_rotation(image1, image2, min_overlap):
+	image1 = np.float64(image1)
+	image1 /= image1.sum()
+	image2 = np.float64(image2)
+	image2 /= image2.sum()
+
+	pad = image2.shape[1]-min_overlap
+
+	image1 = np.pad(image1, ((0,),(pad,)), 'constant', constant_values=np.nan)
+	patches = get_patches2D(image1, image2.shape)
+	diff = abs(patches - image2.reshape((-1,1)))
+	means = np.nanmean(diff, axis=0)
 	offset = np.argmin(means)
 	return offset - pad, means[offset]
 
@@ -280,11 +295,13 @@ def image_scanline_rotation(image1, image2, min_overlap):
 if __name__ == "__main__":
 	np.random.seed(0)
 	# img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
-	img1 = grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000074_full.png'))
-	img2 = grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000075_full.png'))
+	img1 = np.float64(grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000074_full.png')))
+	img2 = np.float64(grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000075_full.png')))
 
 	
 	# import time
 	# t = time.time()
 	print(image_scanline_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
+	print(image_patch_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
+	# print(xcorr_match_images(img1[40:80,140:-140], img2[40:80,140:-140]))
 	# print('%fs' % (time.time() - t))
