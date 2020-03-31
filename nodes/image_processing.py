@@ -260,13 +260,12 @@ def local_sum_valid(A, m, n):
 	s = c.cumsum(axis=1)
 	return s[:,n:] - s[:,:-n]
 
-def image_scanline_rotation(image1, image2):
+def image_scanline_rotation(image1, image2, min_overlap):
 	scanline1 = image1.mean(axis=0)
 	scanline1 /= scanline1.sum()
 	scanline2 = image2.mean(axis=0)
 	scanline2 /= scanline2.sum()
 
-	min_overlap = 30
 	pad = image2.shape[1]-min_overlap
 
 	scanline1 = np.pad(scanline1, (pad,), 'constant', constant_values=np.nan)
@@ -280,14 +279,12 @@ def image_scanline_rotation(image1, image2):
 
 if __name__ == "__main__":
 	np.random.seed(0)
-	img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
-	norm = patch_normalise_pad(img, (9,9))
+	# img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
+	img1 = grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000074_full.png'))
+	img2 = grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000075_full.png'))
 
-	offset = 12
-	im1 = img[5:20,30:-30]
-	im2 = img[5:20,30+offset:-30+offset]
 	
-	import time
-	t = time.time()
-	print(image_scanline_rotation(im1, im2))
-	print('%fs' % (time.time() - t))
+	# import time
+	# t = time.time()
+	print(image_scanline_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
+	# print('%fs' % (time.time() - t))
