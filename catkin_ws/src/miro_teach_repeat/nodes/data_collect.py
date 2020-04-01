@@ -84,7 +84,7 @@ if __name__ == "__main__":
 	collector = miro_data_collect()
 	# hacky but seems we need to sleep for a bit before sending this command
 	time.sleep(1)
-	collector.publish_camera_command()
+	# collector.publish_camera_command()
 	collector.setup_subscribers()
 	
 	rospy.spin()

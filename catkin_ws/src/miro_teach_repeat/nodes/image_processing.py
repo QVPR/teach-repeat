@@ -295,13 +295,21 @@ def image_patch_rotation(image1, image2, min_overlap):
 if __name__ == "__main__":
 	np.random.seed(0)
 	# img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
-	img1 = np.float64(grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000074_full.png')))
+	img1 = grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000074_full.png'))
 	img2 = np.float64(grayscale(cv2.imread('/home/dominic/miro/data/J-lino2/000075_full.png')))
 
+	import image_geometry
+	import scipy.spatial.transform
+
+	cam = image_geometry.PinholeCameraModel()
+	cam.R = scipy.spatial.transform.Rotation.from_euler('Y',math.radians(10)).as_dcm()
+	warped = cam.rectifyImage(img1)
+	cv2.imshow('warped', warped)
+	cv2.waitKey()
 	
 	# import time
 	# t = time.time()
-	print(image_scanline_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
-	print(image_patch_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
+	# print(image_scanline_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
+	# print(image_patch_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
 	# print(xcorr_match_images(img1[40:80,140:-140], img2[40:80,140:-140]))
 	# print('%fs' % (time.time() - t))

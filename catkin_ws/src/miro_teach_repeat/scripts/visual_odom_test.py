@@ -55,8 +55,8 @@ def unwrapFromPi(x):
 		x[i+1:] += 2*math.pi
 	return x
 
-GAIN = -2.778 # gain per image width (pixels)
-DEBUG = False
+GAIN = -3.5 # gain per image width (pixels)
+DEBUG = True
 
 def integrate_visual_odometry(images, poses):
 	visual_data = np.zeros((len(images),3))
@@ -88,8 +88,8 @@ def integrate_visual_odometry(images, poses):
 
 #### #### ####
 base_dir = os.path.expanduser('~/miro/data/')
-dir_name = 'straight-lino'
-file_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(3)]
+dir_name = 'home'
+file_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(1)]
 
 poses_list = [read_pose_files(get_pose_files(file_dir)) for file_dir in file_dirs]
 images_list = [read_image_files(get_image_files(file_dir)) for file_dir in file_dirs]
@@ -101,10 +101,10 @@ colours = ['#00ff00', '#0000ff', '#ff0000']
 f1 = plt.figure(1)
 
 for i,(pose_data,visual_data,colour) in enumerate(zip(pose_data_list,visual_data_list,colours)):
-	plt.subplot(3,1,i+1)
+	plt.subplot(len(file_dirs),1,i+1)
 	plt.plot(unwrapFromPi(pose_data[2]), c=colour, alpha=0.5, label='odom')
 	plt.plot(unwrapFromPi(visual_data[:,2]), '--', c=colour, label='visual odom')
-plt.subplot(3,1,1)
+plt.subplot(len(file_dirs),1,1)
 plt.legend(loc='upper center', bbox_to_anchor=(0.5,1.5), ncol=2)
 
 f = plt.figure(2)
@@ -119,13 +119,13 @@ plt.axis('equal')
 plt.title('odom')
 # plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
 plt.subplot(1,2,2)
 plt.axis('equal')
 plt.title('visual odom')
 # plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+# plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
 
 
 plt.show()

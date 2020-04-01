@@ -166,6 +166,7 @@ catkin_install_python(PROGRAMS
 	nodes/image_matcher.py
 	nodes/image_processing.py
 	nodes/image_stamper.py
+	nodes/image_sync.py
 	nodes/joint_controller.py
 	nodes/localiser.py
 	nodes/odom_integrator.py

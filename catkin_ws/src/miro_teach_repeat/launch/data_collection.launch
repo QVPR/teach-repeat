@@ -20,8 +20,8 @@
 
 	<!-- Collect image data -->
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' ">
-		<rosparam param="distance_threshold">0.2</rosparam>
-		<rosparam param="angle_threshold_deg">30.0</rosparam>                             
+		<rosparam param="distance_threshold">0.1</rosparam>
+		<rosparam param="angle_threshold_deg">15.0</rosparam>                             
 		<rosparam param="camera_setup_command">frame=180w@15</rosparam>
 	</node>
 

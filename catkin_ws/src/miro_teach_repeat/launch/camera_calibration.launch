@@ -1,0 +1,25 @@
+<launch>
+	<!-- Hold head in place -->
+	<node pkg="miro_teach_repeat" type="joint_controller.py" name="miro_joint_controller">
+		<rosparam param="lift">30</rosparam>
+		<rosparam param="yaw">0</rosparam>
+		<rosparam param="pitch">8</rosparam>
+	</node>
+
+	<!-- Timestamp images for matching -->
+	<node pkg="miro_teach_repeat" type="image_stamper.py" name="miro_image_stamper" output="screen">
+		<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
+		<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
+	</node>
+
+	<!-- Uncompress images -->
+	<node pkg="image_transport" type="republish" name="left_republish" args="compressed in:=/miro/sensors/cam_stamped/left raw out:=/miro/sensors/cam_stamped/left/image"/>
+	<node pkg="image_transport" type="republish" name="right_republish" args="compressed in:=/miro/sensors/cam_stamped/right raw out:=/miro/sensors/cam_stamped/right/image"/>
+
+	<!-- Sync and timestamp images for matching -->
+	<node pkg="miro_teach_repeat" type="image_sync.py" name="miro_image_sync" output="screen" >
+		<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
+		<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
+	</node>
+
+</launch>

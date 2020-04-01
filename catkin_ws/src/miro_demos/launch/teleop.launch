@@ -2,7 +2,7 @@
 	<node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" name="miro_teleop" output="screen">
 		<remap from="/cmd_vel" to="/miro/teleop/cmd_vel" />
 		<rosparam param="speed">0.2</rosparam>
-		<rosparam param="turn">2.0</rosparam>
+		<rosparam param="turn">1.0</rosparam>
 	</node>
 	<node pkg="miro_demos" type="twist_stamper.py" name="miro_teleop_stamper" />
 </launch>
