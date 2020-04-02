@@ -170,6 +170,7 @@ catkin_install_python(PROGRAMS
 	nodes/joint_controller.py
 	nodes/localiser.py
 	nodes/odom_integrator.py
+	nodes/teleop_joy.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

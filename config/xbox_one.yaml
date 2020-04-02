@@ -1,0 +1,5 @@
+axis_linear: 1  # Left thumb stick vertical
+scale_linear: 0.2
+
+axis_angular: 2  # Right thumb stick horizontal
+scale_angular: 1.0
