@@ -7,13 +7,14 @@
 	</node>
 
 	<!-- Teleop to control Miro -->
-	<include file="$(find miro_demos)/launch/teleop.launch" />
+	<!-- <include file="$(find miro_demos)/launch/teleop.launch" /> -->
+	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch" />
 
 	<!-- Drive in a straight line -->
 	<!-- <node pkg="miro_teach_repeat" type="drive_straight_controller.py" name="miro_drive_straight" launch-prefix="bash -c 'sleep 5; $0 $@' "/> -->
 
 	<!-- Integrate odometry -->
-	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" />
+	<node pkg="miro_teach_repeat" type="odom_integrator.py" name="miro_odom_integrator" output="screen"/>
 
 	<!-- Timestamp images for matching -->
 	<node pkg="miro_teach_repeat" type="image_stamper.py" name="miro_image_stamper" />
@@ -22,7 +23,7 @@
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' ">
 		<rosparam param="distance_threshold">0.1</rosparam>
 		<rosparam param="angle_threshold_deg">15.0</rosparam>                             
-		<rosparam param="camera_setup_command">frame=180w@15</rosparam>
+		<!-- <rosparam param="camera_setup_command">frame=180w@15</rosparam> -->
 	</node>
 
 	<!-- Save Images and pose in a directory -->

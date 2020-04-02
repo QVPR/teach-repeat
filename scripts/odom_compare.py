@@ -34,7 +34,7 @@ def get_pose_x_y_theta(poses):
 
 #### #### ####
 base_dir = os.path.expanduser('~/miro/data/')
-dir_name = 'J-lino'
+dir_name = 'home'
 odom_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(3)]
 
 pose_files = [get_pose_files(dir) for dir in odom_dirs]
@@ -49,6 +49,6 @@ for pose_data_list,colour in zip(pose_data,colours):
 
 # plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
-plt.scatter([3.5,3.5,1.15], [0,-2,-0.8], s=100, c='#000000', marker='x')
+plt.scatter([7.2,7.2,4.8,1.2], [0,-1.8,-1.8,-1.8], s=100, c='#000000', marker='x')
 
 plt.show()

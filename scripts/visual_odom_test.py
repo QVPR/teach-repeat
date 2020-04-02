@@ -55,8 +55,8 @@ def unwrapFromPi(x):
 		x[i+1:] += 2*math.pi
 	return x
 
-GAIN = -3.5 # gain per image width (pixels)
-DEBUG = True
+GAIN = -3.0 # gain per image width (pixels)
+DEBUG = False
 
 def integrate_visual_odometry(images, poses):
 	visual_data = np.zeros((len(images),3))
@@ -65,8 +65,8 @@ def integrate_visual_odometry(images, poses):
 	visual_data[0][2] = poses[0].M.GetRPY()[2]
 
 	for i in range(1,len(visual_data)):
-		prev_img = image_processing.grayscale(images[i-1][40:80,140:-140])
-		current_img = image_processing.grayscale(images[i][40:80,140:-140])
+		prev_img = image_processing.grayscale(images[i-1][180:260,280:-280])
+		current_img = image_processing.grayscale(images[i][180:260,280:-280])
 		offset = image_processing.image_patch_rotation(prev_img, current_img, prev_img.shape[1]//2)[0]
 
 		if DEBUG:
