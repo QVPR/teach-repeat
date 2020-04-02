@@ -25,7 +25,7 @@ Development:
 			✔ Sync the camera images by approximately stamping them @started(20-03-25 09:34) @done(20-03-25 10:27) @lasted(53m10s)
 			✔ Use 50% blending for the image stitching @done(20-03-25 10:28)
 			✔ Use linear blending @started(20-03-25 10:45) @done(20-03-25 10:52) @lasted(7m16s)
-		☐ Calibrate the cameras to do proper stereo registration
+		☐ @WIP Calibrate the cameras to do proper stereo registration
 	
 	Localisation / Image Processing:
 		✔ Assume the robot is at the same place at startup 
@@ -35,12 +35,17 @@ Development:
 		✔ Implement normxcorr2 @done(20-03-30 18:37)
 		☐ Use pose estimates to get rough ground truth data to test image matching
 		✔ Use basic scanline matching to determine rotation from images @1h @started(20-03-31 08:22) @done(20-03-31 09:18) @lasted(56m42s)
+		☐ Implement a bio-inspired SLAM approach
+			☐ Get range / bearing measurements from AR tags
+			☐ Record data for offline processing (MATLAB)
+			☐ Port to python to run in real-time
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
+		✔ Use a joystick to teleop Miro for smoother movement @done(20-04-02 12:37)
 
 	ROS:
-		☐ Make a nicer ordering for starting nodes (wait until camera is set and joints in position)
+		☐ @low Make a nicer ordering for starting nodes (wait until camera is set and joints in position)
 
 Bugs: 
 	ROS:
@@ -50,6 +55,7 @@ Bugs:
 		☐ @low When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
 			Partly alleviated by using a controller to set the speeds based on integrated odometry - odometry drifts significantly though
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
+		☐ @high Due to network latency, offboard odom integration is dropping messages, so integration errors occur
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)
