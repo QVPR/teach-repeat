@@ -55,7 +55,7 @@ Bugs:
 		☐ @low When commanding Miro to drive straight, it tends to turn right. `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
 			Partly alleviated by using a controller to set the speeds based on integrated odometry - odometry drifts significantly though
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
-		☐ @high Due to network latency, offboard odom integration is dropping messages, so integration errors occur
+		✔ Due to network latency, offboard odom integration is dropping messages, so integration errors occur @1h @started(20-04-06 08:32) @done(20-04-06 09:23) @lasted(51m47s)
 		☐ @high The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
 
 	Localisation / Image Processing:
