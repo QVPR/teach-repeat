@@ -37,11 +37,10 @@ class miro_localiser:
 
 	def setup_publishers(self):	
 		self.pub_camera_settings = rospy.Publisher("/miro/control/command", String, queue_size=0)
-
-	def setup_subscribers(self):	
 		rospy.wait_for_service('/miro/match_image')
 		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
 
+	def setup_subscribers(self):	
 		# subscribe to the images from both cameras
 		self.sub_image_left = message_filters.Subscriber("/miro/sensors/caml_stamped/compressed", CompressedImage, queue_size=1)
 		self.sub_image_right = message_filters.Subscriber("/miro/sensors/camr_stamped/compressed", CompressedImage, queue_size=1)
