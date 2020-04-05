@@ -49,22 +49,24 @@ class miro_image_stamper:
 			with open(self.left_cal_file,'r') as f:
 				self.cam_left_calibration = yaml_to_camera_info(yaml.load(f.read()))
 		else:
-			rospy.loginfo('[Image Stamper] no calibration file for left camera specified. Assuming not calibrated')
-			self.cam_left_calibration = CameraInfo()
+			rospy.loginfo('[Image Stamper] no calibration file for left camera specified. Camera info will not be publised.')
+			self.cam_left_calibration = None
 		
 		if self.right_cal_file is not None:
 			with open(self.right_cal_file,'r') as f:
 				self.cam_right_calibration = yaml_to_camera_info(yaml.load(f.read()))
 		else:
-			rospy.loginfo('[Image Stamper] no calibration file for right camera specified. Assuming not calibrated')
-			self.cam_right_calibration = CameraInfo()
+			rospy.loginfo('[Image Stamper] no calibration file for right camera specified. Camera info will not be publised.')
+			self.cam_right_calibration = None
 		
 	def setup_publishers(self):
 		# publish stamped image
 		self.pub_image_left = rospy.Publisher("/miro/sensors/cam_stamped/left/compressed", CompressedImage, queue_size=0)
 		self.pub_image_right = rospy.Publisher("/miro/sensors/cam_stamped/right/compressed", CompressedImage, queue_size=0)
-		self.pub_info_left = rospy.Publisher("/miro/sensors/cam_stamped/left/camera_info", CameraInfo, queue_size=0)
-		self.pub_info_right = rospy.Publisher("/miro/sensors/cam_stamped/right/camera_info", CameraInfo, queue_size=0)
+		if self.cam_left_calibration is not None:
+			self.pub_info_left = rospy.Publisher("/miro/sensors/cam_stamped/left/camera_info", CameraInfo, queue_size=0)
+		if self.cam_right_calibration is not None:
+			self.pub_info_right = rospy.Publisher("/miro/sensors/cam_stamped/right/camera_info", CameraInfo, queue_size=0)
 
 	def setup_subscribers(self):
 		# subscribe to image
@@ -74,27 +76,28 @@ class miro_image_stamper:
 	def process_image_data_left(self, msg):
 		msg.header.stamp = rospy.Time.now()
 		msg.header.frame_id = "caml"
-		info_left = self.cam_left_calibration
-		info_left.header = msg.header
+		self.pub_image_left.publish(msg)
 
 		if len(msg.data) == 0:
 			rospy.logwarn("[Image Stamper] received empty compressed image - dropping message")
 			return
-		self.pub_image_left.publish(msg)
-		self.pub_info_left.publish(info_left)
+		if self.cam_left_calibration is not None:
+			info_left = self.cam_left_calibration
+			info_left.header = msg.header
+			self.pub_info_left.publish(info_left)
 
 	def process_image_data_right(self, msg):
 		msg.header.stamp = rospy.Time.now()
 		msg.header.frame_id = "camr"
-
-		info_right = self.cam_right_calibration
-		info_right.header = msg.header
+		self.pub_image_right.publish(msg)
 
 		if len(msg.data) == 0:
 			rospy.logwarn("[Image Stamper] received empty compressed image - dropping message")
 			return
-		self.pub_image_right.publish(msg)
-		self.pub_info_right.publish(info_right)
+		if self.cam_right_calibration is not None:
+			info_right = self.cam_right_calibration
+			info_right.header = msg.header
+			self.pub_info_right.publish(info_right)
 
 if __name__ == "__main__":
 
