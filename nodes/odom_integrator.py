@@ -1,11 +1,15 @@
 #!/usr/bin/python
 
+# Note: Should be run onboard Miro
+
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
+from std_srvs.srv import Trigger
 import tf_conversions
 
 import math
+import threading
 
 class miro_integrate_odom:
 
@@ -16,15 +20,24 @@ class miro_integrate_odom:
 	
 	def setup_parameters(self):
 		self.last_odom_time = None
-		self.odom_pose = Pose()
-		self.odom_pose.orientation.w = 1
-		self.dummy_theta = 0
+		self.reset_odom(Trigger())
+		self.mutex = threading.Lock()
 
 	def setup_publishers(self):
 		self.pub_odom = rospy.Publisher("/miro/odom_integrated", Odometry, queue_size=0)
 
 	def setup_subscribers(self):
 		self.sub_odom = rospy.Subscriber("/miro/sensors/odom", Odometry, self.process_odom_data, queue_size=10)
+		self.srv_reset_odom = rospy.Service("/miro/sensors/odom/reset", Trigger, self.reset_odom)
+
+	def reset_odom(self, srv):
+		self.mutex.acquire()
+		self.odom_pose = Pose()
+		self.odom_pose.orientation.w = 1
+		self.mutex.release()
+
+		srv.success = True
+		return srv
 
 	def process_odom_data(self, msg):
 		if self.last_odom_time is None:
@@ -32,14 +45,12 @@ class miro_integrate_odom:
 			return
 
 		delta_time = (msg.header.stamp - self.last_odom_time).to_sec()
-		# print('this time = ' + str(msg.header.stamp))
-		# print('last time = ' + str(self.last_odom_time))
-		# print('delta time = ' + str(delta_time) + ' -> ' + str(1/delta_time))
 		self.last_odom_time = msg.header.stamp
 
 		if delta_time > 0.03:
 			rospy.logwarn('[Odom integrator] - had a time difference of %f from the last odom message - might have dropped a message.' % delta_time)
 
+		self.mutex.acquire() # access self.odom_pose
 
 		# convert current pose and odometry to PyKDL format for calculations
 		pose_frame = tf_conversions.fromMsg(self.odom_pose)
@@ -48,22 +59,16 @@ class miro_integrate_odom:
 			tf_conversions.Vector(msg.twist.twist.angular.x ,msg.twist.twist.angular.y, msg.twist.twist.angular.z)
 		)
 
-		# print(str(math.degrees(pose_frame.M.GetRPY()[2])) + ' [' + str(delta_time) + ']')
-
 		pose_frame.Integrate(velocity, 1/delta_time)
-		# pose_frame.Integrate(velocity, 50.0) # Miro always scales by 1/50 Hz - not by real delta time
-		self.dummy_theta += round(msg.twist.twist.angular.z / 0.541171848774)
+		pose_message = tf_conversions.toMsg(pose_frame)
+		self.normalise_quaternion(pose_message.orientation)
 
-		# print('%f, (%f, %f)' % (self.dummy_theta, msg.twist.twist.angular.z, round(msg.twist.twist.angular.z / 0.541171848774)))
-
-		# print('delta t vs. 50 Hz: %f - %f' % (math.degrees(pose_frame.M.GetRPY()[2]),math.degrees(self.dummy_theta)))
-
-		self.odom_pose = tf_conversions.toMsg(pose_frame)
-		self.normalise_quaternion(self.odom_pose.orientation)
+		self.odom_pose = pose_message
+		self.mutex.release() # write self.odom_pose
 
 		odom_to_publish = msg
 		odom_to_publish.header.frame_id = "odom"
-		odom_to_publish.pose.pose = self.odom_pose
+		odom_to_publish.pose.pose = pose_message
 		self.pub_odom.publish(odom_to_publish)
 	
 	def normalise_quaternion(self, q):
