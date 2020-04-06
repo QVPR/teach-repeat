@@ -1,0 +1,18 @@
+<launch>
+	<!-- Timestamp images from the cameras -->
+	<node pkg="miro_onboard" type="image_stamper.py" name="miro_image_stamper">
+		<!-- <rosparam param="lift">30</rosparam>
+		<rosparam param="yaw">0</rosparam>
+		<rosparam param="pitch">8</rosparam>
+		<rosparam param="reset_odom">true</rosparam> -->
+	</node>
+
+	<!-- Control the kinematic joints -->
+	<node pkg="miro_onboard" type="joint_controller.py" name="miro_joint_controller" />
+
+	<!-- Integrate odometry -->
+	<node pkg="miro_onboard" type="odom_integrator.py" name="miro_odom_integrator" />
+
+	<!-- Read IP on touching nose -->
+	<node pkg="miro_onboard" type="ontouch_read_ip.py" name="miro_ontouch_read_ip" />
+</launch>
