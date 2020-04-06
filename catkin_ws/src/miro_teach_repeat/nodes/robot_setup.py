@@ -6,7 +6,7 @@ import math
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
 
-from miro_teach_repeat.srv import SetJointState
+from miro_onboard.srv import SetJointState
 
 class miro_robot_setup:
 
@@ -32,9 +32,9 @@ class miro_robot_setup:
 		rospy.wait_for_service('miro/control/kinematic_joints/fixed/disable')
 		rospy.wait_for_service('/miro/sensors/odom/reset')
 		self.set_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
-		self.enable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/enable', SetJointState, persistent=False)
-		self.disable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/disable', SetJointState, persistent=False)
-		self.reset_odom = rospy.Service('/miro/sensors/odom/reset', Trigger, persistent=False)
+		self.enable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
+		self.disable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
+		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
 	def setup_subscribers(self):
 		pass

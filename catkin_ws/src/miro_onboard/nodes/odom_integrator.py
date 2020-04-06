@@ -51,7 +51,7 @@ class miro_integrate_odom:
 		self.odom_pose.orientation.w = 1
 		self.mutex.release()
 
-		return True
+		return (True, "")
 
 	def process_odom_data(self, msg):
 		if self.last_odom_time is None:

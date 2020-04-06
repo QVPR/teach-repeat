@@ -57,6 +57,7 @@
 	<depend>cv_bridge</depend>
 	<depend>python-numpy</depend>
 	<depend>std_srvs</depend>
+  <depend>miro_onboard</depend>
 
   <build_depend>message_generation</build_depend>
   
