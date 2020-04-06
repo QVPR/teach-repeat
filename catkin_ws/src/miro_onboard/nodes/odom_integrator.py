@@ -39,7 +39,7 @@ class miro_integrate_odom:
 		self.reset_odom(Trigger())
 
 	def setup_publishers(self):
-		self.pub_odom = rospy.Publisher("/miro/odom_integrated", Odometry, queue_size=0)
+		self.pub_odom = rospy.Publisher("/miro/sensors/odom/integrated", Odometry, queue_size=0)
 
 	def setup_subscribers(self):
 		self.sub_odom = rospy.Subscriber("/miro/sensors/odom", Odometry, self.process_odom_data, queue_size=10)

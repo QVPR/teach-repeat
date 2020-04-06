@@ -7,8 +7,8 @@
 	</node>
 
 	<!-- Uncompress images -->
-	<node pkg="image_transport" type="republish" name="left_republish" args="compressed in:=/miro/sensors/cam_stamped/left raw out:=/miro/sensors/cam_stamped/left/image"/>
-	<node pkg="image_transport" type="republish" name="right_republish" args="compressed in:=/miro/sensors/cam_stamped/right raw out:=/miro/sensors/cam_stamped/right/image"/>
+	<node pkg="image_transport" type="republish" name="left_republish" args="compressed in:=/miro/sensors/cam/left raw out:=/miro/sensors/cam/left/image"/>
+	<node pkg="image_transport" type="republish" name="right_republish" args="compressed in:=/miro/sensors/cam/right raw out:=/miro/sensors/cam/right/image"/>
 
 	<!-- Sync and timestamp images for matching -->
 	<node pkg="miro_teach_repeat" type="image_sync.py" name="miro_image_sync" output="screen" >

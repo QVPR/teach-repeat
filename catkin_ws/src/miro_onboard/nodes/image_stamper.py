@@ -61,12 +61,12 @@ class miro_image_stamper:
 		
 	def setup_publishers(self):
 		# publish stamped image
-		self.pub_image_left = rospy.Publisher("/miro/sensors/cam_stamped/left/compressed", CompressedImage, queue_size=0)
-		self.pub_image_right = rospy.Publisher("/miro/sensors/cam_stamped/right/compressed", CompressedImage, queue_size=0)
+		self.pub_image_left = rospy.Publisher("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=0)
+		self.pub_image_right = rospy.Publisher("/miro/sensors/cam/right/compressed", CompressedImage, queue_size=0)
 		if self.cam_left_calibration is not None:
-			self.pub_info_left = rospy.Publisher("/miro/sensors/cam_stamped/left/camera_info", CameraInfo, queue_size=0)
+			self.pub_info_left = rospy.Publisher("/miro/sensors/cam/left/camera_info", CameraInfo, queue_size=0)
 		if self.cam_right_calibration is not None:
-			self.pub_info_right = rospy.Publisher("/miro/sensors/cam_stamped/right/camera_info", CameraInfo, queue_size=0)
+			self.pub_info_right = rospy.Publisher("/miro/sensors/cam/right/camera_info", CameraInfo, queue_size=0)
 
 	def setup_subscribers(self):
 		# subscribe to image
