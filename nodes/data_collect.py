@@ -37,7 +37,7 @@ class miro_data_collect:
 		self.pub_image_pose = rospy.Publisher("/miro/image_pose", ImageAndPose, queue_size=0)
 
 	def setup_subscribers(self):
-		self.sub_odom = rospy.Subscriber("/miro/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
+		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
 
 		# subscribe to the images from both cameras
 		self.sub_image_left = message_filters.Subscriber("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=1)
