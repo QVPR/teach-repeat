@@ -56,11 +56,14 @@
 	<depend>sensor_msgs</depend>
 	<depend>cv_bridge</depend>
 	<depend>python-numpy</depend>
+	<depend>std_srvs</depend>
 
   <build_depend>message_generation</build_depend>
   
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>miro_demos</exec_depend>
+  <exec_depend>tf_conversions</exec_depend>
+  <exec_depend>python-yaml</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

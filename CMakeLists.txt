@@ -12,6 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	nav_msgs
 	sensor_msgs
+	std_srvs
+	cv_bridge
+	tf_conversions
 )
 
 ## System dependencies are found with CMake's conventions
@@ -166,11 +169,9 @@ catkin_install_python(PROGRAMS
 	nodes/drive_straight_controller.py
 	nodes/image_matcher.py
 	nodes/image_processing.py
-	nodes/image_stamper.py
 	nodes/image_sync.py
-	nodes/joint_controller.py
 	nodes/localiser.py
-	nodes/odom_integrator.py
+	nodes/robot_setup.py
 	nodes/teleop_joy.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
