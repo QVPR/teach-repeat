@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-from enum import Enum
-
 import rospy
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
