@@ -4,12 +4,26 @@
 
 import rospy
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Quaternion
 from std_srvs.srv import Trigger
-import tf_conversions
+import tf.transformations
 
 import math
 import threading
+
+def normalise_quaternion(q):
+		norm = math.sqrt(sum(val**2 for val in [q.x,q.y,q.z,q.w]))
+		q.x /= norm
+		q.y /= norm
+		q.z /= norm
+		q.w /= norm
+		return q
+
+def quaternion_to_vector(q):
+	return [q.x,q.y,q.z,q.w]
+
+def vector_to_quaternion(v):
+	return Quaternion(*v)
 
 class miro_integrate_odom:
 
@@ -51,33 +65,28 @@ class miro_integrate_odom:
 			rospy.logwarn('[Odom integrator] - had a time difference of %f from the last odom message - might have dropped a message.' % delta_time)
 
 		self.mutex.acquire() # access self.odom_pose
+		pose = self.odom_pose
 
-		# convert current pose and odometry to PyKDL format for calculations
-		pose_frame = tf_conversions.fromMsg(self.odom_pose)
-		velocity = tf_conversions.Twist(
-			tf_conversions.Vector(msg.twist.twist.linear.x ,msg.twist.twist.linear.y, msg.twist.twist.linear.z),
-			tf_conversions.Vector(msg.twist.twist.angular.x ,msg.twist.twist.angular.y, msg.twist.twist.angular.z)
-		)
+		# manually integrate odom because tf_conversions isn't installed on Miro
+		dd = msg.twist.twist.linear.x * delta_time
+		dtheta = msg.twist.twist.angular.z * delta_time
 
-		pose_frame.Integrate(velocity, 1/delta_time)
-		pose_message = tf_conversions.toMsg(pose_frame)
-		self.normalise_quaternion(pose_message.orientation)
+		theta = tf.transformations.euler_from_quaternion(quaternion_to_vector(pose.orientation))[2]
+		dx = dd * math.cos(theta)
+		dy = dd * math.sin(theta)
 
-		self.odom_pose = pose_message
+		self.pose.position.x += dx
+		self.pose.position.y += dy
+		self.pose.orientation = vector_to_quaternion(tf.transformations.quaternion_from_euler(0,0,theta+dtheta))
+		self.normalise_quaternion(pose.orientation)
+
+		self.odom_pose = pose
 		self.mutex.release() # write self.odom_pose
 
 		odom_to_publish = msg
 		odom_to_publish.header.frame_id = "odom"
-		odom_to_publish.pose.pose = pose_message
+		odom_to_publish.pose.pose = pose
 		self.pub_odom.publish(odom_to_publish)
-	
-	def normalise_quaternion(self, q):
-		norm = math.sqrt(sum(val**2 for val in [q.x,q.y,q.z,q.w]))
-		q.x /= norm
-		q.y /= norm
-		q.z /= norm
-		q.w /= norm
-		return q
 
 if __name__ == "__main__":
 	rospy.init_node("miro_integrate_odom")
