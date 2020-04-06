@@ -34,8 +34,9 @@ class miro_integrate_odom:
 	
 	def setup_parameters(self):
 		self.last_odom_time = None
-		self.reset_odom(Trigger())
 		self.mutex = threading.Lock()
+
+		self.reset_odom(Trigger())
 
 	def setup_publishers(self):
 		self.pub_odom = rospy.Publisher("/miro/odom_integrated", Odometry, queue_size=0)
@@ -50,8 +51,7 @@ class miro_integrate_odom:
 		self.odom_pose.orientation.w = 1
 		self.mutex.release()
 
-		srv.success = True
-		return srv
+		return True
 
 	def process_odom_data(self, msg):
 		if self.last_odom_time is None:
@@ -75,10 +75,10 @@ class miro_integrate_odom:
 		dx = dd * math.cos(theta)
 		dy = dd * math.sin(theta)
 
-		self.pose.position.x += dx
-		self.pose.position.y += dy
-		self.pose.orientation = vector_to_quaternion(tf.transformations.quaternion_from_euler(0,0,theta+dtheta))
-		self.normalise_quaternion(pose.orientation)
+		pose.position.x += dx
+		pose.position.y += dy
+		pose.orientation = vector_to_quaternion(tf.transformations.quaternion_from_euler(0,0,theta+dtheta))
+		normalise_quaternion(pose.orientation)
 
 		self.odom_pose = pose
 		self.mutex.release() # write self.odom_pose

@@ -1,10 +1,8 @@
 <launch>
 	<!-- Timestamp images from the cameras -->
 	<node pkg="miro_onboard" type="image_stamper.py" name="miro_image_stamper">
-		<!-- <rosparam param="lift">30</rosparam>
-		<rosparam param="yaw">0</rosparam>
-		<rosparam param="pitch">8</rosparam>
-		<rosparam param="reset_odom">true</rosparam> -->
+		<!-- <rosparam param="calibration_file_left" subst_value="True">$(find miro_onboard)/calibration/left_360.yaml</rosparam>
+		<rosparam param="calibration_file_right" subst_value="True">$(find miro_onboard)/calibration/right_360.yaml</rosparam> -->
 	</node>
 
 	<!-- Control the kinematic joints -->

@@ -8,7 +8,7 @@ import math
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
 
-from miro_teach_repeat.srv import SetJointState
+from miro_onboard.srv import SetJointState
 
 class miro_joint_controller:
 
@@ -30,23 +30,20 @@ class miro_joint_controller:
 		self.srv_disable_set_joint_states = rospy.Service('miro/control/kinematic_joints/fixed/disable', Trigger, self.disable_set_joint_state)
 
 	def set_joint_state(self, srv):
-		self.joint_states = srv
-		srv.success = True
-		return srv
+		self.joint_states = srv.jointStates
+		return (True, "")
 	
 	def enable_set_joint_state(self, srv):
 		if self.joint_states is not None:
 			self.enabled = True
-			srv.success = True
-			return srv
+			return (True, "")
 		else:
-			srv.success = False
-			srv.message = "No desired joint state set: call miro/control/kinematic_joints/set_fixed_state service first."
+			error_message = "No desired joint state set: call miro/control/kinematic_joints/set_fixed_state service first."
+			return (False, error_message)
 
 	def disable_set_joint_state(self, srv):
 		self.enabled = False
-		srv.success = True
-		return srv
+		return (True, "")
 
 	def publish_joint_state(self):
 		if self.enabled:
