@@ -64,8 +64,8 @@ class miro_image_sync:
 
 	def setup_subscribers(self):
 		# subscribe to the images from both cameras
-		self.sub_image_left = message_filters.Subscriber("/miro/sensors/cam_stamped/left/image", Image, queue_size=1)
-		self.sub_image_right = message_filters.Subscriber("/miro/sensors/cam_stamped/right/image", Image, queue_size=1)
+		self.sub_image_left = message_filters.Subscriber("/miro/sensors/cam/left/image", Image, queue_size=1)
+		self.sub_image_right = message_filters.Subscriber("/miro/sensors/cam/right/image", Image, queue_size=1)
 		self.sub_images = message_filters.ApproximateTimeSynchronizer((self.sub_image_left, self.sub_image_right), 5, 1.0/30.0)
 		self.sub_images.registerCallback(self.process_image_data)
 		self.set_camera_info_left = rospy.Service("/miro/sensors/cam_sync/left/set_camera_info", SetCameraInfo, self.set_camera_info_left)

@@ -22,7 +22,7 @@ class miro_drive_straight_controller:
 		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=0)
 
 	def setup_subscribers(self):
-		self.sub_odom = rospy.Subscriber("/miro/odom_integrated", Odometry, self.process_odom_data, queue_size=1)
+		self.sub_odom = rospy.Subscriber("/miro/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
 
 	def process_odom_data(self, msg):
 		current_frame = tf_conversions.fromMsg(msg.pose.pose)
