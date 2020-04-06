@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>miro_teach_repeat</name>
+  <name>miro_onboard</name>
   <version>0.0.0</version>
-  <description>Teach and repeat implementation for the Miro robot</description>
+  <description>ROS nodes to run onboard the Miro robot</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/miro_teach_repeat</url> -->
+  <!-- <url type="website">http://wiki.ros.org/miro_onboard</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -55,13 +55,12 @@
 	<depend>nav_msgs</depend>
 	<depend>sensor_msgs</depend>
 	<depend>cv_bridge</depend>
-	<depend>python-numpy</depend>
+	<depend>std_msgs</depend>
 	<depend>std_srvs</depend>
 
   <build_depend>message_generation</build_depend>
   
   <exec_depend>message_runtime</exec_depend>
-  <exec_depend>miro_demos</exec_depend>
   <exec_depend>tf_conversions</exec_depend>
   <exec_depend>python-yaml</exec_depend>
 

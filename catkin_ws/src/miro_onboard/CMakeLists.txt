@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(miro_teach_repeat)
+project(miro_onboard)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	nav_msgs
 	sensor_msgs
+	std_msgs
 	std_srvs
 	cv_bridge
 	tf_conversions
@@ -51,15 +52,13 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-	FILES
-	ImageAndPose.msg
-)
+# add_message_files(
+# 	FILES
+# )
 
 ## Generate services in the 'srv' folder
 add_service_files(
 	FILES
-	ImageMatch.srv
 	SetJointState.srv
 )
 
@@ -74,7 +73,6 @@ add_service_files(
 generate_messages(
 	DEPENDENCIES
 	sensor_msgs
-	geometry_msgs
 )
 
 ################################################
@@ -108,7 +106,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 # 	INCLUDE_DIRS include
-# 	LIBRARIES miro_teach_repeat
+# 	LIBRARIES miro_onboard
 	CATKIN_DEPENDS message_runtime
 # 	DEPENDS system_lib
 )
@@ -126,7 +124,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/miro_teach_repeat.cpp
+#   src/${PROJECT_NAME}/miro_onboard.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -137,7 +135,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/miro_teach_repeat_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/miro_onboard_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -164,15 +162,9 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-	nodes/data_collect.py
-	nodes/data_save.py
-	nodes/drive_straight_controller.py
-	nodes/image_matcher.py
-	nodes/image_processing.py
-	nodes/image_sync.py
-	nodes/localiser.py
-	nodes/robot_setup.py
-	nodes/teleop_joy.py
+	nodes/image_stamper.py
+	nodes/joint_controller.py
+	nodes/odom_integrator.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -209,7 +201,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_miro_teach_repeat.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_miro_onboard.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
