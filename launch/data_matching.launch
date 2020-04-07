@@ -7,25 +7,33 @@
 		<rosparam param="reset_odom">true</rosparam>
 	</node>
 
-	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
-		<rosparam param="lift">30</rosparam>
-		<rosparam param="yaw">0</rosparam>
-		<rosparam param="pitch">8</rosparam>
+	<!-- Load image and pose files for matching -->
+	<!-- <node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen">
+		<rosparam param="save_dir">~/miro/data/latest</rosparam>
+		<rosparam param="image_resize_width">115</rosparam>
+		<rosparam param="image_resize_height">44</rosparam>
+	</node> -->
+
+	<!-- Follow the previous poses -->
+	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
+		<rosparam param="save_dir">~/miro/data/follow</rosparam>
 	</node>
 
 	<!-- Teleop to control Miro -->
-	<include file="$(find miro_demos)/launch/teleop.launch" />
+	<!-- <include file="$(find miro_demos)/launch/teleop.launch" /> -->
+
+	<!-- Drive to goal pose -->
+	<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen"/>
 
 	<!-- Localise using the images -->
-	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
+	<!-- <node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
 		<rosparam param="camera_setup_command">frame=180w@15</rosparam>
 		<rosparam param="image_resize_width">115</rosparam>
 		<rosparam param="image_resize_height">44</rosparam>
-	</node>
+	</node> -->
 
 	<!-- Show image matching -->
-	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
+	<!-- <node pkg="image_view" type="image_view" name="image_match_debug_view" >
 		<remap from="image" to="/miro/match_image_debug" />
-	</node>
+	</node> -->
 </launch>

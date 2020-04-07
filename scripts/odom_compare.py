@@ -50,5 +50,6 @@ for pose_data_list,colour in zip(pose_data,colours):
 # plt.scatter([3.5], [0], s=100, c='#000000', marker='x')
 # plt.scatter([3.5,3.5], [0,-2], s=100, c='#000000', marker='x')
 plt.scatter([7.2,7.2,4.8,1.2], [0,-1.8,-1.8,-1.8], s=100, c='#000000', marker='x')
+# plt.scatter([3.6], [0], s=100, c='#000000', marker='x')
 
 plt.show()

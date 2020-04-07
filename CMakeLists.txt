@@ -166,10 +166,12 @@ catkin_install_python(PROGRAMS
 	nodes/data_collect.py
 	nodes/data_save.py
 	nodes/drive_straight_controller.py
+	nodes/drive_to_pose_controller.py
 	nodes/image_matcher.py
 	nodes/image_processing.py
 	nodes/image_sync.py
 	nodes/localiser.py
+	nodes/odom_follower.py
 	nodes/robot_setup.py
 	nodes/teleop_joy.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
