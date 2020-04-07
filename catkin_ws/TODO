@@ -56,7 +56,7 @@ Bugs:
 			Partly alleviated by using a controller to set the speeds based on integrated odometry - odometry drifts significantly though
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
 		✔ Due to network latency, offboard odom integration is dropping messages, so integration errors occur @1h @started(20-04-06 08:32) @done(20-04-06 09:23) @lasted(51m47s)
-		☐ @high The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
+		☐ @high @WIP The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)

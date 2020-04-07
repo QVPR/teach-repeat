@@ -59,10 +59,17 @@ class miro_integrate_odom:
 			return
 
 		delta_time = (msg.header.stamp - self.last_odom_time).to_sec()
-		self.last_odom_time = msg.header.stamp
 
 		if delta_time > 0.03:
 			rospy.logwarn('[Odom integrator] - had a time difference of %f from the last odom message - might have dropped a message.' % delta_time)
+			with open('/tmp/miro2/log/odom_integrator','w+') as logfile:
+				logfile.write("last odom header:\n")
+				logfile.write(str(self.last_odom_time) + '\n')
+				logfile.write("current odom header:\n")
+				logfile.write(str(msg.header.stamp) + '\n')
+				logfile.write('-------\n')
+		self.last_odom_time = msg.header.stamp
+		delta_time = 0.02 # Hardcode this until we can stop the timestamp from randomly overflowing...
 
 		self.mutex.acquire() # access self.odom_pose
 		pose = self.odom_pose
