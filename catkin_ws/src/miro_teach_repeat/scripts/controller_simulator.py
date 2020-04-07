@@ -18,7 +18,7 @@ gain_beta = -3.0
 
 targets = np.array([
 	[2.4, -1.8, -math.pi/2],
-	[3.0, -1.8, math.pi/2],
+	[3.6, -1.8, math.pi/2],
 	[2.4, 0, math.pi]
 ])
 target_index = 0
