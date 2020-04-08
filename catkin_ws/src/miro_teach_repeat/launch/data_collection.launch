@@ -9,21 +9,21 @@
 
 	<!-- Teleop to control Miro -->
 	<!-- <include file="$(find miro_demos)/launch/teleop.launch" /> -->
-	<!-- <include file="$(find miro_teach_repeat)/launch/teleop_joy.launch" /> -->
+	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch" />
 
 
 	<!-- Follow the previous poses -->
-	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
+	<!-- <node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
 		<rosparam param="save_dir">~/miro/data/follow2</rosparam>
-	</node>
+	</node> -->
 	<!-- Drive in a straight line -->
 	<!-- <node pkg="miro_teach_repeat" type="drive_straight_controller.py" name="miro_drive_straight" launch-prefix="bash -c 'sleep 5; $0 $@' "/> -->
-	<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose"/>
+	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose"/> -->
 
 	<!-- Collect image data -->
 	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' ">
 		<rosparam param="distance_threshold">0.2</rosparam>
-		<rosparam param="angle_threshold_deg">15.0</rosparam>                             
+		<rosparam param="angle_threshold_deg">15.0</rosparam>                           
 		<!-- <rosparam param="camera_setup_command">frame=180w@15</rosparam> -->
 	</node>
 
