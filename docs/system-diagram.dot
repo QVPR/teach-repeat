@@ -1,0 +1,114 @@
+digraph system_diagram {
+	graph [
+		rankdir = "LR"
+	];
+	node [
+		fontsize = "16"
+		shape = "Mrecord"
+	];
+	edge [
+	];
+
+	// -- Odom --
+	// Nodes
+	"odom";
+	"integrate";
+	"odom diff"[
+		label = "odom difference threshold | d = 0.2 m OR &theta; = 15 deg"
+	];
+	"database";
+	// Edges
+	"odom" -> "integrate" [
+		label = "test"
+	];
+	"integrate" -> "odom diff"[
+		color="orange";
+	]
+	"odom diff" -> "database"[
+		label="pose";
+		color="orange";
+	];
+	// -- Img --
+	// Nodes
+	"imgL"[
+		label = "imgL | (640x360)"
+	];
+	"imgR"[
+		label = "imgR | (640x360)"
+	];
+	"img blend"[
+		label = "image blend | linear alpha map"
+	];
+	"resize"[
+		label = "resize | (115x44)"
+	]
+	"patch norm"[
+		label = "patch normalise | (9x9)"
+	]
+	// Edges
+	"imgL" -> "img blend";
+	"imgR" -> "img blend";
+	"img blend" -> "resize"[
+		label="(925x360)"
+	];
+	"resize" -> "patch norm";
+	"patch norm" -> "database"[
+		color="orange";
+		label="image";
+	]
+	// -- Query --
+	// Nodes
+	"query"[
+		label = "query | all images"
+	]
+	"matcher"[
+		label = "image matching | normxcorr2\npad = temp.width/2 = 22\nrange:(-pad to +pad) horiz."
+		// style="wedged"
+		// fillcolor="yellow;0.25:blue"
+		// gradientangle="270"
+	]
+	"pose offset"[
+		label="calc pose offset | &theta; offset = K * image offset"
+	]
+	"goal pose"[
+		label="calc goal pose | goal = (next image pose - curr image pose) + odom + pose offset"
+	]
+	"goto goal"[
+		label="navigate to goal | v = K * &rho;\n&omega; = K*&alpha; + K*&beta;"
+	]
+	// Edges
+	"database" -> "query"[
+		color="blue";
+	]
+	"query" -> "matcher"[
+		label="ref.";
+		color="blue";
+	]
+	"patch norm" -> "matcher"[
+		color="blue";
+		label="temp.";
+	]
+	"matcher" -> "pose offset"[
+		label="image offset";
+		color="blue";
+	]
+	"pose offset" -> "goal pose"[
+		label="pose offset";
+		color="blue";
+	]
+	"matcher" -> "goal pose"[
+		label="match image pose";
+		color="blue";
+	]
+	"matcher" -> "goal pose"[
+		label="next image pose";
+		color="blue";
+	]
+	"integrate" -> "goal pose"[
+		color="blue";
+		label="odom";
+	]
+	"goal pose" -> "goto goal"[
+		color="blue";
+	]
+}
