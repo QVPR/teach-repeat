@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	nav_msgs
 	sensor_msgs
+	std_msgs
 	std_srvs
 	cv_bridge
 	tf_conversions
@@ -73,7 +74,7 @@ add_service_files(
 generate_messages(
 	DEPENDENCIES
 	sensor_msgs
-	geometry_msgs
+	std_msgs
 )
 
 ################################################
