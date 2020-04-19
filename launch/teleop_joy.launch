@@ -1,4 +1,7 @@
 <launch>
+	<arg name="speed_linear" default="0.2" />
+	<arg name="speed_angular" default="1.0" />
+
 	<!-- Teleop to control Miro -->
 	<node pkg="joy" type="joy_node" name="joy">
 		<rosparam param="joy">/dev/input/js0</rosparam>
@@ -8,5 +11,7 @@
 	<!-- Collect image data -->
 	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="miro_teleop_joy">
 		<rosparam command="load" file="$(find miro_teach_repeat)/config/xbox_one.yaml" />
+		<rosparam param="scale_linear" subst_value="true">$(arg speed_linear)</rosparam>
+		<rosparam param="scale_angular" subst_value="true">$(arg speed_angular)</rosparam>
 	</node>
 </launch>
