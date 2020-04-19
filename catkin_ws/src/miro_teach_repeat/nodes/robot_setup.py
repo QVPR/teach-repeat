@@ -5,6 +5,7 @@ import random
 import math
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
+from std_msgs.msg import UInt32
 
 from miro_onboard.srv import SetJointState
 
@@ -25,6 +26,7 @@ class miro_robot_setup:
 		self.joint_states.position = [0.0, self.lift, self.yaw, self.pitch]
 
 		self.should_reset_odom = rospy.get_param('~reset_odom', False)
+		self.should_disable_cliff_sensors = rospy.get_param('~disable_cliff_sensors', False)
 
 	def setup_publishers(self):
 		rospy.wait_for_service('miro/control/kinematic_joints/set_fixed_state')
@@ -36,6 +38,8 @@ class miro_robot_setup:
 		self.disable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
 		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
+		self.pub_flags = rospy.Publisher('miro/control/flags', UInt32, queue_size=0)
+
 	def setup_subscribers(self):
 		pass
 
@@ -44,9 +48,13 @@ class miro_robot_setup:
 		self.enable_fixed_state()
 		if self.should_reset_odom:
 			self.reset_odom()
+		if self.should_disable_cliff_sensors:
+			# flag to disable cliff reflex, from miro constants
+			self.pub_flags.publish(UInt32(data = 1 << 21))
 
 	def stop(self):
 		self.disable_fixed_state()
+		self.pub_flags.publish(UInt32(data = 0)) # reenable cliff reflex
 
 if __name__ == "__main__":
 	rospy.init_node("miro_robot_setup")

@@ -5,6 +5,7 @@
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>
 		<rosparam param="reset_odom">true</rosparam>
+		<rosparam param="disable_cliff_sensors">true</rosparam>
 	</node>
 
 	<!-- Load image and pose files for matching -->

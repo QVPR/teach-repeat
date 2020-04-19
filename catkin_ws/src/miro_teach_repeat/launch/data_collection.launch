@@ -5,6 +5,7 @@
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>
 		<rosparam param="reset_odom">true</rosparam>
+		<rosparam param="disable_cliff_sensors">true</rosparam>
 	</node>
 
 	<!-- Teleop to control Miro -->
@@ -14,17 +15,16 @@
 
 	<!-- Follow the previous poses -->
 	<!-- <node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
-		<rosparam param="save_dir">~/miro/data/follow2</rosparam>
+		<rosparam param="save_dir">~/miro/data/follow11</rosparam>
 	</node> -->
 	<!-- Drive in a straight line -->
 	<!-- <node pkg="miro_teach_repeat" type="drive_straight_controller.py" name="miro_drive_straight" launch-prefix="bash -c 'sleep 5; $0 $@' "/> -->
-	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose"/> -->
+	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen" /> -->
 
 	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' ">
+	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' " output="screen">
 		<rosparam param="distance_threshold">0.2</rosparam>
 		<rosparam param="angle_threshold_deg">15.0</rosparam>                           
-		<!-- <rosparam param="camera_setup_command">frame=180w@15</rosparam> -->
 	</node>
 
 	<!-- Save Images and pose in a directory -->
