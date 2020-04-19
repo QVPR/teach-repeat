@@ -34,8 +34,8 @@ def get_pose_x_y_theta(poses):
 
 #### #### ####
 base_dir = os.path.expanduser('~/miro/data/')
-dir_name = 'home2'
-odom_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(3)]
+dir_name = 'follow'
+odom_dirs = [base_dir + dir_name + str(i+1) + '/' for i in range(10,11)]
 
 pose_files = [get_pose_files(dir) for dir in odom_dirs]
 poses = [read_pose_files(p) for p in pose_files]
