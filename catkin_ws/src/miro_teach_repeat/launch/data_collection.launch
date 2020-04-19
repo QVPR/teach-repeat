@@ -9,8 +9,16 @@
 	</node>
 
 	<!-- Teleop to control Miro -->
-	<!-- <include file="$(find miro_demos)/launch/teleop.launch" /> -->
-	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch" />
+	<arg name="speed_lin" value="0.2" />
+	<arg name="speed_ang" value="0.5" />
+	<!-- <include file="$(find miro_demos)/launch/teleop.launch">
+		<arg name="speed_linear" value="$(arg speed_lin)" />
+		<arg name="speed_angular" value="$(arg speed_ang)" />
+	</include> -->
+	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
+		<arg name="speed_linear" value="$(arg speed_lin)" />
+		<arg name="speed_angular" value="$(arg speed_ang)" />
+	</include>
 
 
 	<!-- Follow the previous poses -->
