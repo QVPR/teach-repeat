@@ -16,8 +16,6 @@ import image_processing
 from miro_teach_repeat.msg import ImageAndPose
 from miro_teach_repeat.srv import ImageMatch
 
-SEARCH_SIZE = 3
-
 class miro_odom_follower:
 
 	def __init__(self):		
@@ -80,5 +78,6 @@ class miro_odom_follower:
 if __name__ == "__main__":
 	rospy.init_node("miro_odom_follower")
 	follower = miro_odom_follower()
+	time.sleep(1) # seemed to solve issue with goal being published before listener ready
 	follower.publish_goal(follower.poses[0])
 	rospy.spin()

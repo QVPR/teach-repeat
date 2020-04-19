@@ -157,8 +157,6 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 	return offset-template_start, error
 
 def xcorr_match_images(image, template_image):
-	image = image.copy()
-	template_image = template_image.copy()
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	corr = normxcorr2(image, template_image, mode='valid')
 	offset = np.argmax(corr)
@@ -205,6 +203,8 @@ def stitch_stereo_image(image_left, image_right):
 	return stitched_image
 
 def normxcorr2(image, template, mode="full"):
+	image = image.copy()
+	template = template.copy()
 	image_min = image.min()
 	if image_min < 0:
 		image -= image_min

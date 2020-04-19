@@ -51,6 +51,9 @@ class miro_data_save:
 		message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 		image_as_text = pickle.dumps(normalised_image)
 
+
+		cv2.imwrite(self.save_dir+id+'_left.png', np.uint8(image_processing.compressed_msg_to_image(msg.image_left)))
+		cv2.imwrite(self.save_dir+id+'_right.png', np.uint8(image_processing.compressed_msg_to_image(msg.image_right)))
 		cv2.imwrite(self.save_dir+id+'_full.png', np.uint8(image))
 		cv2.imwrite(self.save_dir+id+'_thumbnail.png', np.uint8(255.0 * (1 + normalised_image) / 2.0))
 		with open(self.save_dir+id+'_pose.txt', 'w') as pose_file:
