@@ -33,7 +33,7 @@ class miro_data_save:
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
 
-		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
+		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 

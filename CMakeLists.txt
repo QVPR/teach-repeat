@@ -61,6 +61,7 @@ add_message_files(
 add_service_files(
 	FILES
 	ImageMatch.srv
+	PoseOffset.srv
 )
 
 ## Generate actions in the 'action' folder

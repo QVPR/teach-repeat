@@ -14,7 +14,7 @@ import tf_conversions
 
 import image_processing
 from miro_teach_repeat.msg import ImageAndPose
-from miro_teach_repeat.srv import ImageMatch
+from miro_teach_repeat.srv import PoseOffset
 
 class miro_odom_follower:
 
@@ -24,7 +24,7 @@ class miro_odom_follower:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
-		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
+		self.save_dir = os.path.expanduser(rospy.get_param('miro_data_save_dir', '~/miro/data'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 
@@ -32,10 +32,17 @@ class miro_odom_follower:
 		pose_files.sort()
 
 		self.poses = self.load_poses(pose_files)
-		self.current_goal = 0
+		self.goal_index = 0
+		self.goal = self.poses[self.goal_index]
+
+		self.localise = rospy.get_param('~localise', False)
 
 	def setup_publishers(self):
 		self.goal_pub = rospy.Publisher('/miro/control/goal', PoseStamped, queue_size=0)
+
+		if self.localise:
+			rospy.wait_for_service('/miro/get_image_pose_offset')
+			self.get_image_pose_offset = rospy.ServiceProxy('/miro/get_image_pose_offset', PoseOffset, persistent=True)
 
 	def setup_subscribers(self):
 		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
@@ -49,23 +56,35 @@ class miro_odom_follower:
 		return data
 
 	def process_odom_data(self, msg):
-		current_frame = tf_conversions.fromMsg(msg.pose.pose)
-		goal_frame = tf_conversions.fromMsg(self.poses[self.current_goal])
+		current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
+		current_goal_frame_odom = tf_conversions.fromMsg(self.current_goal)
+		old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
-		delta_frame = current_frame.Inverse() * goal_frame
+		delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
 		if delta_frame.p.Norm() < 0.10:
-			if self.current_goal+1 < len(self.poses):
-				self.current_goal += 1
-				if self.current_goal+1 == len(self.poses):
-					self.publish_goal(self.poses[self.current_goal], 0.0)
-				else:
-					self.publish_goal(self.poses[self.current_goal])
+			self.current_goal_index += 1
+			if self.current_goal_index == len(self.poses):
+				self.goal_index = 0
+
+			if self.localise:
+				image_theta_offset = self.get_image_pose_offset()
+				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
+
+				# old target -> new target in frame of old target (x = forwards)
+				goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
+				# rotate to odom frame (x = positive odom) [same frame as current_goal]
+				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
+				# rotate the goal offset by the rotational correction
+				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
+				# add the corrected offset to the current goal
+				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
+
+				self.publish_goal(tf_conversions.toMsg(new_goal_odom), 0.1)
 			else:
-				self.current_goal = 0
-				self.publish_goal(self.poses[self.current_goal])
+				self.publish_goal(self.poses[self.goal_index], 0.1)
 	
-	def publish_goal(self, pose, lookahead_distance=0.2):
+	def publish_goal(self, pose, lookahead_distance=0.0):
 		goal = PoseStamped()
 		goal.header.stamp = rospy.Time.now()
 		goal.header.frame_id = "odom"

@@ -1,4 +1,9 @@
 <launch>
+	<!-- Global params -->
+	<rosparam param="miro_data_save_dir">~/miro/data/follow11</rosparam>
+	<rosparam param="image_resize_width">115</rosparam>
+	<rosparam param="image_resize_height">44</rosparam>
+
 	<!-- Hold head in place and reset odometry -->
 	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
 		<rosparam param="lift">30</rosparam>
@@ -20,13 +25,8 @@
 		<arg name="speed_angular" value="$(arg speed_ang)" />
 	</include>
 
-
 	<!-- Follow the previous poses -->
-	<!-- <node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
-		<rosparam param="save_dir">~/miro/data/follow11</rosparam>
-	</node> -->
-	<!-- Drive in a straight line -->
-	<!-- <node pkg="miro_teach_repeat" type="drive_straight_controller.py" name="miro_drive_straight" launch-prefix="bash -c 'sleep 5; $0 $@' "/> -->
+	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen" />
 	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen" /> -->
 
 	<!-- Collect image data -->
@@ -39,7 +39,5 @@
 	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen" launch-prefix="bash -c 'sleep 2; $0 $@' ">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
-		<rosparam param="image_resize_width">115</rosparam>
-		<rosparam param="image_resize_height">44</rosparam>
 	</node>
 </launch>
