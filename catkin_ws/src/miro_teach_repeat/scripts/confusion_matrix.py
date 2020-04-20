@@ -18,8 +18,8 @@ def read_file(filename):
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/follow11/')
-dir2 = os.path.expanduser('~/miro/data/follow12/')
+dir1 = os.path.expanduser('~/miro/data/follow20/')
+dir2 = os.path.expanduser('~/miro/data/follow21/')
 
 image_files1 = [dir1+f for f in os.listdir(dir1) if f[-10:] == '_image.pkl']
 image_files1.sort()

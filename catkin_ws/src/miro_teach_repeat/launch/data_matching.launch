@@ -1,6 +1,6 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_save_dir">~/miro/data/follow11</rosparam>
+	<rosparam param="miro_data_save_dir">~/miro/data/follow20</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 
@@ -30,7 +30,7 @@
 	</node>
 
 	<!-- Show image matching -->
-	<!-- <node pkg="image_view" type="image_view" name="image_match_debug_view" >
+	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
 		<remap from="image" to="/miro/match_image_debug" />
-	</node> -->
+	</node>
 </launch>

@@ -6,6 +6,7 @@ import cv2
 import os
 import pickle
 from sensor_msgs.msg import Image
+from std_msgs.msg import Int32
 
 import image_processing
 from miro_teach_repeat.srv import ImageMatch
@@ -76,7 +77,7 @@ class miro_image_matcher:
 		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
 
 		# self.current_position = best_index + start_search_range
-		return offset
+		return Int32(data=offset)
 
 
 if __name__ == "__main__":

@@ -57,18 +57,19 @@ class miro_odom_follower:
 
 	def process_odom_data(self, msg):
 		current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
-		current_goal_frame_odom = tf_conversions.fromMsg(self.current_goal)
+		current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
 		old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
 		delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
 		if delta_frame.p.Norm() < 0.10:
-			self.current_goal_index += 1
-			if self.current_goal_index == len(self.poses):
-				self.goal_index = 0
+			self.goal_index += 1
+			if self.goal_index == len(self.poses):
+				self.goal_index = len(self.poses)-1
+				return
 
 			if self.localise:
-				image_theta_offset = self.get_image_pose_offset()
+				image_theta_offset = self.get_image_pose_offset().poseThetaOffset.data
 				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
 				# old target -> new target in frame of old target (x = forwards)
@@ -80,9 +81,11 @@ class miro_odom_follower:
 				# add the corrected offset to the current goal
 				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
-				self.publish_goal(tf_conversions.toMsg(new_goal_odom), 0.1)
+				self.goal = tf_conversions.toMsg(new_goal_odom)
+				self.publish_goal(self.goal, 0.1)
 			else:
-				self.publish_goal(self.poses[self.goal_index], 0.1)
+				self.goal = self.poses[self.goal_index]
+				self.publish_goal(self.goal, 0.1)
 	
 	def publish_goal(self, pose, lookahead_distance=0.0):
 		goal = PoseStamped()
