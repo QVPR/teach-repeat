@@ -37,6 +37,12 @@ def get_pose_x_y_theta(poses):
 def rotation_matrix(rad):
 	return np.array(((math.cos(rad),-math.sin(rad)),(math.sin(rad),math.cos(rad))));
 
+def np_to_frame(pose_tuple):
+	return tf_conversions.Frame(tf_conversions.Rotation.RotZ(pose_tuple[2]),tf_conversions.Vector(pose_tuple[0],pose_tuple[1],0))
+
+def frame_to_np(pose_frame):
+	return np.array((pose_frame.p.x(), pose_frame.p.y(), pose_frame.M.GetRPY()[2]))
+
 MAX_V = 0.4
 MAX_OMEGA = 2.439
 dt = 0.02
@@ -129,31 +135,26 @@ for i in range(N):
 		target_index += 1
 		if target_index == len(targets):
 			target_index = 0
-		current_target = target
-		current_target_gt = targets[target_index-1]
-		new_target_gt = targets[target_index]
+
+		current_target = np_to_frame(target)
+		current_target_gt = np_to_frame(targets[target_index-1])
+		new_target_gt = np_to_frame(targets[target_index])
 		
-		target_offset = (new_target_gt - current_target_gt) # world frame
-		# rotate into the current target gt frame (x = forwards)
-		target_offset[0:2] = np.matmul(rotation_matrix(-current_target_gt[2]), target_offset[0:2]) # current target gt frame
-		# rotate into the odom frame (frame of the current target) to be added on
-		target_offset[0:2] = np.matmul(rotation_matrix(current_target[2]), target_offset[0:2])
+		# current_target_gt -> new_target_gt in current_target_gt frame (x = forwards)
+		target_offset = current_target_gt.Inverse() * new_target_gt 
+		# transform to odom frame (x = positive odom) [same frame as current_target]
+		target_offset.p = tf_conversions.Rotation.RotZ(current_target.M.GetRPY()[2]) * target_offset.p
 
-		gt_pose = np.array((ground_truth_frame.p.x(),ground_truth_frame.p.y(),gt_theta))
-		gt_target_offset = gt_pose - current_target_gt
-		# rotate into the target frame (y = horizontal distance)
-		gt_target_offset[0:2] = np.matmul(rotation_matrix(-current_target_gt[2]), gt_target_offset[0:2])
-		gt_target_offset[2] = wrapToPi(gt_target_offset[2])
+		# get the offset from the current target (simulates image offset)
+		gt_target_offset = current_target_gt.Inverse() * ground_truth_frame
 		# 1 deg offset = 0.65 px offset; 1 m offset = 15 px offset
-		combined_offset = 0.65 * math.degrees(gt_target_offset[2]) + 15*gt_target_offset[1]
+		combined_offset = 0.65 * math.degrees(gt_target_offset.M.GetRPY()[2]) + 15*gt_target_offset.p.y()
 
-		# rotate the target offset by the rotational correction
 		correction_rotation = - 0.02 * combined_offset
-		target_offset[0:2] = np.matmul(rotation_matrix(correction_rotation), target_offset[0:2])
-		target_offset[2] += correction_rotation
-
-		target = current_target + target_offset
-		# target = new_target_gt
+		# rotate the target offset by the rotational correction
+		target_offset = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_rotation)) * target_offset
+		# add the offset to the current target
+		target = frame_to_np(tf_conversions.Frame(target_offset.M * current_target.M, target_offset.p + current_target.p))
 
 		actual_targets.append(target)
 
