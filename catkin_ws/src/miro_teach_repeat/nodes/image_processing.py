@@ -202,6 +202,12 @@ def stitch_stereo_image(image_left, image_right):
 
 	return stitched_image
 
+def stitch_stereo_image_message(msg_left, msg_right, compressed=False):
+	if compressed:
+		return stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right))
+	else:
+		return stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right))
+
 def normxcorr2(image, template, mode="full"):
 	image = image.copy()
 	template = template.copy()

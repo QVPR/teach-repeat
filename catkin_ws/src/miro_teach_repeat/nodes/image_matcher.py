@@ -22,11 +22,11 @@ class miro_image_matcher:
 	def setup_parameters(self):
 		self.pub_image_match_debug = rospy.Publisher('/miro/match_image_debug', Image, queue_size=0)
 
-		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
+		self.save_dir = os.path.expanduser(rospy.get_param('/miro_data_save_dir', '~/miro/data'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 
-		self.resize = image_processing.make_size(height=rospy.get_param('~image_resize_height', None), width=rospy.get_param('~image_resize_width', None))
+		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 
