@@ -9,6 +9,7 @@ import datetime
 import time
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import CompressedImage, JointState
+from std_msgs.msg import Float64
 import message_filters
 
 import math
@@ -51,15 +52,15 @@ class miro_localiser:
 
 	def calculate_image_pose_offset(self, srv):
 		if self.last_image_msg is not None:
-			image = image_processing.stitch_stereo_image_message(*self.last_image_msg)
+			image = image_processing.stitch_stereo_image_message(*self.last_image_msg, compressed=True)
 			normalised_image = image_processing.patch_normalise_image(image, (9,9), resize=self.resize)
-			image_offset = self.match_image(image_processing.image_to_msg(normalised_image))
+			image_offset = self.match_image(image_processing.image_to_msg(normalised_image)).pixelOffset.data
 
 			# positive image offset: query image is shifted left from reference image
 			# this means we have done a right (negative turn) which we should correct with a positive turn
 			# positive offset -> positive turn, gain = positive
 			# (normalise the pixel offset by the width of the image)
-			return self.image_offset_gain * float(image_offset) / normalised_image.shape[1]
+			return Float64(data=self.image_offset_gain * float(image_offset) / normalised_image.shape[1])
 		else:
 			raise RuntimeError('Localiser: tried to localise before image data is received!')
 

@@ -26,7 +26,7 @@
 	</include>
 
 	<!-- Follow the previous poses -->
-	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen" />
+	<!-- <node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen" /> -->
 	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen" /> -->
 
 	<!-- Collect image data -->
