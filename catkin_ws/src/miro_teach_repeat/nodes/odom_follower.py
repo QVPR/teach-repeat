@@ -9,6 +9,7 @@ import math
 from rospy_message_converter import message_converter
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import UInt32
 import tf_conversions
 
 
@@ -24,11 +25,11 @@ class miro_odom_follower:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
-		self.save_dir = os.path.expanduser(rospy.get_param('miro_data_save_dir', '~/miro/data'))
-		if self.save_dir[-1] != '/':
-			self.save_dir += '/'
+		self.load_dir = os.path.expanduser(rospy.get_param('miro_data_load_dir', '~/miro/data'))
+		if self.load_dir[-1] != '/':
+			self.load_dir += '/'
 
-		pose_files = [self.save_dir+f for f in os.listdir(self.save_dir) if f[-9:] == '_pose.txt']
+		pose_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-9:] == '_pose.txt']
 		pose_files.sort()
 
 		self.poses = self.load_poses(pose_files)
@@ -63,13 +64,14 @@ class miro_odom_follower:
 		delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
 		if delta_frame.p.Norm() < 0.10:
+			old_goal_index = self.goal_index
 			self.goal_index += 1
 			if self.goal_index == len(self.poses):
 				self.goal_index = len(self.poses)-1
 				return
 
 			if self.localise:
-				image_theta_offset = self.get_image_pose_offset().poseThetaOffset.data
+				image_theta_offset = self.get_image_pose_offset(UInt32(data=old_goal_index)).poseThetaOffset.data
 				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
 				# old target -> new target in frame of old target (x = forwards)
@@ -100,6 +102,5 @@ class miro_odom_follower:
 if __name__ == "__main__":
 	rospy.init_node("miro_odom_follower")
 	follower = miro_odom_follower()
-	time.sleep(1) # seemed to solve issue with goal being published before listener ready
 	follower.publish_goal(follower.poses[0])
 	rospy.spin()

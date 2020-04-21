@@ -18,6 +18,8 @@ Testing:
 			* but narrowing the field of view limits the max tracked turning speed
 			* so... need to capture at a higher frame rate for VO
 			* want to do better stereo unwarping so the centre of the image looks less crazy
+	☐ Develop basic tests for the teach-repeat (straight line, L, loop)
+	☐ Test current approach to get a benchmark
 
 Development:
 	Setup:

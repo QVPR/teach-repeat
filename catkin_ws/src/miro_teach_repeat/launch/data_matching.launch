@@ -1,6 +1,7 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_save_dir">~/miro/data/follow20</rosparam>
+	<rosparam param="miro_data_load_dir">~/miro/data/follow51</rosparam>
+	<rosparam param="miro_data_save_dir">~/miro/data/follow51_tests/1</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 
@@ -33,4 +34,6 @@
 	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
 		<remap from="image" to="/miro/match_image_debug" />
 	</node>
+
+	<node pkg="rosbag" type="record" name="rosbagger" args="/miro/control/cmd_vel /miro/control/command /miro/control/goal /miro/control/kinematic_joints /miro/sensors/cam/left/compressed /miro/sensors/cam/right/compressed /miro/sensors/kinematic_joints /miro/sensors/odom /miro/sensors/odom/integrated /miro/sensors/wheel_speed_cmd"/>
 </launch>

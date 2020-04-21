@@ -144,6 +144,8 @@ for i in range(N):
 		target_offset = current_target_gt.Inverse() * new_target_gt 
 		# transform to odom frame (x = positive odom) [same frame as current_target]
 		target_offset.p = tf_conversions.Rotation.RotZ(current_target.M.GetRPY()[2]) * target_offset.p
+		#Note: theoeretically this should be part of this?
+		# target_offset.p += np_to_frame(d_pos).p
 
 		# get the offset from the current target (simulates image offset)
 		gt_target_offset = current_target_gt.Inverse() * ground_truth_frame

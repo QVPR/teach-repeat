@@ -1,6 +1,6 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_save_dir">~/miro/data/follow11</rosparam>
+	<rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 
