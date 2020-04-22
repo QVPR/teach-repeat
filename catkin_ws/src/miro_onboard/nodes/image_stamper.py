@@ -49,29 +49,29 @@ class miro_image_stamper:
 			with open(self.left_cal_file,'r') as f:
 				self.cam_left_calibration = yaml_to_camera_info(yaml.load(f.read()))
 		else:
-			rospy.loginfo('[Image Stamper] no calibration file for left camera specified. Camera info will not be publised.')
+			rospy.loginfo('[Image Stamper] no calibration file for left camera specified. Camera info will not be published.')
 			self.cam_left_calibration = None
 		
 		if self.right_cal_file is not None:
 			with open(self.right_cal_file,'r') as f:
 				self.cam_right_calibration = yaml_to_camera_info(yaml.load(f.read()))
 		else:
-			rospy.loginfo('[Image Stamper] no calibration file for right camera specified. Camera info will not be publised.')
+			rospy.loginfo('[Image Stamper] no calibration file for right camera specified. Camera info will not be published.')
 			self.cam_right_calibration = None
 		
 	def setup_publishers(self):
 		# publish stamped image
-		self.pub_image_left = rospy.Publisher("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=0)
-		self.pub_image_right = rospy.Publisher("/miro/sensors/cam/right/compressed", CompressedImage, queue_size=0)
+		self.pub_image_left = rospy.Publisher("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=10)
+		self.pub_image_right = rospy.Publisher("/miro/sensors/cam/right/compressed", CompressedImage, queue_size=10)
 		if self.cam_left_calibration is not None:
-			self.pub_info_left = rospy.Publisher("/miro/sensors/cam/left/camera_info", CameraInfo, queue_size=0)
+			self.pub_info_left = rospy.Publisher("/miro/sensors/cam/left/camera_info", CameraInfo, queue_size=10)
 		if self.cam_right_calibration is not None:
-			self.pub_info_right = rospy.Publisher("/miro/sensors/cam/right/camera_info", CameraInfo, queue_size=0)
+			self.pub_info_right = rospy.Publisher("/miro/sensors/cam/right/camera_info", CameraInfo, queue_size=10)
 
 	def setup_subscribers(self):
 		# subscribe to image
-		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data_left, queue_size=1)
-		self.sub_image_right = rospy.Subscriber("/miro/sensors/camr/compressed", CompressedImage, self.process_image_data_right, queue_size=1)
+		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data_left, queue_size=10, buffer_size=2**22)
+		self.sub_image_right = rospy.Subscriber("/miro/sensors/camr/compressed", CompressedImage, self.process_image_data_right, queue_size=10, buffer_size=2**22)
 
 	def process_image_data_left(self, msg):
 		msg.header.stamp = rospy.Time.now()
@@ -100,7 +100,6 @@ class miro_image_stamper:
 			self.pub_info_right.publish(info_right)
 
 if __name__ == "__main__":
-
 	rospy.init_node("miro_image_stamper")
 	stamper = miro_image_stamper()
 	rospy.spin()

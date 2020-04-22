@@ -51,9 +51,10 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-# 	FILES
-# )
+add_message_files(
+	FILES
+	CompressedImageSynchronised.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -162,6 +163,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
 	nodes/image_stamper.py
+	nodes/image_synchroniser.py
 	nodes/joint_controller.py
 	nodes/odom_integrator.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
