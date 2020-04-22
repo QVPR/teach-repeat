@@ -67,6 +67,10 @@ Bugs:
 		✔ Sometimes the localiser doesn't receive images - updates multiple times on old images @done(20-04-22 09:40)
 			* This was an issue with the queue size of the ApproximateTimeSynchroniser
 				set it large enough to account for delays in left/right image message delivery
+		☐ @high Fixing the above created the opposite issue - that all images were synced, but a time delay accumulated
+			* Narrowed down to network issues -> chance of delay in receiving images, would typically build up over time
+				described here: https://answers.ros.org/question/220502/image-subscriber-lag-despite-queue-1/
+				Need to set the buffer size of the subscriber
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)
