@@ -70,8 +70,8 @@ class miro_image_stamper:
 
 	def setup_subscribers(self):
 		# subscribe to image
-		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data_left, queue_size=10, buffer_size=2**22)
-		self.sub_image_right = rospy.Subscriber("/miro/sensors/camr/compressed", CompressedImage, self.process_image_data_right, queue_size=10, buffer_size=2**22)
+		self.sub_image_left = rospy.Subscriber("/miro/sensors/caml/compressed", CompressedImage, self.process_image_data_left, queue_size=10, buff_size=2**22)
+		self.sub_image_right = rospy.Subscriber("/miro/sensors/camr/compressed", CompressedImage, self.process_image_data_right, queue_size=10, buff_size=2**22)
 
 	def process_image_data_left(self, msg):
 		msg.header.stamp = rospy.Time.now()

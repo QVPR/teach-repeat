@@ -5,6 +5,9 @@
 		<rosparam param="calibration_file_right" subst_value="True">$(find miro_onboard)/calibration/right_360.yaml</rosparam> -->
 	</node>
 
+	<!-- Syncrhonise images from the cameras -->
+	<node pkg="miro_onboard" type="image_synchroniser.py" name="miro_image_sync" />
+
 	<!-- Control the kinematic joints -->
 	<node pkg="miro_onboard" type="joint_controller.py" name="miro_joint_controller" />
 

@@ -4,9 +4,7 @@ import rospy
 import math
 import time
 from sensor_msgs.msg import CompressedImage
-import tf_conversions
 import message_filters
-from std_msgs.msg import Float64
 
 from miro_onboard.msg import CompressedImageSynchronised
 
@@ -21,12 +19,12 @@ class miro_image_synchroniser:
 		pass
 
 	def setup_publishers(self):	
-		self.pub_images_synchronised = rospy.Publisher("/miro/senors/cam/both/compressed", CompressedImageSynchronised, queue_size=10)
+		self.pub_images_synchronised = rospy.Publisher("/miro/sensors/cam/both/compressed", CompressedImageSynchronised, queue_size=10)
 
 	def setup_subscribers(self):
 		# subscribe to the images from both cameras
-		self.sub_image_left = message_filters.Subscriber("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=10, buffer_size=2**22)
-		self.sub_image_right = message_filters.Subscriber("/miro/sensors/cam/right/compressed", CompressedImage, queue_size=10, buffer_size=2**22)
+		self.sub_image_left = message_filters.Subscriber("/miro/sensors/cam/left/compressed", CompressedImage, queue_size=10, buff_size=2**22)
+		self.sub_image_right = message_filters.Subscriber("/miro/sensors/cam/right/compressed", CompressedImage, queue_size=10, buff_size=2**22)
 		self.sub_images = message_filters.ApproximateTimeSynchronizer((self.sub_image_left, self.sub_image_right), 10, 1.0/30.0)
 		self.sub_images.registerCallback(self.process_image_data)
 
