@@ -44,6 +44,8 @@ class miro_image_matcher:
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
 
+		self.match_number = 0
+
 	def setup_publishers(self):
 		pass
 
@@ -82,7 +84,13 @@ class miro_image_matcher:
 		cv2.line(debug_image, (int(image.shape[1]/2),image.shape[0]), (int(image.shape[1]/2), 2*image.shape[0]), (200,0,0))
 		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
 
-		cv2.imwrite(self.save_dir+'%06d.png' % request.imageIndex.data, debug_image)
+		cv2.imwrite(self.save_dir+'%06d.png' % self.match_number, debug_image)
+
+		image_as_text = pickle.dumps(image)
+		with open(self.save_dir+('%06d_image.pkl' % self.match_number), 'w') as image_file:
+			image_file.write(image_as_text)
+
+		self.match_number += 1
 
 		# self.current_position = best_index + start_search_range
 		return Int32(data=offset)

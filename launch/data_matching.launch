@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_load_dir">~/miro/data/follow-straight</rosparam>
-	<rosparam param="miro_data_save_dir">~/miro/data/follow-straight_tests/5</rosparam>
+	<rosparam param="miro_data_load_dir">~/miro/data/follow-straight-3</rosparam>
+	<rosparam param="miro_data_save_dir">~/miro/data/follow-straight-3_tests/16</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 
@@ -15,10 +15,10 @@
 	</node>
 
 	<!-- Load image files for matching -->
-	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen" />
+	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' "/>
 
 	<!-- Follow the previous poses, but use images to correct for odometry drift -->
-	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen">
+	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
 		<rosparam param="localise">true</rosparam>
 	</node>
 

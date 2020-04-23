@@ -15,7 +15,7 @@
 
 	<!-- Teleop to control Miro -->
 	<arg name="speed_lin" value="0.2" />
-	<arg name="speed_ang" value="0.5" />
+	<arg name="speed_ang" value="1.0" />
 	<!-- <include file="$(find miro_demos)/launch/teleop.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />
@@ -23,6 +23,7 @@
 	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />
+		<arg name="launch_delay" value="4.0" />
 	</include>
 
 	<!-- Follow the previous poses -->
@@ -30,13 +31,13 @@
 	<!-- <node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen" /> -->
 
 	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 2; $0 $@' " output="screen">
+	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 4; $0 $@' " output="screen">
 		<rosparam param="distance_threshold">0.2</rosparam>
 		<rosparam param="angle_threshold_deg">15.0</rosparam>                           
 	</node>
 
 	<!-- Save Images and pose in a directory -->
-	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen" launch-prefix="bash -c 'sleep 2; $0 $@' ">
+	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
 	</node>
