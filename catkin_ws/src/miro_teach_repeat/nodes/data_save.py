@@ -68,6 +68,7 @@ class miro_data_save:
 		with open(self.save_dir+id+'_image.pkl', 'w') as image_file:
 			image_file.write(image_as_text)
 		self.save_id += 1
+		print('saved frame %d' % self.save_id)
 
 
 if __name__ == "__main__":

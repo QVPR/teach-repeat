@@ -73,6 +73,7 @@ Bugs:
 				Need to set the buffer size of the subscriber
 			* Moved image synchronisation to onboard which appears to solve the problem
 				Setting queue size to 1 and buff size large (maybe doesn't have an effect...) - still lag spikes but quickly recovered by dropping messages
+		☐ We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)

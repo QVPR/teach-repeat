@@ -18,26 +18,37 @@ def read_file(filename):
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/follow20/')
-dir2 = os.path.expanduser('~/miro/data/follow21/')
+dir1 = os.path.expanduser('~/miro/data/follow-straight-3/')
+dir2 = os.path.expanduser('~/miro/data/follow-straight-3_tests/16/')
 
 image_files1 = [dir1+f for f in os.listdir(dir1) if f[-10:] == '_image.pkl']
 image_files1.sort()
+images1 = [pickle.loads(read_file(image)) for image in image_files1]
+
+# image_files2 = [dir2+f for f in os.listdir(dir2) if f[-4:] == '.png']
 image_files2 = [dir2+f for f in os.listdir(dir2) if f[-10:] == '_image.pkl']
 image_files2.sort()
-
-images1 = [pickle.loads(read_file(image)) for image in image_files1]
+# images2 = [np.float64(cv2.imread(image, cv2.IMREAD_GRAYSCALE))*2.0/255.0 - 1.0 for image in image_files2]
 images2 = [pickle.loads(read_file(image)) for image in image_files2]
 
 correlations = np.zeros((len(images1),len(images2)))
 offsets = np.zeros((len(images1),len(images2)))
 
+N = len(images1) * len(images2)
+print('%d total images' % N)
+
+start_time = time.time()
+
 for i,image1 in enumerate(images1):
+	print('progress = %.2f%% [%d/%d]'%(i*100.0/len(images1),i*len(images2), N))
 	for j,image2 in enumerate(images2):
 		offset, correlation = image_processing.xcorr_match_images(image1, image2)
 		correlations[i,j] = correlation
 		offsets[i,j] = offset
 correlations /= np.reshape(np.max(correlations, axis=0), (1,-1))
+
+dt = time.time()-start_time
+print('processed %d images in %.2f seconds (%.2f / s)' % (N, dt, N/dt))
 
 fancy = False
 if fancy:
@@ -60,6 +71,7 @@ if fancy:
 			# cv2.putText(confusion_image, num, (int((j+1.5)*images1[0].shape[1]-textsize[0]/2), int((i+2)*images1[0].shape[0]-textsize[1]/2)), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 1 )
 else:
 	confusion_image = np.uint8(255*correlations)
+	offset_image = np.uint8(255.0/115.0/2.0*abs(offsets))
 
 
 
@@ -67,6 +79,20 @@ else:
 # print(offsets)
 # print(offsets[correlations == 1])
 
+base_file_path = '/home/dominic/Pictures/follow-straight-3_16'
+
+np.save(base_file_path+'_c', correlations)
+np.save(base_file_path+'_o', offsets)
+
 # cv2.imshow('con', confusion_image)
-cv2.imwrite('/home/dominic/Pictures/follow-con2.png',confusion_image)
+cv2.imwrite(base_file_path+'_c1.png', confusion_image)
+cv2.imwrite(base_file_path+'_o1.png', offset_image)
+
+width_on_height_scale = round(confusion_image.shape[1] / float(confusion_image.shape[0]))
+
+if width_on_height_scale > 1:
+	cv2.imwrite(base_file_path+'_c2.png', cv2.resize(confusion_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+	cv2.imwrite(base_file_path+'_o2.png', cv2.resize(offset_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+
+
 cv2.waitKey()

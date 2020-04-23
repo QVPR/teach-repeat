@@ -68,7 +68,7 @@ class miro_odom_follower:
 			self.goal_index += 1
 			if self.goal_index == len(self.poses):
 				self.goal_index = len(self.poses)-1
-				return
+				# self.goal_index = 0
 
 			if self.localise:
 				image_theta_offset = self.get_image_pose_offset(UInt32(data=old_goal_index)).poseThetaOffset.data
