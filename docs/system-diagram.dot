@@ -59,19 +59,16 @@ digraph system_diagram {
 	// -- Query --
 	// Nodes
 	"query"[
-		label = "query | all images"
+		label = "query | current goal image"
 	]
 	"matcher"[
-		label = "image matching | normxcorr2\npad = temp.width/2 = 22\nrange:(-pad to +pad) horiz."
-		// style="wedged"
-		// fillcolor="yellow;0.25:blue"
-		// gradientangle="270"
+		label = "image matching | normxcorr2\npad = temp.width/2 = 57\nrange:(-pad to +pad) horiz."
 	]
 	"pose offset"[
 		label="calc pose offset | &theta; offset = K * image offset"
 	]
 	"goal pose"[
-		label="calc goal pose | goal = (next image pose - curr image pose) + odom + pose offset"
+		label="calc goal pose | goal = (next image pose - curr image pose) + last goal + pose offset\nlookahead distance: 0.1 m"
 	]
 	"goto goal"[
 		label="navigate to goal | v = K * &rho;\n&omega; = K*&alpha; + K*&beta;"
