@@ -18,8 +18,9 @@ def read_file(filename):
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/follow-straight-3/')
-dir2 = os.path.expanduser('~/miro/data/follow-straight-3_tests/16/')
+dir1 = os.path.expanduser('~/miro/data/follow-long-path/')
+dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/2/')
+base_file_path = dir2
 
 image_files1 = [dir1+f for f in os.listdir(dir1) if f[-10:] == '_image.pkl']
 image_files1.sort()
@@ -79,20 +80,18 @@ else:
 # print(offsets)
 # print(offsets[correlations == 1])
 
-base_file_path = '/home/dominic/Pictures/follow-straight-3_16'
-
-np.save(base_file_path+'_c', correlations)
-np.save(base_file_path+'_o', offsets)
+np.save(base_file_path+'c', correlations)
+np.save(base_file_path+'o', offsets)
 
 # cv2.imshow('con', confusion_image)
-cv2.imwrite(base_file_path+'_c1.png', confusion_image)
-cv2.imwrite(base_file_path+'_o1.png', offset_image)
+cv2.imwrite(base_file_path+'c1.png', confusion_image)
+cv2.imwrite(base_file_path+'o1.png', offset_image)
 
 width_on_height_scale = round(confusion_image.shape[1] / float(confusion_image.shape[0]))
 
 if width_on_height_scale > 1:
-	cv2.imwrite(base_file_path+'_c2.png', cv2.resize(confusion_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
-	cv2.imwrite(base_file_path+'_o2.png', cv2.resize(offset_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+	cv2.imwrite(base_file_path+'c2.png', cv2.resize(confusion_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+	cv2.imwrite(base_file_path+'o2.png', cv2.resize(offset_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
 
 
 cv2.waitKey()

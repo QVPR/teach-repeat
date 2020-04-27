@@ -60,10 +60,14 @@ pose_data = get_pose_x_y_theta(poses)
 
 targets = np.hstack([data.reshape(-1,1) for data in pose_data])
 targets = targets[:-2,:]
+# targets = np.vstack((np.arange(0,40,0.2),np.zeros(200),np.zeros(200))).T
 target_index = 0
 target = targets[target_index]
+target_to_navigate_to = target + np.array([0.1*math.cos(target[2]),0.1*math.sin(target[2]),0])
 
 actual_targets = []
+update_locations = []
+x_errors = []
 
 odom = Odometry()
 odom.pose.pose.position.x = 0
@@ -80,7 +84,7 @@ ground_truth.orientation.w = odom.pose.pose.orientation.w
 ground_truth.orientation.z = odom.pose.pose.orientation.z
 ground_truth_frame = tf_conversions.fromMsg(ground_truth)
 
-N = 18000
+N = 12000
 xs = np.zeros(N)
 ys = np.zeros(N)
 thetas = np.zeros(N)
@@ -108,8 +112,8 @@ for i in range(N):
 	gt_theta = ground_truth_frame.M.GetRPY()[2]
 	gt_thetas[i] =  gt_theta
 
-	target_pos = (target[0], target[1], 0)
-	target_theta = target[2]
+	target_pos = (target_to_navigate_to[0], target_to_navigate_to[1], 0)
+	target_theta = target_to_navigate_to[2]
 
 	d_pos = tf_conversions.Vector(*target_pos) - odom_frame.p
 
@@ -131,6 +135,8 @@ for i in range(N):
 			omega = MAX_V * turn_rate * omega / abs(omega)
 			v = MAX_V * v / abs(v)
 
+	# gt_target_offset = np_to_frame(targets[target_index]).Inverse() * ground_truth_frame
+	# if abs(gt_target_offset.p.x()) < 0.05:
 	if rho < 0.10:
 		target_index += 1
 		if target_index == len(targets):
@@ -151,6 +157,7 @@ for i in range(N):
 		gt_target_offset = current_target_gt.Inverse() * ground_truth_frame
 		# 1 deg offset = 0.65 px offset; 1 m offset = 15 px offset
 		combined_offset = 0.65 * math.degrees(gt_target_offset.M.GetRPY()[2]) + 15*gt_target_offset.p.y()
+		combined_offset += np.random.randn() * 5 + 3
 
 		correction_rotation = - 0.02 * combined_offset
 		# rotate the target offset by the rotational correction
@@ -158,7 +165,11 @@ for i in range(N):
 		# add the offset to the current target
 		target = frame_to_np(tf_conversions.Frame(target_offset.M * current_target.M, target_offset.p + current_target.p))
 
+		target_to_navigate_to = target + np.array([0.1*math.cos(target[2]),0.1*math.sin(target[2]),0])
+
 		actual_targets.append(target)
+		update_locations.append([gt_xs[i], gt_ys[i], gt_thetas[i]])
+		x_errors.append(gt_target_offset.p.x())
 
 
 	vN = np.random.randn() * MAX_V / 20
@@ -189,8 +200,16 @@ print('final pose = [%f, %f, %f]' % (xs[-1],ys[-1],thetas[-1]))
 print('target = [%f, %f, %f]' % (target[0],target[1],target_theta))
 print(target_index)
 
+if len(update_locations) > targets.shape[0]:
+	targets_right_len = np.tile(targets, (int(math.ceil(float(len(update_locations))/targets.shape[0])),1))[:len(update_locations),:]
+else:
+	targets_right_len = targets[:len(update_locations),:]
+plt.plot(np.vstack((targets_right_len[:len(update_locations),0],np.array([t[0] for t in update_locations]))), 
+	np.vstack((targets_right_len[:len(update_locations),1],np.array([t[1] for t in update_locations]))), 
+	color="#0000ff", alpha=0.5)
 plt.quiver(targets[:,0], targets[:,1], np.cos(targets[:,2]), np.sin(targets[:,2]))
 # plt.quiver([t[0] for t in actual_targets], [t[1] for t in actual_targets], [math.cos(t[2]) for t in actual_targets], [math.sin(t[2]) for t in actual_targets], color="#ff0000", alpha=0.5)
+plt.plot([t[0] for t in update_locations], [t[1] for t in update_locations], 'x', color="#ff0000", alpha=0.5)
 display_spacing = 10
 q1 = plt.quiver(gt_xs[::display_spacing], gt_ys[::display_spacing], np.cos(gt_thetas[::display_spacing]), np.sin(gt_thetas[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
 # q2 = plt.quiver(xs[::display_spacing], ys[::display_spacing], np.cos(thetas[::display_spacing]), np.sin(thetas[::display_spacing]), scale=50, color='#0000ff', alpha = 0.2)
@@ -198,5 +217,8 @@ plt.axis('equal')
 # plt.legend([q1,q2],['ground truth','odometry'])
 plt.legend([q1],['ground truth'])
 plt.title('Navigation test - Correction - 5% Gaussian Noise [6 min]')
+
+plt.figure()
+plt.plot(x_errors)
 
 plt.show()
