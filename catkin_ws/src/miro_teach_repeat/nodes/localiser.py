@@ -14,6 +14,7 @@ import tf_conversions
 
 import image_processing
 from miro_onboard.msg import CompressedImageSynchronised
+from miro_teach_repeat.msg import Goal
 from miro_teach_repeat.srv import ImageMatch
 
 def read_file(filename):
@@ -43,6 +44,8 @@ class miro_localiser:
 		self.goal_index = 0
 		self.goal = self.poses[self.goal_index]
 
+		self.stop_at_end = rospy.get_param('~stop_at_end', True)
+
 		# Image
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
@@ -64,7 +67,7 @@ class miro_localiser:
 			os.makedirs(self.save_dir+'norm/')
 		
 	def setup_publishers(self):	
-		self.goal_pub = rospy.Publisher('/miro/control/goal', PoseStamped, queue_size=1)
+		self.goal_pub = rospy.Publisher('/miro/control/goal', Goal, queue_size=1)
 
 		rospy.wait_for_service('/miro/match_image')
 		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
@@ -84,35 +87,38 @@ class miro_localiser:
 			old_goal_index = self.goal_index
 			self.goal_index += 1
 			if self.goal_index == len(self.poses):
-				self.goal_index = len(self.poses)-1 # stop at the end
-				# self.goal_index = 0 # repeat the path (loop)
+				if self.stop_at_end:
+					self.goal_index = len(self.poses)-1
+				else:
+					self.goal_index = 0 # repeat the path (loop)
 
-				image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
-				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
+			image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
+			new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
-				# old target -> new target in frame of old target (x = forwards)
-				goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
-				# rotate to odom frame (x = positive odom) [same frame as current_goal]
-				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
-				# rotate the goal offset by the rotational correction
-				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
-				# add the corrected offset to the current goal
-				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
+			# old target -> new target in frame of old target (x = forwards)
+			goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
+			# rotate to odom frame (x = positive odom) [same frame as current_goal]
+			goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
+			# rotate the goal offset by the rotational correction
+			goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
+			# add the corrected offset to the current goal
+			new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
-				self.goal = tf_conversions.toMsg(new_goal_odom)
-				self.publish_goal(self.goal, 0.1)
+			self.goal = tf_conversions.toMsg(new_goal_odom)
+			if self.stop_at_end:
+				self.publish_goal(self.goal, 0.0, True)
 			else:
-				self.goal = self.poses[self.goal_index]
-				self.publish_goal(self.goal, 0.1)
+				self.publish_goal(self.goal, 0.1, False)
 
-	def publish_goal(self, pose, lookahead_distance=0.0):
-		goal = PoseStamped()
-		goal.header.stamp = rospy.Time.now()
-		goal.header.frame_id = "odom"
+	def publish_goal(self, pose, lookahead_distance=0.0, stop_at_goal=False):
+		goal = Goal()
+		goal.pose.header.stamp = rospy.Time.now()
+		goal.pose.header.frame_id = "odom"
 		theta = tf_conversions.fromMsg(pose).M.GetRPY()[2]
-		goal.pose.position.x = pose.position.x + lookahead_distance * math.cos(theta)
-		goal.pose.position.y = pose.position.y + lookahead_distance * math.sin(theta)
-		goal.pose.orientation = pose.orientation
+		goal.pose.pose.position.x = pose.position.x + lookahead_distance * math.cos(theta)
+		goal.pose.pose.position.y = pose.position.y + lookahead_distance * math.sin(theta)
+		goal.pose.pose.orientation = pose.orientation
+		goal.stop_at_goal = stop_at_goal
 		self.goal_pub.publish(goal)
 
 	def process_image_data(self, msg):
