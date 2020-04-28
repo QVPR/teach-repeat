@@ -1,3 +1,0 @@
-std_msgs/UInt32 goalIndex
----
-std_msgs/Float64 poseThetaOffset

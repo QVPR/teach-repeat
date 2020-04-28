@@ -55,6 +55,7 @@ Development:
 			☐ Connect controller to Miro via bluetooth (unsure if possible)
 		☐ @low Publish the offset between odom and "map" frame
 		☐ Specify "intermediate" or "stop" goals - allow faster movement
+		✔ Refactor localiser and odom_follower into one node @30m @started(20-04-28 15:59) @done(20-04-28 16:30) @lasted(31m51s)
 
 Bugs: 
 	ROS:

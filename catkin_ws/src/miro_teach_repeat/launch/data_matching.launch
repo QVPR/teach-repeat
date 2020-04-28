@@ -17,18 +17,13 @@
 	<!-- Load image files for matching -->
 	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' "/>
 
-	<!-- Follow the previous poses, but use images to correct for odometry drift -->
-	<node pkg="miro_teach_repeat" type="odom_follower.py" name="miro_odom_follower" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
-		<rosparam param="localise">true</rosparam>
+	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
+	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
+		<rosparam param="image_offset_gain">2.3</rosparam>
 	</node>
 
 	<!-- Drive to goal pose -->
 	<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="miro_drive_to_pose" output="screen"/>
-
-	<!-- Follow odom and localise using the images -->
-	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen">
-		<rosparam param="image_offset_gain">2.3</rosparam>
-	</node>
 
 	<!-- Show image matching -->
 	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
