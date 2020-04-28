@@ -61,7 +61,6 @@ add_message_files(
 add_service_files(
 	FILES
 	ImageMatch.srv
-	PoseOffset.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -75,6 +74,7 @@ add_service_files(
 generate_messages(
 	DEPENDENCIES
 	sensor_msgs
+	geometry_msgs
 	std_msgs
 )
 
@@ -173,7 +173,6 @@ catkin_install_python(PROGRAMS
 	nodes/image_processing.py
 	nodes/image_sync.py
 	nodes/localiser.py
-	nodes/odom_follower.py
 	nodes/robot_setup.py
 	nodes/teleop_joy.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
