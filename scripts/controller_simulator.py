@@ -1,3 +1,4 @@
+#!/usr/bin/python
 
 # Note: tf_conversions.fromMsg(tf_conversions.toMsg(odom_msg)) !== odom_msg
 # some accuracy is lost going from Q -> DCM -> Q
