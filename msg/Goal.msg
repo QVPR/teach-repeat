@@ -1,0 +1,2 @@
+geometry_msgs/PoseStamped pose
+std_msgs/Bool stop_at_goal
