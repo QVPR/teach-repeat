@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-# Note: Should be run onboard Miro
-
 import rospy
 import random
 import math

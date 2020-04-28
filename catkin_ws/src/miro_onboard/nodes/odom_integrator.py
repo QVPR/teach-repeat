@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-# Note: Should be run onboard Miro
-
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose, Quaternion

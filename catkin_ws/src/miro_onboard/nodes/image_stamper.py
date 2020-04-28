@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-# Note: Should be run onboard Miro
-
 import rospy
 from sensor_msgs.msg import CompressedImage, CameraInfo
 import cv_bridge

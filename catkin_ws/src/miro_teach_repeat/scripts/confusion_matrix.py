@@ -19,18 +19,22 @@ def read_file(filename):
 	return data
 
 dir1 = os.path.expanduser('~/miro/data/follow-long-path/')
-dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/2/')
-base_file_path = dir2
+dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/3/')
+base_file_path = dir2 + 'full_'
+dir2 += 'norm/'
 
 image_files1 = [dir1+f for f in os.listdir(dir1) if f[-10:] == '_image.pkl']
 image_files1.sort()
 images1 = [pickle.loads(read_file(image)) for image in image_files1]
 
-# image_files2 = [dir2+f for f in os.listdir(dir2) if f[-4:] == '.png']
-image_files2 = [dir2+f for f in os.listdir(dir2) if f[-10:] == '_image.pkl']
-image_files2.sort()
-# images2 = [np.float64(cv2.imread(image, cv2.IMREAD_GRAYSCALE))*2.0/255.0 - 1.0 for image in image_files2]
-images2 = [pickle.loads(read_file(image)) for image in image_files2]
+if dir2[-5:-1] == 'norm':
+	image_files2 = [dir2+f for f in os.listdir(dir2) if f[-4:] == '.png']
+	image_files2.sort()
+	images2 = [np.float64(cv2.imread(image, cv2.IMREAD_GRAYSCALE))*2.0/255.0 - 1.0 for image in image_files2]
+else:
+	image_files2 = [dir2+f for f in os.listdir(dir2) if f[-10:] == '_image.pkl']
+	image_files2.sort()
+	images2 = [pickle.loads(read_file(image)) for image in image_files2]
 
 correlations = np.zeros((len(images1),len(images2)))
 offsets = np.zeros((len(images1),len(images2)))

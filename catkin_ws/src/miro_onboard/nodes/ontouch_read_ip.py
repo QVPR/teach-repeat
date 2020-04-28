@@ -1,9 +1,5 @@
 #!/usr/bin/python
 
-# NOTE: this should be copied to Miro 
-# and an entry added to run this automatically on startup
-# then touch Miro's nose sensors to read out the IP address
-
 import os
 import subprocess
 

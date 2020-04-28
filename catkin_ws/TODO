@@ -18,8 +18,11 @@ Testing:
 			* but narrowing the field of view limits the max tracked turning speed
 			* so... need to capture at a higher frame rate for VO
 			* want to do better stereo unwarping so the centre of the image looks less crazy
-	☐ Develop basic tests for the teach-repeat (straight line, L, loop)
-	☐ Test current approach to get a benchmark
+	✔ Develop basic tests for the teach-repeat (straight line, L, loop) @done(20-04-28 10:44)
+		Outdoor path, indoor path, outdoor loop, straight line
+	✔ Test current approach to get a benchmark @done(20-04-28 10:46)
+		Works quite well on all paths - initial offsets cause failure though
+	☐ Investigate whether not accounting for known goal->odom theta offset is causing issues
 
 Development:
 	Setup:
@@ -35,7 +38,6 @@ Development:
 		✔ Downsample the matching resolution significantly (should lead to more robust performance) @started(20-03-25 10:53) @done(20-03-25 11:16) @lasted(23m22s)
 		✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
 		✔ Implement normxcorr2 @done(20-03-30 18:37)
-		☐ Use pose estimates to get rough ground truth data to test image matching
 		✔ Use basic scanline matching to determine rotation from images @1h @started(20-03-31 08:22) @done(20-03-31 09:18) @lasted(56m42s)
 		☐ Implement a bio-inspired SLAM approach
 			☐ Get range / bearing measurements from AR tags
@@ -47,21 +49,25 @@ Development:
 		✔ Use a joystick to teleop Miro for smoother movement @done(20-04-02 12:37)
 
 	ROS:
-		☐ @low Make a nicer ordering for starting nodes (wait until camera is set and joints in position)
-		☐ @low Port pose following to run onboard Miro at full 50 Hz
+		☐ @high Make a nicer ordering for starting nodes (wait until camera is set and joints in position)
+		☐ Run everything onboard Miro
+			☐ @low Port pose following to run onboard Miro at full 50 Hz
+			☐ Connect controller to Miro via bluetooth (unsure if possible)
 		☐ @low Publish the offset between odom and "map" frame
+		☐ Specify "intermediate" or "stop" goals - allow faster movement
 
 Bugs: 
 	ROS:
 		✔ Subscribing to camera before setting camera options results in receiving empty message @20m @started(20-03-25 13:12) @done(20-03-25 13:28) @lasted(16m57s)
 
 	Miro:
-		☐ @WIP When commanding Miro to drive straight, it tends to turn right (right wheel locks). `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0.
+		✔ When commanding Miro to drive straight, it tends to turn right (right wheel locks). `/miro/sensors/wheel_speed_cmd` shows the right wheel speed sometimes set to 0. @done(20-04-28 10:47)
 			Partly alleviated by using a controller to set the speeds based on integrated odometry - odometry drifts significantly though
 			* Developer replied saying this was due to the cliff sensor stopping the wheel - testing whether disabling the sensors fixes this
+				* seems to fix it (but hard to test without dark carpet)
 		✔ The kinematic joints seem to do some caching, so ingore repeated commands (even as the joints move passively) @30m @started(20-03-25 15:22) @done(20-03-25 15:45) @lasted(23m39s)
 		✔ Due to network latency, offboard odom integration is dropping messages, so integration errors occur @1h @started(20-04-06 08:32) @done(20-04-06 09:23) @lasted(51m47s)
-		☐ @high @WIP The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
+		☐ @WIP The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
 			* Developer replied - is a known issue and should have been fixed already...
 		☐ @high Controlling the yaw of the head is unreliable, but it has a big effect on the driving
 		✔ Sometimes the localiser doesn't receive images - updates multiple times on old images @done(20-04-22 09:40)
@@ -73,7 +79,8 @@ Bugs:
 				Need to set the buffer size of the subscriber
 			* Moved image synchronisation to onboard which appears to solve the problem
 				Setting queue size to 1 and buff size large (maybe doesn't have an effect...) - still lag spikes but quickly recovered by dropping messages
-		☐ We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
+		☐ @high We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
+		☐ @high Sometimes in data_matching the system doesn't start driving - is the goal published before we're looking for it?
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)
