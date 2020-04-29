@@ -5,7 +5,7 @@ import random
 import math
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
-from std_msgs.msg import UInt32
+from std_msgs.msg import UInt32, Bool
 
 from miro_onboard.srv import SetJointState
 
@@ -28,6 +28,8 @@ class miro_robot_setup:
 		self.should_reset_odom = rospy.get_param('~reset_odom', False)
 		self.should_disable_cliff_sensors = rospy.get_param('~disable_cliff_sensors', False)
 
+		self.ready = None
+
 	def setup_publishers(self):
 		rospy.wait_for_service('miro/control/kinematic_joints/set_fixed_state')
 		rospy.wait_for_service('miro/control/kinematic_joints/fixed/enable')
@@ -39,9 +41,15 @@ class miro_robot_setup:
 		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
 		self.pub_flags = rospy.Publisher('miro/control/flags', UInt32, queue_size=0)
+		self.pub_ready = rospy.Publisher("/miro/ready", Bool, queue_size=1)
 
 	def setup_subscribers(self):
-		pass
+		self.sub_at_set_point = rospy.Publisher("/miro/control/kinematic_joints/at_set_point", Bool, self.process_joint_at_set_point, queue_size=1)
+
+	def process_joint_at_set_point(self, msg):
+		if msg.data and self.ready == False:
+			self.ready = True
+			self.pub_ready.publish(Bool(data=True))
 
 	def start(self):
 		self.set_fixed_state(self.joint_states)
@@ -51,6 +59,7 @@ class miro_robot_setup:
 		if self.should_disable_cliff_sensors:
 			# flag to disable cliff reflex, from miro constants
 			self.pub_flags.publish(UInt32(data = 1 << 21))
+		self.ready = False
 
 	def stop(self):
 		self.disable_fixed_state()
@@ -64,4 +73,3 @@ if __name__ == "__main__":
 	rospy.on_shutdown(setup.stop)
 
 	rospy.spin()
-

@@ -5,6 +5,7 @@ import random
 import math
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
+from std_msgs.msg import Bool
 
 from miro_onboard.srv import SetJointState
 
@@ -22,6 +23,7 @@ class miro_joint_controller:
 
 	def setup_publishers(self):
 		self.pub_joints = rospy.Publisher("/miro/control/kinematic_joints", JointState, queue_size=1)
+		self.pub_at_set_point = rospy.Publisher("/miro/control/kinematic_joints/at_set_point", Bool, queue_size=1)
 
 	def setup_subscribers(self):
 		self.sub_joints = rospy.Subscriber("/miro/sensors/kinematic_joints", JointState, self.process_joint_data, queue_size=1)
@@ -57,6 +59,12 @@ class miro_joint_controller:
 			joint_state_command.name = self.joint_states.name
 			joint_state_command.position = set_joint_positions
 			self.pub_joints.publish(joint_state_command)
+
+			# first joint is fixed
+			if max(abs(error) for error in errors[1:]) < 0.1:
+				self.pub_at_set_point.publish(Bool(data=True))
+			else:
+				self.pub_at_set_point.publish(Bool(data=False))
 
 
 if __name__ == "__main__":

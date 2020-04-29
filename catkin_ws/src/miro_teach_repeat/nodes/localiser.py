@@ -10,6 +10,7 @@ from rospy_message_converter import message_converter
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool
 import tf_conversions
 
 import image_processing
@@ -32,6 +33,8 @@ class miro_localiser:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
+		self.ready = not rospy.get_param('/wait_for_ready', False)
+
 		# Odom
 		self.load_dir = os.path.expanduser(rospy.get_param('miro_data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
@@ -73,42 +76,66 @@ class miro_localiser:
 		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
 
 	def setup_subscribers(self):
+		if not self.ready:
+			self.sub_ready = rospy.Subscriber("/miro/ready", Bool, self.on_ready, queue_size=1)
 		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_images = rospy.Subscriber('/miro/sensors/cam/both/compressed', CompressedImageSynchronised, self.process_image_data, queue_size=1, buff_size=2**22)
 
+	def on_ready(self, msg):
+		if msg.data:
+			if not self.ready:
+				localiser.publish_goal(localiser.poses[0])
+			self.ready = True
+
 	def process_odom_data(self, msg):
-		current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
-		current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
-		old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
+		if self.ready:
+			current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
+			current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
+			old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
-		delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
+			delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
-		if delta_frame.p.Norm() < 0.10:
-			old_goal_index = self.goal_index
-			self.goal_index += 1
-			if self.goal_index == len(self.poses):
+			if delta_frame.p.Norm() < 0.10:
+				old_goal_index = self.goal_index
+				self.goal_index += 1
+				if self.goal_index == len(self.poses):
+					if self.stop_at_end:
+						self.goal_index = len(self.poses)-1
+					else:
+						self.goal_index = 0 # repeat the path (loop)
+
+				image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
+				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
+
+				# old target -> new target in frame of old target (x = forwards)
+				goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
+				# rotate to odom frame (x = positive odom) [same frame as current_goal]
+				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
+				# rotate the goal offset by the rotational correction
+				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
+				# add the corrected offset to the current goal
+				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
+
+				self.goal = tf_conversions.toMsg(new_goal_odom)
 				if self.stop_at_end:
-					self.goal_index = len(self.poses)-1
+					self.publish_goal(self.goal, 0.0, True)
 				else:
-					self.goal_index = 0 # repeat the path (loop)
+					self.publish_goal(self.goal, 0.1, False)
 
-			image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
-			new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
+	def process_image_data(self, msg):
+		if self.ready:
+			n = msg.left.header.seq
+			if self.last_image is None:
+				self.first_img_seq = n
+			n -= self.first_img_seq
 
-			# old target -> new target in frame of old target (x = forwards)
-			goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
-			# rotate to odom frame (x = positive odom) [same frame as current_goal]
-			goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
-			# rotate the goal offset by the rotational correction
-			goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
-			# add the corrected offset to the current goal
-			new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
+			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
+			normalised_image = image_processing.patch_normalise_image(full_image, (9,9), resize=self.resize)
+			
+			cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
+			cv2.imwrite(self.save_dir+('norm/%06d.png' % n), np.uint8(255.0 * (1 + normalised_image) / 2.0))
 
-			self.goal = tf_conversions.toMsg(new_goal_odom)
-			if self.stop_at_end:
-				self.publish_goal(self.goal, 0.0, True)
-			else:
-				self.publish_goal(self.goal, 0.1, False)
+			self.last_image = normalised_image
 
 	def publish_goal(self, pose, lookahead_distance=0.0, stop_at_goal=False):
 		goal = Goal()
@@ -120,20 +147,6 @@ class miro_localiser:
 		goal.pose.pose.orientation = pose.orientation
 		goal.stop_at_goal = stop_at_goal
 		self.goal_pub.publish(goal)
-
-	def process_image_data(self, msg):
-		n = msg.left.header.seq
-		if self.last_image is None:
-			self.first_img_seq = n
-		n -= self.first_img_seq
-
-		full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
-		normalised_image = image_processing.patch_normalise_image(full_image, (9,9), resize=self.resize)
-		
-		cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
-		cv2.imwrite(self.save_dir+('norm/%06d.png' % n), np.uint8(255.0 * (1 + normalised_image) / 2.0))
-
-		self.last_image = normalised_image
 
 	def calculate_image_pose_offset(self, image_to_search_index):
 		if self.last_image is not None:
@@ -150,5 +163,6 @@ class miro_localiser:
 if __name__ == "__main__":
 	rospy.init_node("miro_localiser")
 	localiser = miro_localiser()
-	localiser.publish_goal(localiser.poses[0])
+	if localiser.ready:
+		localiser.publish_goal(localiser.poses[0])
 	rospy.spin()

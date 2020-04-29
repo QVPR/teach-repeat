@@ -4,6 +4,7 @@
 	<rosparam param="miro_data_save_dir">~/miro/data/follow-long-path_tests/3</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="wait_for_ready">true</rosparam>
 
 	<!-- Hold head in place, reset odometry and disable cliff sensors -->
 	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
@@ -15,10 +16,10 @@
 	</node>
 
 	<!-- Load image files for matching -->
-	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' "/>
+	<node pkg="miro_teach_repeat" type="image_matcher.py" name="miro_image_matcher" output="screen" />
 
 	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
-	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
+	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen" >
 		<rosparam param="image_offset_gain">2.3</rosparam>
 		<rosparam param="stop_at_end">true</rosparam>
 	</node>
