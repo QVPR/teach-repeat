@@ -70,7 +70,7 @@ Bugs:
 		✔ Due to network latency, offboard odom integration is dropping messages, so integration errors occur @1h @started(20-04-06 08:32) @done(20-04-06 09:23) @lasted(51m47s)
 		☐ @WIP The timestamp (of at least odom messages) occasionally overflows - causing big odom integration errors
 			* Developer replied - is a known issue and should have been fixed already...
-		☐ @high Controlling the yaw of the head is unreliable, but it has a big effect on the driving
+		✔ Controlling the yaw of the head is unreliable, but it has a big effect on the driving @30m @started(20-04-29 16:39) @done(20-04-29 17:09) @lasted(30m49s)
 		✔ Sometimes the localiser doesn't receive images - updates multiple times on old images @done(20-04-22 09:40)
 			* This was an issue with the queue size of the ApproximateTimeSynchroniser
 				set it large enough to account for delays in left/right image message delivery
