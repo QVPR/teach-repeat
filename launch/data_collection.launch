@@ -3,6 +3,7 @@
 	<rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="wait_for_ready">true</rosparam>
 
 	<!-- Hold head in place and reset odometry -->
 	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
@@ -23,17 +24,16 @@
 	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />
-		<arg name="launch_delay" value="4.0" />
 	</include>
 
 	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" launch-prefix="bash -c 'sleep 4; $0 $@' " output="screen">
+	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" output="screen">
 		<rosparam param="distance_threshold">0.2</rosparam>
 		<rosparam param="angle_threshold_deg">15.0</rosparam>                           
 	</node>
 
 	<!-- Save Images and pose in a directory -->
-	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen" launch-prefix="bash -c 'sleep 4; $0 $@' ">
+	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
 		<rosparam param="save_dir">~/miro/data</rosparam>
 		<rosparam param="timestamp_folder">1</rosparam>
 	</node>
