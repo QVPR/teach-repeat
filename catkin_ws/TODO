@@ -22,7 +22,8 @@ Testing:
 		Outdoor path, indoor path, outdoor loop, straight line
 	✔ Test current approach to get a benchmark @done(20-04-28 10:46)
 		Works quite well on all paths - initial offsets cause failure though
-	☐ Investigate whether not accounting for known goal->odom theta offset is causing issues
+	✔ Investigate whether not accounting for known goal->odom theta offset is causing issues @started(20-04-30 16:34) @done(20-04-30 17:16) @lasted(42m28s)
+		* In sim, it needs some work to surface, but can be seen to cause issues
 
 Development:
 	Setup:
