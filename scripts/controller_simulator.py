@@ -60,7 +60,7 @@ poses = read_pose_files(pose_files)
 pose_data = get_pose_x_y_theta(poses)
 
 targets = np.hstack([data.reshape(-1,1) for data in pose_data])
-targets = targets[:-2,:]
+targets = targets[:-2:2,:]
 # targets = np.vstack((np.arange(0,40,0.2),np.zeros(200),np.zeros(200))).T
 target_index = 0
 target = targets[target_index]
@@ -156,11 +156,14 @@ for i in range(N):
 
 		# get the offset from the current target (simulates image offset)
 		gt_target_offset = current_target_gt.Inverse() * ground_truth_frame
+		odom_target_offset = current_target.Inverse() * odom_frame
 		# 1 deg offset = 0.65 px offset; 1 m offset = 15 px offset
 		combined_offset = 0.65 * math.degrees(gt_target_offset.M.GetRPY()[2]) + 15*gt_target_offset.p.y()
-		combined_offset += np.random.randn() * 5 + 3
+		expected_offset = 0.65 * math.degrees(odom_target_offset.M.GetRPY()[2]) + 15*odom_target_offset.p.y()
+		combined_offset += np.random.randn() * 2 + 0.5
 
-		correction_rotation = - 0.02 * combined_offset
+		# correction_rotation = - 0.02 * (combined_offset)
+		correction_rotation = - 0.02 * (combined_offset - expected_offset)
 		# rotate the target offset by the rotational correction
 		target_offset = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_rotation)) * target_offset
 		# add the offset to the current target

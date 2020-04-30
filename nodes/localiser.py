@@ -107,12 +107,17 @@ class miro_localiser:
 				image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
 				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
+				known_goal_offset = current_goal_frame_odom.Inverse() * current_frame_odom
+				# these parameters were estimated from scripts/rotation_displacement_test.py
+				expected_pixel_offset = 0.65*math.degrees(known_goal_offset.M.GetRPY()[2]) + 15*known_goal_offset.p.y()
+				expected_theta_offset = self.image_offset_gain * float(expected_pixel_offset) / self.last_image.shape[1]
+
 				# old target -> new target in frame of old target (x = forwards)
 				goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
 				# rotate to odom frame (x = positive odom) [same frame as current_goal]
 				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
 				# rotate the goal offset by the rotational correction
-				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset)) * goal_offset
+				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset - expected_theta_offset)) * goal_offset
 				# add the corrected offset to the current goal
 				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
