@@ -44,7 +44,7 @@ class miro_robot_setup:
 		self.pub_ready = rospy.Publisher("/miro/ready", Bool, queue_size=1)
 
 	def setup_subscribers(self):
-		self.sub_at_set_point = rospy.Publisher("/miro/control/kinematic_joints/at_set_point", Bool, self.process_joint_at_set_point, queue_size=1)
+		self.sub_at_set_point = rospy.Subscriber("/miro/control/kinematic_joints/at_set_point", Bool, self.process_joint_at_set_point, queue_size=1)
 
 	def process_joint_at_set_point(self, msg):
 		if msg.data and self.ready == False:

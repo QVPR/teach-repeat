@@ -83,7 +83,7 @@ class miro_drive_to_pose_controller:
 	def set_goal(self, msg):
 		self.goal_pos = [msg.pose.pose.position.x, msg.pose.pose.position.y, 0]
 		self.goal_theta = tf_conversions.fromMsg(msg.pose.pose).M.GetRPY()[2]
-		self.stop_at_goal = msg.stop_at_goal
+		self.stop_at_goal = msg.stop_at_goal.data
 
 
 if __name__ == "__main__":
