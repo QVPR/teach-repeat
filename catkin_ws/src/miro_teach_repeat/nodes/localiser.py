@@ -10,13 +10,13 @@ from rospy_message_converter import message_converter
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, UInt32
 import tf_conversions
 
 import image_processing
 from miro_onboard.msg import CompressedImageSynchronised
 from miro_teach_repeat.msg import Goal
-from miro_teach_repeat.srv import ImageMatch
+from miro_teach_repeat.srv import ImageMatch, ImageMatchRequest
 
 def read_file(filename):
 	with open(filename, 'r') as f:
@@ -84,7 +84,7 @@ class miro_localiser:
 	def on_ready(self, msg):
 		if msg.data:
 			if not self.ready:
-				localiser.publish_goal(localiser.poses[0])
+				localiser.publish_goal(self.poses[0], 0.1, False)
 			self.ready = True
 
 	def process_odom_data(self, msg):
@@ -101,6 +101,7 @@ class miro_localiser:
 				if self.goal_index == len(self.poses):
 					if self.stop_at_end:
 						self.goal_index = len(self.poses)-1
+						return
 					else:
 						self.goal_index = 0 # repeat the path (loop)
 
@@ -122,7 +123,7 @@ class miro_localiser:
 				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
 				self.goal = tf_conversions.toMsg(new_goal_odom)
-				if self.stop_at_end:
+				if self.goal_index == len(self.poses)-1 and self.stop_at_end:
 					self.publish_goal(self.goal, 0.0, True)
 				else:
 					self.publish_goal(self.goal, 0.1, False)
@@ -150,12 +151,13 @@ class miro_localiser:
 		goal.pose.pose.position.x = pose.position.x + lookahead_distance * math.cos(theta)
 		goal.pose.pose.position.y = pose.position.y + lookahead_distance * math.sin(theta)
 		goal.pose.pose.orientation = pose.orientation
-		goal.stop_at_goal = stop_at_goal
+		goal.stop_at_goal.data = stop_at_goal
 		self.goal_pub.publish(goal)
 
 	def calculate_image_pose_offset(self, image_to_search_index):
 		if self.last_image is not None:
-			image_offset = self.match_image(image_processing.image_to_msg(self.last_image), image_to_search_index).pixelOffset.data
+			matchRequest = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index))
+			image_offset = self.match_image(matchRequest).pixelOffset.data
 
 			# positive image offset: query image is shifted left from reference image
 			# this means we have done a right (negative turn) which we should correct with a positive turn

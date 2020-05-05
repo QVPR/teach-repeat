@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
 
 import image_processing
-from miro_teach_repeat.srv import ImageMatch
+from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
 
 # SEARCH_SIZE = 3
 
@@ -93,7 +93,7 @@ class miro_image_matcher:
 		self.match_number += 1
 
 		# self.current_position = best_index + start_search_range
-		return Int32(data=offset)
+		return ImageMatchResponse(Int32(offset))
 
 
 if __name__ == "__main__":
