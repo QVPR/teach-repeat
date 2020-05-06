@@ -6,7 +6,7 @@ import cv2
 import os
 import pickle
 from sensor_msgs.msg import Image
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 
 import image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
@@ -76,6 +76,7 @@ class miro_image_matcher:
 		best_index = 0
 
 		offset = match_data[best_index][0]
+		correlation = match_data[best_index][1]
 
 		debug_image = np.concatenate((image, self.images[request.imageIndex.data]), axis=0)
 		debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
@@ -93,7 +94,7 @@ class miro_image_matcher:
 		self.match_number += 1
 
 		# self.current_position = best_index + start_search_range
-		return ImageMatchResponse(Int32(offset))
+		return ImageMatchResponse(Int32(offset), Float32(correlation))
 
 
 if __name__ == "__main__":

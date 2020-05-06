@@ -105,7 +105,7 @@ class miro_localiser:
 					else:
 						self.goal_index = 0 # repeat the path (loop)
 
-				image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
+				image_path_offset, image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
 				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
 				known_goal_offset = current_goal_frame_odom.Inverse() * current_frame_odom
@@ -119,6 +119,8 @@ class miro_localiser:
 				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
 				# rotate the goal offset by the rotational correction
 				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset - expected_theta_offset)) * goal_offset
+				# extend or retract the goal using image-based along-path offset
+				goal_offset_corrected.p *= image_path_offset
 				# add the corrected offset to the current goal
 				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
@@ -156,14 +158,35 @@ class miro_localiser:
 
 	def calculate_image_pose_offset(self, image_to_search_index):
 		if self.last_image is not None:
-			matchRequest = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index))
-			image_offset = self.match_image(matchRequest).pixelOffset.data
+			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index))
+			image_match = self.match_image(match_request)
+			image_match_offset = image_match.pixelOffset.data
+			image_match_corr = image_match.correlation.data
+
+			if image_to_search_index > 0 and image_to_search_index < len(self.poses)-1:
+				prev_match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index-1))
+				prev_image_match = self.match_image(prev_match_request)
+				prev_image_match_corr = prev_image_match.correction.data
+				next_match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index+1))
+				next_image_match = self.match_image(next_match_request)
+				next_image_match_corr = next_image_match.correction.data
+
+				if next_image_match_corr > image_match_corr:
+					path_offset = 0.5
+				elif prev_image_match_corr > image_match_corr:
+					path_offset = 1.5
+				else:
+					path_offset = 1.0
+			else:
+				path_offset = 1.0
 
 			# positive image offset: query image is shifted left from reference image
 			# this means we have done a right (negative turn) which we should correct with a positive turn
 			# positive offset -> positive turn, gain = positive
 			# (normalise the pixel offset by the width of the image)
-			return self.image_offset_gain * float(image_offset) / self.last_image.shape[1]
+			theta_offset = self.image_offset_gain * float(image_match_offset) / self.last_image.shape[1]
+
+			return path_offset, theta_offset
 		else:
 			raise RuntimeError('Localiser: tried to localise before image data is received!')
 
