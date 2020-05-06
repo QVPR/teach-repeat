@@ -63,15 +63,25 @@ class miro_drive_to_pose_controller:
 
 			# Scale to preserve rate of turn
 			if not self.stop_at_goal or abs(v) > MAX_V or abs(omega) > MAX_OMEGA:
-				turn_rate = abs(omega / v)
-				turn_rate_at_max = MAX_OMEGA / MAX_V
-
-				if turn_rate > turn_rate_at_max:
+				if omega == 0 and v == 0:
+					v = 0
+					omega = 0
+				elif omega == 0:
+					v = MAX_V
+					omega = 0
+				elif v == 0:
+					v = 0
 					omega = MAX_OMEGA * omega / abs(omega)
-					v = MAX_OMEGA / turn_rate * v / abs(v)
 				else:
-					omega = MAX_V * turn_rate * omega / abs(omega)
-					v = MAX_V * v / abs(v)
+					turn_rate = abs(omega / v)
+					turn_rate_at_max = MAX_OMEGA / MAX_V
+
+					if turn_rate > turn_rate_at_max:
+						omega = MAX_OMEGA * omega / abs(omega)
+						v = MAX_OMEGA / turn_rate * v / abs(v)
+					else:
+						omega = MAX_V * turn_rate * omega / abs(omega)
+						v = MAX_V * v / abs(v)
 
 			motor_command = TwistStamped()
 			motor_command.header.stamp = rospy.Time.now()

@@ -73,7 +73,8 @@ class miro_integrate_odom:
 		pose = self.odom_pose
 
 		# manually integrate odom because tf_conversions isn't installed on Miro
-		dd = msg.twist.twist.linear.x * delta_time
+		TRANSLATION_ERROR_FACTOR = 1.1
+		dd = msg.twist.twist.linear.x * delta_time * TRANSLATION_ERROR_FACTOR
 		dtheta = msg.twist.twist.angular.z * delta_time
 
 		theta = tf.transformations.euler_from_quaternion(quaternion_to_vector(pose.orientation))[2]

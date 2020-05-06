@@ -54,13 +54,13 @@ gain_beta = -3.0
 
 np.random.seed(7)
 
-directory = os.path.expanduser('~/miro/data/follow2/')
+directory = os.path.expanduser('~/miro/data/follow-long-path/')
 pose_files = get_pose_files(directory)
 poses = read_pose_files(pose_files)
 pose_data = get_pose_x_y_theta(poses)
 
 targets = np.hstack([data.reshape(-1,1) for data in pose_data])
-targets = targets[:-2:2,:]
+targets = targets[:-2,:]
 # targets = np.vstack((np.arange(0,40,0.2),np.zeros(200),np.zeros(200))).T
 target_index = 0
 target = targets[target_index]
@@ -80,7 +80,7 @@ odom_frame = tf_conversions.fromMsg(odom.pose.pose)
 
 ground_truth = Pose()
 ground_truth.position.x = odom.pose.pose.position.x
-ground_truth.position.y = odom.pose.pose.position.y
+ground_truth.position.y = 0.5#odom.pose.pose.position.y
 ground_truth.orientation.w = odom.pose.pose.orientation.w
 ground_truth.orientation.z = odom.pose.pose.orientation.z
 ground_truth_frame = tf_conversions.fromMsg(ground_truth)
@@ -160,12 +160,25 @@ for i in range(N):
 		# 1 deg offset = 0.65 px offset; 1 m offset = 15 px offset
 		combined_offset = 0.65 * math.degrees(gt_target_offset.M.GetRPY()[2]) + 15*gt_target_offset.p.y()
 		expected_offset = 0.65 * math.degrees(odom_target_offset.M.GetRPY()[2]) + 15*odom_target_offset.p.y()
-		combined_offset += np.random.randn() * 2 + 0.5
+		# combined_offset += np.random.randn() * 2 + 0.5
 
 		# correction_rotation = - 0.02 * (combined_offset)
 		correction_rotation = - 0.02 * (combined_offset - expected_offset)
 		# rotate the target offset by the rotational correction
 		target_offset = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_rotation)) * target_offset
+
+		if target_index > 1:
+			prev_target_gt = np_to_frame(targets[target_index-2])
+			prev_target_offset = prev_target_gt.Inverse() * ground_truth_frame 
+			next_target_offset = new_target_gt.Inverse() * ground_truth_frame 
+			if next_target_offset.p.Norm() < gt_target_offset.p.Norm():
+				target_offset.p *= 0.5 * (next_target_offset.p.Norm()/gt_target_offset.p.Norm())
+			elif prev_target_offset.p.Norm() < gt_target_offset.p.Norm():
+				target_offset.p *= 1.5 * (gt_target_offset.p.Norm()/prev_target_offset.p.Norm())
+
+		# x_offset += np.random.randn() * 0.05# + 0.5
+		# target_offset.p *= (target_offset.p.Norm() - x_offset) / target_offset.p.Norm()
+
 		# add the offset to the current target
 		target = frame_to_np(tf_conversions.Frame(target_offset.M * current_target.M, target_offset.p + current_target.p))
 
@@ -179,7 +192,7 @@ for i in range(N):
 	vN = np.random.randn() * MAX_V / 20
 	omegaN = np.random.randn() * MAX_OMEGA / 20
 
-	odom_frame.p += tf_conversions.Vector(dt * (v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
+	odom_frame.p += tf_conversions.Vector(dt * 1.1*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
 	odom_frame.M.DoRotZ(dt * (omega+omegaN))
 
 	ground_truth_frame.p += tf_conversions.Vector(dt * v * math.cos(gt_theta), dt * v * math.sin(gt_theta), 0.0)
