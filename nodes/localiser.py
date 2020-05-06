@@ -88,7 +88,7 @@ class miro_localiser:
 			self.ready = True
 
 	def process_odom_data(self, msg):
-		if self.ready:
+		if self.ready and self.last_image is not None:
 			current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
 			current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
 			old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])

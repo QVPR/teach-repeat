@@ -18,9 +18,9 @@ def read_file(filename):
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/follow-long-path/')
-dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/8/')
-dir2_full = os.path.expanduser('~/miro/data/follow-long-path_tests/8/norm/')
+dir1 = os.path.expanduser('~/miro/data/follow-straight-odom/')
+dir2 = os.path.expanduser('~/miro/data/follow-straight-odom_tests/3/')
+dir2_full = os.path.expanduser('~/miro/data/follow-straight-odom_tests/3/norm/')
 base_file_path = dir2 + 'full_'
 # dir2 += 'norm/'
 

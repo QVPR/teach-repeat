@@ -1,12 +1,12 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam>
+	<!-- <rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam> -->
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
 	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
+	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 2; $0 $@' ">
 		<rosparam param="lift">30</rosparam>
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>

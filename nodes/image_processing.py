@@ -302,54 +302,20 @@ def image_patch_rotation(image1, image2, min_overlap):
 
 if __name__ == "__main__":
 	np.random.seed(0)
-	# img = np.float64(np.random.randint(0,256,(44,115), dtype=np.uint8))
-	img1 = grayscale(cv2.imread('/home/dominic/Pictures/L2.png'))
-	img2 = grayscale(cv2.imread('/home/dominic/Pictures/R2.png'))
+	import pickle
+	def read_file(filename):
+		with open(filename, 'r') as f:
+			data = f.read()
+		return data
 
-	import image_geometry
-	import scipy.spatial.transform
+	img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-inside_tests/1/000000_image.pkl'))
+	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-inside_tests/2/000000_image.pkl'))
 
-	height, width = img1.shape
-	K = np.array([339.5929335036774, 0.0, width/2, 0.0, 338.1646422931829, height/2, 0.0, 0.0, 1.0]).reshape(3,3)
-	# K1 = np.array([339.5929335036774, 0.0, 302.3151446150193, 0.0, 338.1646422931829, 164.24615236157783, 0.0, 0.0, 1.0]).reshape(3,3)
-	# K2 = np.array([421.8457462857705, 0.0, 307.19951192683885, 0.0, 420.2160629941844, 139.56714513486457, 0.0, 0.0, 1.0]).reshape(3,3)
-	R1 = scipy.spatial.transform.Rotation.from_euler('Y',math.radians(-27)).as_dcm()
-	R2 = scipy.spatial.transform.Rotation.from_euler('Y',math.radians(27)).as_dcm()
-	D1 = np.array([-0.31355715866352996, 0.07348274729264032, 0.0013916779653480483, 0.0010994248771950602, 0.0])
-	D2 = np.array([-0.38126443041527774, 0.1004896256759518, 0.01632508148069258, 0.003089452847769042, 0.0])
+	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+	corr = normxcorr2(img1_pad, img2, mode='valid')
 
-	OUT_WIDTH = width
-	OUT_HEIGHT = height
+	import matplotlib.pyplot as plt
 
-	k1 = cv2.getOptimalNewCameraMatrix(K,D1,(width, height),1.0,(OUT_WIDTH,OUT_HEIGHT))
-	P1 = k1[0]
-	k2 = cv2.getOptimalNewCameraMatrix(K,D2,(width, height),1.0,(OUT_WIDTH,OUT_HEIGHT))
-	P2 = k2[0]
-
-	mapx1, mapy1 = cv2.initUndistortRectifyMap(K, D1, R1, P1, (OUT_WIDTH, OUT_HEIGHT), cv2.CV_32FC1)
-	mapx2, mapy2 = cv2.initUndistortRectifyMap(K, D2, R2, P2, (OUT_WIDTH, OUT_HEIGHT), cv2.CV_32FC1)
-	warp1 = cv2.remap(img1, mapx1, mapy1, cv2.INTER_CUBIC)
-	warp2 = cv2.remap(img2, mapx2, mapy2, cv2.INTER_CUBIC)
-
-	# warp1 = warp1[max(k1[1][1],k2[1][1]):min(k1[1][3],k2[1][3]),:]
-	# warp2 = warp2[max(k1[1][1],k2[1][1]):min(k1[1][3],k2[1][3]),:]
-
-	non_overlap_pixels = 200
-	overlap_pixels = OUT_WIDTH - non_overlap_pixels*2
-	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(non_overlap_pixels)))
-	combined = np.uint8(blend_map_linear * warp1 + np.flip(blend_map_linear) * warp2)
-
-	combined2 = np.uint8(stitch_stereo_image(img1, img2))
-
-	cv2.imshow('L', warp1)
-	cv2.imshow('R', warp2)
-	cv2.imshow('both1', combined)
-	cv2.imshow('both2', combined2)
-	cv2.waitKey()
+	plt.plot(np.arange(-int(img2.shape[1]/2),int(img2.shape[1]/2)+1), corr[0,:])
+	plt.show()
 	
-	# import time
-	# t = time.time()
-	# print(image_scanline_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
-	# print(image_patch_rotation(img1[40:80,140:-140], img2[40:80,140:-140], 463//2 - 140))
-	# print(xcorr_match_images(img1[40:80,140:-140], img2[40:80,140:-140]))
-	# print('%fs' % (time.time() - t))
