@@ -19,9 +19,9 @@ def read_file(filename):
 	return data
 
 dir1 = os.path.expanduser('~/miro/data/follow-long-path/')
-dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/3/')
-base_file_path = dir2 + 'full_'
-dir2 += 'norm/'
+dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/2/')
+base_file_path = dir2 #+ 'full_'
+# dir2 += 'norm/'
 
 image_files1 = [dir1+f for f in os.listdir(dir1) if f[-10:] == '_image.pkl']
 image_files1.sort()
@@ -50,6 +50,11 @@ for i,image1 in enumerate(images1):
 		offset, correlation = image_processing.xcorr_match_images(image1, image2)
 		correlations[i,j] = correlation
 		offsets[i,j] = offset
+
+# save before normalisation
+np.save(base_file_path+'c', correlations)
+np.save(base_file_path+'o', offsets)
+
 correlations /= np.reshape(np.max(correlations, axis=0), (1,-1))
 
 dt = time.time()-start_time
@@ -77,15 +82,6 @@ if fancy:
 else:
 	confusion_image = np.uint8(255*correlations)
 	offset_image = np.uint8(255.0/115.0/2.0*abs(offsets))
-
-
-
-# print(correlations)
-# print(offsets)
-# print(offsets[correlations == 1])
-
-np.save(base_file_path+'c', correlations)
-np.save(base_file_path+'o', offsets)
 
 # cv2.imshow('con', confusion_image)
 cv2.imwrite(base_file_path+'c1.png', confusion_image)

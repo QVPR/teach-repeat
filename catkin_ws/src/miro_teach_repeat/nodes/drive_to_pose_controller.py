@@ -10,7 +10,7 @@ import math
 
 from miro_teach_repeat.msg import Goal
 
-MAX_V = 0.4
+MAX_V = 0.2
 MAX_OMEGA = MAX_V / 0.164 # (width) = 2.439
 
 def wrapToPi(x):
