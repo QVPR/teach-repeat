@@ -29,12 +29,14 @@ class miro_robot_setup:
 		self.should_disable_cliff_sensors = rospy.get_param('~disable_cliff_sensors', False)
 
 		self.ready = None
+		self.frames_to_wait_for_ready = 50 # 50 frames = 1 s
+		self.ready_frames = self.frames_to_wait_for_ready
 
 	def setup_publishers(self):
+		rospy.wait_for_service('/miro/sensors/odom/reset')
 		rospy.wait_for_service('miro/control/kinematic_joints/set_fixed_state')
 		rospy.wait_for_service('miro/control/kinematic_joints/fixed/enable')
 		rospy.wait_for_service('miro/control/kinematic_joints/fixed/disable')
-		rospy.wait_for_service('/miro/sensors/odom/reset')
 		self.set_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
 		self.enable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
 		self.disable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
@@ -48,8 +50,12 @@ class miro_robot_setup:
 
 	def process_joint_at_set_point(self, msg):
 		if msg.data and self.ready == False:
-			self.ready = True
-			self.pub_ready.publish(Bool(data=True))
+			self.ready_frames -= 1
+			if self.ready_frames == 0:
+				self.ready = True
+				self.pub_ready.publish(Bool(data=True))
+		else:
+			self.ready_frames = self.frames_to_wait_for_ready
 
 	def start(self):
 		self.set_fixed_state(self.joint_states)

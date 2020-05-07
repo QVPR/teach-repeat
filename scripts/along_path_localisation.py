@@ -13,14 +13,16 @@ sys.path.append(os.path.dirname(__file__) + '/../nodes')
 import importlib
 image_processing = importlib.import_module('image_processing')
 
+import colourmap
+
 def read_file(filename):
 	with open(filename, 'r') as f:
 		data = f.read()
 	return data
 
 dir1 = os.path.expanduser('~/miro/data/follow-straight-odom/')
-dir2 = os.path.expanduser('~/miro/data/follow-straight-odom_tests/3/')
-dir2_full = os.path.expanduser('~/miro/data/follow-straight-odom_tests/3/norm/')
+dir2 = os.path.expanduser('~/miro/data/follow-straight-odom_tests/6/')
+dir2_full = os.path.expanduser('~/miro/data/follow-straight-odom_tests/6/norm/')
 base_file_path = dir2 + 'full_'
 # dir2 += 'norm/'
 
@@ -78,19 +80,27 @@ if not os.path.exists(base_file_path+'c.npy'):
 	# save before normalisation
 	np.save(base_file_path+'c', correlations)
 
+	confusion_image_unscaled = np.uint8(255*colourmap.parula_data[np.uint8(255*correlations)])[:,:,::-1]
+
+	confusion_image_global_scaled = np.uint8(255*colourmap.parula_data[np.uint8(255*(correlations/correlations.max()))])[:,:,::-1]
+
 	correlations /= np.reshape(np.max(correlations, axis=0), (1,-1))
 
 	dt = time.time()-start_time
 	print('processed %d images in %.2f seconds (%.2f / s)' % (N, dt, N/dt))
 
-	confusion_image = np.uint8(255*correlations)
+	confusion_image = np.uint8(255*colourmap.parula_data[np.uint8(255*correlations)])[:,:,::-1]
 
 	cv2.imwrite(base_file_path+'c1.png', confusion_image)
+	cv2.imwrite(base_file_path+'c1_unscaled.png', confusion_image_unscaled)
+	cv2.imwrite(base_file_path+'c1_global_scaled.png', confusion_image_global_scaled)
 
 	width_on_height_scale = round(confusion_image.shape[1] / float(confusion_image.shape[0]))
 
 	if width_on_height_scale > 1:
 		cv2.imwrite(base_file_path+'c2.png', cv2.resize(confusion_image,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+		cv2.imwrite(base_file_path+'c2_unscaled.png', cv2.resize(confusion_image_unscaled,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
+		cv2.imwrite(base_file_path+'c2_global_scaled.png', cv2.resize(confusion_image_global_scaled,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
 else:
 	correlations = np.load(base_file_path+'c.npy')
 
@@ -102,6 +112,7 @@ for i,image1 in enumerate(images2):
 	correspondances_indices[i] = np.argmin(diffs)
 correspondances = x[correspondances_indices]
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 correlations = correlations[:,correspondances_indices[0]:correspondances_indices[-1]]
@@ -116,10 +127,12 @@ for i in range(1,len(combo)):
 	# combo[i] = combo[i-1] + step_size + 0.02*(best_matches[i]-combo[i-1])
 	combo[i] = combo[i-1] + 1.0*int(np.any(correspondances_indices == i-1+correspondances_indices[0])) + 0.01*(best_matches[i]-combo[i-1])
 
-plt.plot(x, best_matches, '.', alpha = 0.2)
-plt.plot(correspondances, np.arange(len(correspondances)), 'x')
-# plt.plot(straight_line, alpha = 1)
-# plt.plot(moving_average, alpha = 1)
-plt.plot(x, combo, alpha = 1)
+matplotlib.style.use('ggplot')
+plt.plot(x/15.0, best_matches*0.2, '.', alpha = 0.4)
+plt.plot(correspondances/15.0, np.arange(len(correspondances))*0.2, 'x')
+plt.title('Along-route localisation vs best visual match [110% odom]')
+plt.xlabel('time (s)')
+plt.ylabel('path distance (m)')
+plt.legend(['best visual match','keyframe'])
 
 plt.show()

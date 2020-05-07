@@ -6,7 +6,7 @@ import cv2
 import os
 import pickle
 from sensor_msgs.msg import Image
-from std_msgs.msg import Int32, Float32
+from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
 import image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
@@ -67,13 +67,13 @@ class miro_image_matcher:
 
 	def match_image(self, request):
 		image = image_processing.msg_to_image(request.normalisedImage)
-		# start_search_range = max(0, self.current_position - SEARCH_SIZE)
-		# end_search_range = min(len(self.images), self.current_position + SEARCH_SIZE)
-		# match_data = [image_processing.xcorr_match_images(ref_img, image) for ref_img in self.images[start_search_range:end_search_range]]
-		# match_data = [image_processing.xcorr_match_images(ref_img, image) for ref_img in self.images]
-		# best_index = np.argmax([m[1] for m in match_data])
-		match_data = [image_processing.xcorr_match_images(self.images[request.imageIndex.data], image)]
-		best_index = 0
+		image_index = request.imageIndex.data
+		start_range = max(0, image_index - request.searchRange.data)
+		end_range = min(len(self.images), image_index + request.searchRange.data + 1)
+		match_data = [image_processing.xcorr_match_images(ref_img, image) for ref_img in self.images[start_range:end_range]]
+		best_index = image_index - start_range
+		# match_data = [image_processing.xcorr_match_images(self.images[request.imageIndex.data], image)]
+		# best_index = 0
 
 		offset = match_data[best_index][0]
 		correlation = match_data[best_index][1]
@@ -94,7 +94,14 @@ class miro_image_matcher:
 		self.match_number += 1
 
 		# self.current_position = best_index + start_search_range
-		return ImageMatchResponse(Int32(offset), Float32(correlation))
+		offsets = Int32MultiArray()
+		offsets.layout.dim = [MultiArrayDimension(size=len(match_data))]
+		offsets.data = [int(match[0]) for match in match_data]
+		correlations = Float32MultiArray()
+		correlations.layout.dim = [MultiArrayDimension(size=len(match_data))]
+		correlations.data = [match[1] for match in match_data]
+
+		return ImageMatchResponse(offsets, correlations)
 
 
 if __name__ == "__main__":
