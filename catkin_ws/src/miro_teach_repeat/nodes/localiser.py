@@ -158,18 +158,14 @@ class miro_localiser:
 
 	def calculate_image_pose_offset(self, image_to_search_index):
 		if self.last_image is not None:
-			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index))
-			image_match = self.match_image(match_request)
-			image_match_offset = image_match.pixelOffset.data
-			image_match_corr = image_match.correlation.data
-
 			if image_to_search_index > 0 and image_to_search_index < len(self.poses)-1:
-				prev_match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index-1))
-				prev_image_match = self.match_image(prev_match_request)
-				prev_image_match_corr = prev_image_match.correction.data
-				next_match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index+1))
-				next_image_match = self.match_image(next_match_request)
-				next_image_match_corr = next_image_match.correction.data
+				match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(1))
+				match_response = self.match_image(match_request)
+
+				image_match_offset = match_response.offsets.data[1]
+				image_match_corr = match_response.correlations.data[1]
+				prev_image_match_corr = match_response.correlations.data[0]
+				next_image_match_corr = match_response.correlations.data[2]
 
 				if next_image_match_corr > image_match_corr:
 					path_offset = 0.5
@@ -178,6 +174,11 @@ class miro_localiser:
 				else:
 					path_offset = 1.0
 			else:
+				match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(0))
+				match_response = self.match_image(match_request)
+
+				image_match_offset = match_response.offsets.data[0]
+
 				path_offset = 1.0
 
 			# positive image offset: query image is shifted left from reference image

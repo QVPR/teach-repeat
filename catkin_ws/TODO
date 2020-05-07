@@ -24,6 +24,8 @@ Testing:
 		Works quite well on all paths - initial offsets cause failure though
 	✔ Investigate whether not accounting for known goal->odom theta offset is causing issues @started(20-04-30 16:34) @done(20-04-30 17:16) @lasted(42m28s)
 		* In sim, it needs some work to surface, but can be seen to cause issues
+	☐ Test along-route localisation
+		* Works nicely for a ~30 m outdoor->indoor route using +/- 50% correction (+/-10% artificial linear odom error)
 
 Development:
 	Setup:
@@ -83,7 +85,7 @@ Bugs:
 			* Moved image synchronisation to onboard which appears to solve the problem
 				Setting queue size to 1 and buff size large (maybe doesn't have an effect...) - still lag spikes but quickly recovered by dropping messages
 		☐ @high We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
-		☐ @high @WIP Sometimes in data_matching the system doesn't start driving - is the goal published before we're looking for it?
+		✔ Sometimes in data_matching the system doesn't start driving - is the goal published before we're looking for it? @done(20-05-07 16:39)
 
 	Localisation / Image Processing:
 		✔ Why do the offsets come out all significantly negative? @15m @started(20-03-26 09:05) @done(20-03-26 09:11) @lasted(6m30s)

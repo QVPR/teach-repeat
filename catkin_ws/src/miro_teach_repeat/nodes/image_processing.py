@@ -308,8 +308,8 @@ if __name__ == "__main__":
 			data = f.read()
 		return data
 
-	img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-inside_tests/1/000000_image.pkl'))
-	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-inside_tests/2/000000_image.pkl'))
+	img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
+	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/2 - HUGE VISION FAIL/000000_image.pkl'))
 
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
 	corr = normxcorr2(img1_pad, img2, mode='valid')

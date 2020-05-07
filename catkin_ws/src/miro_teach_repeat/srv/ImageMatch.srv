@@ -1,5 +1,6 @@
 sensor_msgs/Image normalisedImage
 std_msgs/UInt32 imageIndex
+std_msgs/UInt32 searchRange # total images searched = 1 + 2*searchRange
 ---
-std_msgs/Int32 pixelOffset
-std_msgs/Float32 correlation
+std_msgs/Int32MultiArray offsets
+std_msgs/Float32MultiArray correlations
