@@ -69,6 +69,12 @@ class miro_localiser:
 			os.makedirs(self.save_dir+'full/')
 		if not os.path.isdir(self.save_dir+'norm/'):
 			os.makedirs(self.save_dir+'norm/')
+		if not os.path.isdir(self.save_dir+'pose/'):
+			os.makedirs(self.save_dir+'pose/')
+		if not os.path.isdir(self.save_dir+'offset/'):
+			os.makedirs(self.save_dir+'offset/')
+		if not os.path.isdir(self.save_dir+'correction/'):
+			os.makedirs(self.save_dir+'correction/')
 
 		self.goal_number = 0
 		
@@ -137,18 +143,18 @@ class miro_localiser:
 
 				# save current pose info
 				message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(msg.pose.pose))
-				with open(self.save_dir+'poses/'+self.goal_number+'_pose.txt', 'w') as pose_file:
+				with open(self.save_dir+('pose/%06d_pose.txt' % self.goal_number), 'w') as pose_file:
 					pose_file.write(message_as_text)
 				# save current offset
 				offset = tf_conversions.toMsg(new_goal_odom.Inverse() * new_goal_frame_world)
 				message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(offset))
-				with open(self.save_dir+'offsets/'+self.goal_number+'_offset.txt', 'w') as offset_file:
+				with open(self.save_dir+('offset/%06d_offset.txt' % self.goal_number), 'w') as offset_file:
 					offset_file.write(message_as_text)
 				# publish offset to tf
 				self.tf_pub.sendTransform((offset.position.x,offset.position.y,offset.position.z),(offset.orientation.x,offset.orientation.y,offset.orientation.z,offset.orientation.w),rospy.Time.now(),'map','odom')
 				# publish current corrections
 				message_as_text = json.dumps({'theta_offset':correction_theta, 'path_offset':image_path_offset})
-				with open(self.save_dir+'corrections/'+self.goal_number+'_correction.txt', 'w') as correction_file:
+				with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:
 					correction_file.write(message_as_text)
 
 				self.goal_number += 1
