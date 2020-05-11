@@ -12,6 +12,7 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
 import tf_conversions
+import tf
 
 import image_processing
 from miro_onboard.msg import CompressedImageSynchronised
@@ -68,12 +69,15 @@ class miro_localiser:
 			os.makedirs(self.save_dir+'full/')
 		if not os.path.isdir(self.save_dir+'norm/'):
 			os.makedirs(self.save_dir+'norm/')
+
+		self.goal_number = 0
 		
 	def setup_publishers(self):	
 		self.goal_pub = rospy.Publisher('/miro/control/goal', Goal, queue_size=1)
 
 		rospy.wait_for_service('/miro/match_image')
 		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
+		self.tf_pub = tf.TransformBroadcaster()
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -112,13 +116,14 @@ class miro_localiser:
 				# these parameters were estimated from scripts/rotation_displacement_test.py
 				expected_pixel_offset = 0.65*math.degrees(known_goal_offset.M.GetRPY()[2]) + 15*known_goal_offset.p.y()
 				expected_theta_offset = self.image_offset_gain * float(expected_pixel_offset) / self.last_image.shape[1]
+				correction_theta = image_theta_offset - expected_theta_offset
 
 				# old target -> new target in frame of old target (x = forwards)
 				goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
 				# rotate to odom frame (x = positive odom) [same frame as current_goal]
 				goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
 				# rotate the goal offset by the rotational correction
-				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(image_theta_offset - expected_theta_offset)) * goal_offset
+				goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_theta)) * goal_offset
 				# extend or retract the goal using image-based along-path offset
 				goal_offset_corrected.p *= image_path_offset
 				# add the corrected offset to the current goal
@@ -129,6 +134,24 @@ class miro_localiser:
 					self.publish_goal(self.goal, 0.0, True)
 				else:
 					self.publish_goal(self.goal, 0.1, False)
+
+				# save current pose info
+				message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(msg.pose.pose))
+				with open(self.save_dir+'poses/'+self.goal_number+'_pose.txt', 'w') as pose_file:
+					pose_file.write(message_as_text)
+				# save current offset
+				offset = tf_conversions.toMsg(new_goal_odom.Inverse() * new_goal_frame_world)
+				message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(offset))
+				with open(self.save_dir+'offsets/'+self.goal_number+'_offset.txt', 'w') as offset_file:
+					offset_file.write(message_as_text)
+				# publish offset to tf
+				self.tf_pub.sendTransform((offset.position.x,offset.position.y,offset.position.z),(offset.orientation.x,offset.orientation.y,offset.orientation.z,offset.orientation.w),rospy.Time.now(),'map','odom')
+				# publish current corrections
+				message_as_text = json.dumps({'theta_offset':correction_theta, 'path_offset':image_path_offset})
+				with open(self.save_dir+'corrections/'+self.goal_number+'_correction.txt', 'w') as correction_file:
+					correction_file.write(message_as_text)
+
+				self.goal_number += 1
 
 	def process_image_data(self, msg):
 		if self.ready:
