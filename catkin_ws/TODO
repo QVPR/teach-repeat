@@ -60,6 +60,11 @@ Development:
 		✔ Specify "intermediate" or "stop" goals - allow faster movement @15m @started(20-04-28 16:39) @done(20-04-28 16:59) @lasted(20m10s)
 		✔ Refactor localiser and odom_follower into one node @30m @started(20-04-28 15:59) @done(20-04-28 16:30) @lasted(31m51s)
 
+	Visualisation:
+		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)
+		☐ Record poses and offsets in data_matching @30m
+		☐ Some way of visualising the corrections over a run
+
 Bugs: 
 	ROS:
 		✔ Subscribing to camera before setting camera options results in receiving empty message @20m @started(20-03-25 13:12) @done(20-03-25 13:28) @lasted(16m57s)
