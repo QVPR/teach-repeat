@@ -69,20 +69,20 @@ class miro_image_matcher:
 		image = image_processing.msg_to_image(request.normalisedImage)
 		image_index = request.imageIndex.data
 		start_range = max(0, image_index - request.searchRange.data)
-		end_range = min(len(self.images), image_index + request.searchRange.data + 1)
-		match_data = [image_processing.xcorr_match_images(ref_img, image) for ref_img in self.images[start_range:end_range]]
+		end_range = min(len(self.images), image_index + request.searchRange.data)
 		best_index = image_index - start_range
-		# match_data = [image_processing.xcorr_match_images(self.images[request.imageIndex.data], image)]
-		# best_index = 0
+		match_data = []
+		for i in range(end_range - start_range):
+			img_index = start_range + i
+			if img_index == best_index:
+				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image)
+				match_data[i] = (offset, corr)
+			else:
+				match_data[i] = image_processing.xcorr_match_images(self.images[img_index], image)
 
 		offset = match_data[best_index][0]
 		correlation = match_data[best_index][1]
 
-		debug_image = np.concatenate((image, self.images[request.imageIndex.data]), axis=0)
-		debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
-		debug_image = cv2.merge((debug_image, debug_image, debug_image))
-		cv2.line(debug_image, (int(-offset+image.shape[1]/2),0), (int(-offset+image.shape[1]/2),image.shape[0]-1), (0,255,0))
-		cv2.line(debug_image, (int(image.shape[1]/2),image.shape[0]), (int(image.shape[1]/2), 2*image.shape[0]), (200,0,0))
 		self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
 
 		cv2.imwrite(self.save_dir+'%06d.png' % self.match_number, debug_image)

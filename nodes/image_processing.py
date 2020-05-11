@@ -162,6 +162,13 @@ def xcorr_match_images(image, template_image):
 	offset = np.argmax(corr)
 	return offset - int(template_image.shape[1]/2), corr[0,offset]
 
+def xcorr_match_images_debug(image, template_image):
+	image_pad = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
+	corr = normxcorr2(image_pad, template_image, mode='valid')
+	offset = np.argmax(corr)
+	debug_image = create_correlation_debug_image(image, template_image, corr)
+	return offset - int(template_image.shape[1]/2), corr[0,offset], debug_image
+
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
 	differences = [0] * len(positions)
@@ -298,6 +305,25 @@ def image_patch_rotation(image1, image2, min_overlap):
 	offset = np.argmin(means)
 	return offset - pad, means[offset]
 
+def create_correlation_debug_image(img1, img2, corr):
+	offset = np.argmax(corr) - int(img2.shape[1]/2)
+	debug_size = 50
+
+	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr[0,:],0,1))) - 1
+
+	debug_image = np.concatenate((img1, img2, -1*np.ones((debug_size,img1.shape[1]))), axis=0)
+	debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
+	debug_image = cv2.merge((debug_image, debug_image, debug_image))
+
+	cv2.line(debug_image, (int(-offset+img1.shape[1]/2),0), (int(-offset+img1.shape[1]/2),img1.shape[0]-1), (0,255,0))
+	cv2.line(debug_image, (int(img1.shape[1]/2),img1.shape[0]), (int(img1.shape[1]/2), 2*img1.shape[0]-1), (255,0,0))
+	
+	cv2.line(debug_image, (0,debug_image.shape[0]-(debug_size/4)), (img1.shape[1],debug_image.shape[0]-(debug_size/4)), (60,0,0))
+	cv2.line(debug_image, (0,debug_image.shape[0]-(debug_size/2)), (img1.shape[1],debug_image.shape[0]-(debug_size/2)), (60,0,0))
+	cv2.line(debug_image, (0,debug_image.shape[0]-(3*debug_size/4)), (img1.shape[1],debug_image.shape[0]-(3*debug_size/4)), (60,0,0))
+	
+	debug_image[corr_positions,np.arange(corr_positions.size),:] = 255
+	return debug_image
 
 
 if __name__ == "__main__":
@@ -314,8 +340,10 @@ if __name__ == "__main__":
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
 	corr = normxcorr2(img1_pad, img2, mode='valid')
 
-	import matplotlib.pyplot as plt
-
-	plt.plot(np.arange(-int(img2.shape[1]/2),int(img2.shape[1]/2)+1), corr[0,:])
-	plt.show()
+	debug_image = create_correlation_debug_image(img1, img2, corr)
+	cv2.imshow('img', cv2.resize(debug_image, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST))
+	cv2.waitKey()
 	
+	import matplotlib.pyplot as plt
+	# plt.plot(np.arange(-int(img2.shape[1]/2),int(img2.shape[1]/2)+1), corr[0,:])
+	# plt.show()
