@@ -311,7 +311,7 @@ def create_correlation_debug_image(img1, img2, corr):
 
 	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr[0,:],0,1))) - 1
 
-	debug_image = np.concatenate((img1, img2, -1*np.ones((debug_size,img1.shape[1]))), axis=0)
+	debug_image = np.concatenate((img2, img1, -1*np.ones((debug_size,img1.shape[1]))), axis=0)
 	debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
 	debug_image = cv2.merge((debug_image, debug_image, debug_image))
 
