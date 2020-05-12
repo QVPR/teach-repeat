@@ -50,6 +50,8 @@ Development:
 			☐ Record data for offline processing (MATLAB)
 			☐ Port to python to run in real-time
 		☐ Larger along-route localisation window
+		✔ Filter out obvious bad offset localisations (threshold) @done(20-05-13 09:40)
+			* Better approach to compare the ratio of correlations between top and second peak
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
