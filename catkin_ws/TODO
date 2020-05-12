@@ -26,6 +26,9 @@ Testing:
 		* In sim, it needs some work to surface, but can be seen to cause issues
 	✔ Test along-route localisation @done(20-05-11 14:10)
 		* Works nicely for a ~30 m outdoor->indoor route using +/- 50% correction (+/-10% artificial linear odom error)
+	☐ Testing the breaking point of along-route localisation (what % odom corruption)
+	☐ Test effect of moving the robot +/- 1 metre along the path -> along path localisation
+	☐ Test robot in more complex environments (turning on spot, there and back)
 
 Development:
 	Setup:
@@ -46,6 +49,7 @@ Development:
 			☐ Get range / bearing measurements from AR tags
 			☐ Record data for offline processing (MATLAB)
 			☐ Port to python to run in real-time
+		☐ Larger along-route localisation window
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
@@ -89,7 +93,7 @@ Bugs:
 				Need to set the buffer size of the subscriber
 			* Moved image synchronisation to onboard which appears to solve the problem
 				Setting queue size to 1 and buff size large (maybe doesn't have an effect...) - still lag spikes but quickly recovered by dropping messages
-		☐ @high We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
+		☐ @critical We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
 		✔ Sometimes in data_matching the system doesn't start driving - is the goal published before we're looking for it? @done(20-05-07 16:39)
 
 	Localisation / Image Processing:
