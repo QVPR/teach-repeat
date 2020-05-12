@@ -111,6 +111,10 @@ class miro_localiser:
 				if self.goal_index == len(self.poses):
 					if self.stop_at_end:
 						self.goal_index = len(self.poses)-1
+						# save image when arriving at the final goal
+						if self.goal_number < len(self.poses):
+							image_path_offset, image_theta_offset = self.calculate_image_pose_offset(old_goal_index)
+							self.goal_number += 1
 						return
 					else:
 						self.goal_index = 0 # repeat the path (loop)
