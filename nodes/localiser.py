@@ -105,7 +105,7 @@ class miro_localiser:
 
 			delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
-			if delta_frame.p.Norm() < 0.10:
+			if delta_frame.p.Norm() < 0.10 and delta_frame.M.GetRPY()[2] < math.radians(5):
 				old_goal_index = self.goal_index
 				self.goal_index += 1
 				if self.goal_index == len(self.poses):
