@@ -95,7 +95,7 @@ Bugs:
 				Need to set the buffer size of the subscriber
 			* Moved image synchronisation to onboard which appears to solve the problem
 				Setting queue size to 1 and buff size large (maybe doesn't have an effect...) - still lag spikes but quickly recovered by dropping messages
-		☐ @critical We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal
+		✔ We can't follow a spin-on-the-spot maneuvre because we only consider Euclidean distance for matching current position -> goal @done(20-05-13 11:18)
 		✔ Sometimes in data_matching the system doesn't start driving - is the goal published before we're looking for it? @done(20-05-07 16:39)
 
 	Localisation / Image Processing:
