@@ -191,29 +191,24 @@ class miro_localiser:
 
 	def calculate_image_pose_offset(self, image_to_search_index):
 		if self.last_image is not None:
-			if image_to_search_index > 0 and image_to_search_index < len(self.poses)-1:
-				match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(1))
-				match_response = self.match_image(match_request)
+			HALF_SEARCH_RANGE = 1
+			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(HALF_SEARCH_RANGE))
+			match_response = self.match_image(match_request)
 
-				image_match_offset = match_response.offsets.data[1]
-				image_match_corr = match_response.correlations.data[1]
-				prev_image_match_corr = match_response.correlations.data[0]
-				next_image_match_corr = match_response.correlations.data[2]
-
-				if next_image_match_corr > image_match_corr:
-					path_offset = 0.5
-				elif prev_image_match_corr > image_match_corr:
-					path_offset = 1.5
-				else:
-					path_offset = 1.0
+			if image_to_search_index >= HALF_SEARCH_RANGE:
+				centre_image_index = HALF_SEARCH_RANGE
 			else:
-				match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(0))
-				match_response = self.match_image(match_request)
+				centre_image_index = image_to_search_index
 
-				image_match_offset = match_response.offsets.data[0]
-				image_match_corr = match_response.correlations.data[0]
+			image_match_offset = match_response.offsets.data[centre_image_index]
+			image_match_corr = match_response.correlations.data[centre_image_index]
+			best_match = np.argmax(match_request.correlations.data)
 
-				path_offset = 1.0
+			path_offset_magnitude = best_match - centre_image_index
+			if path_offset_magnitude > 0:
+				path_offset = 1.5 ** path_offset_magnitude
+			elif path_offset_magnitude < 0:
+				path_offset = 0.5 ** (-path_offset_magnitude)
 
 			OFFSET_RECOGNITION_THRESHOLD = 0.1
 			if image_match_corr < OFFSET_RECOGNITION_THRESHOLD:
