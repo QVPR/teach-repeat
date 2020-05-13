@@ -202,13 +202,15 @@ class miro_localiser:
 
 			image_match_offset = match_response.offsets.data[centre_image_index]
 			image_match_corr = match_response.correlations.data[centre_image_index]
-			best_match = np.argmax(match_request.correlations.data)
+			best_match = np.argmax(match_response.correlations.data)
 
 			path_offset_magnitude = best_match - centre_image_index
 			if path_offset_magnitude > 0:
-				path_offset = 1.5 ** path_offset_magnitude
+				path_offset = 0.5 ** path_offset_magnitude
 			elif path_offset_magnitude < 0:
-				path_offset = 0.5 ** (-path_offset_magnitude)
+				path_offset = 1.5 ** (-path_offset_magnitude)
+			else:
+				path_offset = 1.0
 
 			OFFSET_RECOGNITION_THRESHOLD = 0.1
 			if image_match_corr < OFFSET_RECOGNITION_THRESHOLD:
