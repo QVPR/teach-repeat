@@ -221,11 +221,13 @@ class miro_localiser:
 				path_offset = 1.5 ** (-path_offset_magnitude)
 			else:
 				path_offset = 1.0
-			# path_offset = 1.0
 
 			OFFSET_RECOGNITION_THRESHOLD = 0.1
 			if image_match_corr < OFFSET_RECOGNITION_THRESHOLD:
 				image_match_offset = 0
+			if match_response.correlations.data[best_match] < OFFSET_RECOGNITION_THRESHOLD:
+				path_offset = 1.0
+			
 
 			# positive image offset: query image is shifted left from reference image
 			# this means we have done a right (negative turn) which we should correct with a positive turn
