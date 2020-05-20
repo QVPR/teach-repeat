@@ -27,7 +27,7 @@ Testing:
 	✔ Test along-route localisation @done(20-05-11 14:10)
 		* Works nicely for a ~30 m outdoor->indoor route using +/- 50% correction (+/-10% artificial linear odom error)
 	✔ Testing the breaking point of along-route localisation (what % odom corruption) @done(20-05-14 14:06)
-	☐ Test effect of moving the robot +/- 1 metre along the path -> along path localisation
+	✔ Test effect of moving the robot +/- 1 metre along the path -> along path localisation @done(20-05-20 15:52)
 	☐ Test robot in more complex environments (turning on spot, there and back)
 
 Development:
@@ -53,6 +53,8 @@ Development:
 		✔ Filter out obvious bad offset localisations (threshold) @done(20-05-13 09:40)
 			* Better approach to compare the ratio of correlations between top and second peak
 		☐ Disable along-path localisation during a turn
+		✔ Threshold along-path localisation @done(20-05-20 16:26)
+		☐ Apply small corrections continually
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
