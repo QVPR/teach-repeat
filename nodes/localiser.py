@@ -27,6 +27,9 @@ def read_file(filename):
 def load_poses(pose_files):
 	return [message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(read_file(f))) for f in pose_files]
 
+def wrapToPi(x):
+	return ((x + math.pi) % (2*math.pi)) - math.pi
+
 class miro_localiser:
 	def __init__(self):
 		self.setup_parameters()
@@ -105,7 +108,9 @@ class miro_localiser:
 
 			delta_frame = current_frame_odom.Inverse() * current_goal_frame_odom
 
-			if delta_frame.p.Norm() < 0.10 and delta_frame.M.GetRPY()[2] < math.radians(5):
+			if delta_frame.p.Norm() < 0.10 and abs(wrapToPi(delta_frame.M.GetRPY()[2])) >= math.radians(5):
+				print('angle difference from goal = %.2f [rho = %.3f]' % (math.degrees(wrapToPi(delta_frame.M.GetRPY()[2])),delta_frame.p.Norm()))
+			if delta_frame.p.Norm() < 0.10 and abs(wrapToPi(delta_frame.M.GetRPY()[2])) < math.radians(5):
 				old_goal_index = self.goal_index
 				self.goal_index += 1
 				if self.goal_index == len(self.poses):
@@ -139,11 +144,16 @@ class miro_localiser:
 				# add the corrected offset to the current goal
 				new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
 
+				diff = old_goal_frame_world.Inverse() * new_goal_frame_world
+				print(diff.p.Norm(), math.degrees(diff.M.GetRPY()[2]))
 				self.goal = tf_conversions.toMsg(new_goal_odom)
-				if self.goal_index == len(self.poses)-1 and self.stop_at_end:
+				if diff.p.Norm() < 0.1:
 					self.publish_goal(self.goal, 0.0, True)
 				else:
-					self.publish_goal(self.goal, 0.1, False)
+					if self.goal_index == len(self.poses)-1 and self.stop_at_end:
+						self.publish_goal(self.goal, 0.0, True)
+					else:
+						self.publish_goal(self.goal, 0.1, False)
 
 				# save current pose info
 				message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(msg.pose.pose))
@@ -211,6 +221,7 @@ class miro_localiser:
 				path_offset = 1.5 ** (-path_offset_magnitude)
 			else:
 				path_offset = 1.0
+			# path_offset = 1.0
 
 			OFFSET_RECOGNITION_THRESHOLD = 0.1
 			if image_match_corr < OFFSET_RECOGNITION_THRESHOLD:
