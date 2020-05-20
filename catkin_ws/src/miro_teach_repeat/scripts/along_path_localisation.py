@@ -20,10 +20,10 @@ def read_file(filename):
 		data = f.read()
 	return data
 
-dir1 = os.path.expanduser('~/miro/data/follow-straight-odom/')
-dir2 = os.path.expanduser('~/miro/data/follow-straight-odom_tests/6/')
-dir2_full = os.path.expanduser('~/miro/data/follow-straight-odom_tests/6/norm/')
-base_file_path = dir2 + 'full_'
+dir1 = os.path.expanduser('~/miro/data/follow-long-path/')
+dir2 = os.path.expanduser('~/miro/data/follow-long-path_tests/17/')
+dir2_full = os.path.expanduser('~/miro/data/follow-long-path_tests/17/norm/')
+base_file_path = dir2
 # dir2 += 'norm/'
 
 half_search_range = 5
@@ -49,7 +49,7 @@ else:
 	image_files2_full.sort()
 	images2_full = [pickle.loads(read_file(image)) for image in image_files2_full]
 
-if not os.path.exists(base_file_path+'c.npy'):
+if not os.path.exists(base_file_path+'confusion.npy'):
 
 	correlations = np.zeros((len(images1),len(images2_full)))
 
@@ -102,7 +102,7 @@ if not os.path.exists(base_file_path+'c.npy'):
 		cv2.imwrite(base_file_path+'c2_unscaled.png', cv2.resize(confusion_image_unscaled,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
 		cv2.imwrite(base_file_path+'c2_global_scaled.png', cv2.resize(confusion_image_global_scaled,None,fx=1,fy=width_on_height_scale,interpolation=cv2.INTER_NEAREST))
 else:
-	correlations = np.load(base_file_path+'c.npy')
+	correlations = np.load(base_file_path+'confusion.npy')
 
 x = np.array([int(image_name[-10:-4]) for image_name in image_files2_full])
 
