@@ -134,6 +134,22 @@ def get_patches2D(image, patch_size):
 	ncols = image.shape[1] - patch_size[1] + 1
 	return numpy.lib.stride_tricks.as_strided(image, patch_size + (nrows, ncols), image.strides + image.strides).reshape(patch_size[0]*patch_size[1],-1)
 
+def get_patches2D_sparse(image, patch_size, point_stride, patch_type='all'):
+	full_patch_size_rows = 1 + (patch_size[0]-1) * point_stride[0]
+	full_patch_size_cols = 1 + (patch_size[1]-1) * point_stride[1]
+	nrows = image.shape[0] - full_patch_size_rows + 1
+	ncols = image.shape[1] - full_patch_size_cols + 1
+	if patch_type == 'all':
+		output_size = (patch_size[0], patch_size[1], nrows, ncols)
+	elif patch_type == 'rows':
+		output_size = (patch_size[0], patch_size[1], nrows, 1)
+	elif patch_type == 'cols':
+		output_size = (patch_size[0], patch_size[1], 1, ncols)
+	elif patch_type == 'one':
+		output_size = (patch_size[0], patch_size[1], 1, 1)
+	strides = (point_stride[0]*image.strides[0], point_stride[1]*image.strides[1]) + image.strides
+	return numpy.lib.stride_tricks.as_strided(image, output_size, strides).reshape(patch_size[0]*patch_size[1],-1)
+
 def get_patches1D(image, patch_size):
 	nrows = image.shape[0] - patch_size + 1
 	return numpy.lib.stride_tricks.as_strided(image, (patch_size, nrows), image.strides + image.strides)
@@ -254,6 +270,42 @@ def normxcorr2(image, template, mode="full"):
 	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
 	return correlated
 
+def normxcorr2_sparse(image, template, sampling=(1,1)):
+	image = image.copy()
+	template = template.copy()
+	image_min = image.min()
+	if image_min < 0:
+		image -= image_min
+	template_min = template.min()
+	if template_min < 0:
+		template -= template_min
+
+	nrows = 1 + (template.shape[0] - 1) / sampling[0]
+	ncols = 1 + (template.shape[1] - 1) / sampling[1]
+
+	template_sparse = get_patches2D_sparse(template, (nrows, ncols), sampling, 'one')
+	image_patches_sparse = get_patches2D_sparse(image, (nrows, ncols), sampling, 'cols')
+
+	local_sum = np.sum(image_patches_sparse, axis=0)
+	local_sum2 = np.sum(image_patches_sparse**2, axis=0)
+
+	xcorr = np.sum(image_patches_sparse * template_sparse, axis=0)
+
+	mn = template_sparse.size
+	template_mean = template_sparse.sum()/mn
+	numerator = xcorr - local_sum * template_mean
+
+	denominator_image = local_sum2 - local_sum**2/mn
+	denominator_image[denominator_image < 0.0] = 0.0
+	denominator_template = ((template_sparse - template_mean)**2).sum()
+	denominator = np.sqrt(denominator_image * denominator_template)
+
+	correlated = np.zeros_like(numerator)
+	tolerance = math.sqrt(np.spacing(abs(denominator).max()))
+	nonzero_index = np.where(denominator > tolerance)
+	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
+	return correlated
+
 def local_sum_full(A, m, n):
 	B = np.pad(A, ((m,),(n,)), 'constant', constant_values=0)
 	s = np.cumsum(B, axis=0)
@@ -335,16 +387,58 @@ if __name__ == "__main__":
 			data = f.read()
 		return data
 
+	import time
+
+	# img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
+	# img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/2 - HUGE VISION FAIL/00000_image.pkl'))
+	
 	img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
-	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/2 - HUGE VISION FAIL/000000_image.pkl'))
+	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/8/000000_image.pkl'))
 
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-	corr = normxcorr2(img1_pad, img2, mode='valid')
 
-	debug_image = create_correlation_debug_image(img1, img2, corr)
-	cv2.imshow('img', cv2.resize(debug_image, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST))
-	cv2.waitKey()
+	t1 = time.time()
+	corr = normxcorr2(img1_pad, img2, mode='valid')
+	t = time.time() - t1
+	print('full normxcorr time: %f s' % (t))
+
+	t1 = time.time()
+	corr_1 = normxcorr2_sparse(img1_pad, img2, (1,1))
+	t_1 = time.time() - t1
+	print('normxcorr 1x1 time: %f s' % (t_1))
+
+	t1 = time.time()
+	corr_2 = normxcorr2_sparse(img1_pad, img2, (2,2))
+	t_2 = time.time() - t1
+	print('normxcorr 2x2 time: %f s' % (t_2))
+
+	t1 = time.time()
+	corr_3 = normxcorr2_sparse(img1_pad, img2, (3,3))
+	t_3 = time.time() - t1
+	print('normxcorr 3x3 time: %f s' % (t_3))
+
+	t1 = time.time()
+	corr_4 = normxcorr2_sparse(img1_pad, img2, (4,4))
+	t_4 = time.time() - t1
+	print('normxcorr 4x4 time: %f s' % (t_4))
+
+	# debug_image = create_correlation_debug_image(img1, img2, corr)
+	# cv2.imshow('img', cv2.resize(debug_image, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST))
+	# cv2.waitKey()
 	
+	corrs = [corr_1, corr_2, corr_3, corr_4]
+	times = [t_1, t_2, t_3, t_4]
 	import matplotlib.pyplot as plt
-	# plt.plot(np.arange(-int(img2.shape[1]/2),int(img2.shape[1]/2)+1), corr[0,:])
-	# plt.show()
+
+	for i, (corr, t) in enumerate(zip(corrs,times)):
+		plt.subplot(len(corrs)*100 + 10 + i+1)
+		plt.plot(corr)
+		m = np.argmax(corr)
+		plt.plot(m, corr[m], 'o')
+		plt.xticks([])
+		plt.title('1/%d res; t=%.2f ms' % (i+1,1000*t), rotation=0)
+		plt.ylim([-.1,.25])
+		plt.gca().yaxis.set_label_position("right")
+
+	plt.tight_layout()
+	plt.show()
