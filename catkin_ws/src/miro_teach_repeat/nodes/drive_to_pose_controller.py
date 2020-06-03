@@ -16,6 +16,33 @@ MAX_OMEGA = MAX_V / 0.164 # (width) = 2.439
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
 
+def rho_alpha_beta(dx, dy, theta, goal_theta):
+	rho = math.sqrt(dx*dx + dy*dy)
+	alpha = wrapToPi(math.atan2(dy, dx) - theta)
+	beta = wrapToPi(-theta - alpha + goal_theta)
+	return rho, alpha, beta
+
+def scale_velocities(v, omega, stop_at_goal):
+	if not stop_at_goal or abs(v) > MAX_V or abs(omega) > max(omega):
+		# Scale to preserve rate of turn
+		if omega == 0:
+			v = MAX_V
+			omega = 0
+		elif v == 0:
+			v = 0
+			omega = MAX_OMEGA * omega / abs(omega)
+		else:
+			turn_rate = abs(omega / v)
+			turn_rate_at_max = MAX_OMEGA / MAX_V
+
+			if turn_rate > turn_rate_at_max:
+				omega = MAX_OMEGA * omega / abs(omega)
+				v = MAX_OMEGA / turn_rate * v / abs(v)
+			else:
+				omega = MAX_V * turn_rate * omega / abs(omega)
+				v = MAX_V * v / abs(v)
+	return v, omega
+
 class miro_drive_to_pose_controller:
 
 	def __init__(self):
@@ -54,34 +81,17 @@ class miro_drive_to_pose_controller:
 			theta = current_frame.M.GetRPY()[2]
 
 			d_pos = tf_conversions.Vector(*self.goal_pos) - current_frame.p
-			rho = d_pos.Norm()
-			alpha = wrapToPi(math.atan2(d_pos.y(), d_pos.x()) - theta)
-			beta = wrapToPi(-theta - alpha + self.goal_theta)
+			rho, alpha, beta = rho_alpha_beta(d_pos.x(), d_pos.y(), theta, self.goal_theta)
 
 			v = self.gain_rho * rho
 			omega = self.gain_alpha * alpha + self.gain_beta * beta
 
-			# Scale to preserve rate of turn
-			if not self.stop_at_goal or abs(v) > MAX_V or abs(omega) > MAX_OMEGA:
-				if omega == 0 and v == 0:
-					v = 0
-					omega = 0
-				elif omega == 0:
-					v = MAX_V
-					omega = 0
-				elif v == 0:
-					v = 0
-					omega = MAX_OMEGA * omega / abs(omega)
-				else:
-					turn_rate = abs(omega / v)
-					turn_rate_at_max = MAX_OMEGA / MAX_V
+			if rho < 0.1:
+				v = 0
+				omega = self.gain_alpha * wrapToPi(self.goal_theta-theta)
+				print('only turning')
 
-					if turn_rate > turn_rate_at_max:
-						omega = MAX_OMEGA * omega / abs(omega)
-						v = MAX_OMEGA / turn_rate * v / abs(v)
-					else:
-						omega = MAX_V * turn_rate * omega / abs(omega)
-						v = MAX_V * v / abs(v)
+			v, omega = scale_velocities(v, omega, self.stop_at_goal)
 
 			motor_command = TwistStamped()
 			motor_command.header.stamp = rospy.Time.now()

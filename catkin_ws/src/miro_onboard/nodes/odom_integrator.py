@@ -73,7 +73,7 @@ class miro_integrate_odom:
 		pose = self.odom_pose
 
 		# manually integrate odom because tf_conversions isn't installed on Miro
-		TRANSLATION_ERROR_FACTOR = 1.1
+		TRANSLATION_ERROR_FACTOR = 1.0
 		dd = msg.twist.twist.linear.x * delta_time * TRANSLATION_ERROR_FACTOR
 		dtheta = msg.twist.twist.angular.z * delta_time
 

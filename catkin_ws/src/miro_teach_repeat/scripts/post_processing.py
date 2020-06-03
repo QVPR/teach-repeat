@@ -141,8 +141,8 @@ def integrate_corrected_poses(poses, origin, theta_corrections, path_corrections
 	return poses_to_np(corrected_poses)
 
 if __name__ == "__main__":
-	dir_reference = os.path.expanduser('~/miro/data/odom-breaking/')
-	dir_test = os.path.expanduser('~/miro/data/odom-breaking_tests2/42/')
+	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
+	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/36/')
 
 	reference_images = load_images(dir_reference)
 	reference_poses = load_poses(dir_reference)
