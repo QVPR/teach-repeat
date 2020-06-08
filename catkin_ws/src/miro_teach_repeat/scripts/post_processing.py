@@ -89,10 +89,9 @@ def get_confusion_matrix(directory, reference_images, test_images):
 	return correlations, offsets
 
 def plot_along_route_localisation(correlations, path_offset, correspondances):
-	fig, ax = plt.subplots()
+	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)}, sharex=True)
 
-	corrected_path_offsets = path_offset
-	corrected_path_offsets -= 1.0
+	corrected_path_offsets = path_offset - 1.0
 	max_diff = np.abs(corrected_path_offsets).max()
 	corrected_path_offsets /= (2 * max_diff)
 	corrected_path_offsets += 0.5
@@ -103,32 +102,42 @@ def plot_along_route_localisation(correlations, path_offset, correspondances):
 	# corrected_path_offsets += 0.5
 	colours = plt.cm.coolwarm(corrected_path_offsets)
 
-	ax.scatter(np.arange(correlations.shape[1]), np.argmax(correlations, axis=0), color='black', marker='.', alpha=0.4)
-	ax.scatter(correspondances, np.arange(len(correspondances)), marker='x', color=colours)
-
+	ax1.scatter(np.arange(correlations.shape[1]), np.argmax(correlations, axis=0), color='black', marker='.', alpha=0.4)
+	ax1.scatter(correspondances, np.arange(len(correspondances)), marker='x', color=colours)
 	sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.coolwarm)
 	sm.set_array([])
-	cb = fig.colorbar(sm)
-	cb.set_label('along-path correction')
+	cb = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.05, aspect=50)
+	# cb.set_label('along-path correction')
 	cb.set_ticks([0,0.5,1])
-	cb.ax.set_yticklabels(['*%.2f (reduce)' % (1-max_diff),'*1.00 (none)','*%.2f (extend)' % (1+max_diff)])
-	plt.xlabel('image frame number')
-	plt.ylabel('keyframe number')
+	cb.ax.set_xticklabels(['%.2f (reduce)' % (1-max_diff),'1.0','%.2f (extend)' % (1+max_diff)])
+	ax1.set_ylabel('keyframe number')
+	# ax1.set_xticklabels([])
+
+	ax2.axhline(1.0, linestyle='--', color='grey')
+	ax2.plot(correspondances, path_offset[:len(correspondances)])
+	ax2.set_xlabel('image frame number')
+	ax2.set_ylabel('path correction')
+	plt.tight_layout()
 
 def plot_odom_theta_offset(correlations, poses, theta_offsets):
-	fig, ax = plt.subplots()
+	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)})
 
 	theta_lim = math.ceil(math.degrees(np.abs(theta_offsets).max()))
 	corrected_theta_offsets = 0.5 + 0.5*(theta_offsets / math.radians(theta_lim)).clip(min=-1, max=1)
 	colours = plt.cm.coolwarm(corrected_theta_offsets)
 
-	ax.quiver(poses.x, poses.y, np.cos(poses.theta), np.sin(poses.theta), color=colours, scale=50)
-
+	ax1.quiver(poses.x, poses.y, np.cos(poses.theta), np.sin(poses.theta), color=colours, scale=50)
 	sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.coolwarm)
 	sm.set_array([-theta_lim, theta_lim])
-	cb = fig.colorbar(sm)
-	cb.set_label('theta correction (degrees)')
-	ax.axis('equal')
+	cb = fig.colorbar(sm, ax=ax1)
+	cb.set_label(r'angle correction, $\Delta\theta$ ($^\circ$)')
+	ax1.axis('equal')
+
+	ax2.axhline(0.0, linestyle='--', color='grey')
+	ax2.plot(np.degrees(theta_offsets))
+	ax2.set_ylabel(r'$\Delta\theta$ ($^\circ$)')
+	ax2.set_xticklabels([])
+	plt.tight_layout()
 
 def integrate_corrected_poses(poses, origin, theta_corrections, path_corrections):
 	corrected_poses = [poses.frames[0]]
@@ -218,7 +227,7 @@ def plot_image_along_path_localisation_full(correlations, correspondances, searc
 
 if __name__ == "__main__":
 	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/65/')
+	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests_odom2/1/')
 
 	reference_images = load_images(dir_reference)
 	reference_poses = load_poses(dir_reference)
@@ -238,7 +247,7 @@ if __name__ == "__main__":
 	
 	plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
 
-	plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 1)
+	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 1)
 
 	plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
 
