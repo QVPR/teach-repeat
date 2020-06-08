@@ -54,6 +54,14 @@ def get_image_indices_cv(directory):
 	image_files = get_sorted_files_by_ending(directory, '.png')
 	return np.array([int(os.path.basename(f)[:-4]) for f in image_files])
 
+def get_image_keyframes(images, debug_images):
+	not_dupes = [True] + [not np.allclose(debug_images[i],debug_images[i-1]) for i in range(1,len(debug_images))]
+	deduped = debug_images[not_dupes]
+	new_goal = [False] + [not np.allclose(deduped[i,44:88,:], deduped[i-1,44:88,:]) for i in range(1,len(deduped))]
+	debug_keyframes = deduped[new_goal,:44,:]
+	keyframes = np.array([images[np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in images])] for keyframe in debug_keyframes])
+	return keyframes
+
 def load_poses(directory):
 	pose_files = get_sorted_files_by_ending(directory, '_pose.txt')
 	return poses_to_np([tf_conversions.fromMsg(message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(read_file(p)))) for p in pose_files])
@@ -140,15 +148,80 @@ def integrate_corrected_poses(poses, origin, theta_corrections, path_corrections
 
 	return poses_to_np(corrected_poses)
 
+def plot_image_along_path_localisation(correlations, correspondances, search_range):
+	corr_range = np.arange(-search_range, search_range+1)
+	corr_data = np.zeros((len(corr_range), correspondances.size))
+	for i, corr in enumerate(corr_range):
+		if corr < 0:
+			corr = abs(corr)
+			c = np.hstack((np.zeros(corr), correlations[np.arange(len(correspondances)-corr),correspondances[corr:]]))
+		elif corr > 0:
+			c = np.hstack((correlations[np.arange(corr,len(correspondances)),correspondances[:-corr]], np.zeros(corr)))
+		else:
+			c = correlations[np.arange(len(correspondances)),correspondances]
+		corr_data[i,:] = c
+
+	corr_data -= 0.1
+	corr_data[corr_data < 0] = 0.0
+	corr_data /= corr_data.sum(axis=0)
+
+	weighted_average = np.sum(corr_data * corr_range.reshape(-1,1), axis=0)
+
+	plt.figure()
+	plt.imshow(corr_data[:,:], cmap='viridis')
+	plt.clim([0,1])
+	plt.plot(weighted_average + search_range, 'r.')
+
+def plot_image_along_path_localisation_full(correlations, correspondances, search_range):
+	correspondance_full = np.zeros(correlations.shape[1], dtype=np.uint32)
+	correspondance_full[correspondances] = 1
+	correspondance_full = np.cumsum(correspondance_full)
+
+	diffs = [a - b for a,b in zip(list(correspondances)+[correlations.shape[1]], [0] + list(correspondances))]
+	u = np.array([-a for n in diffs for a in np.arange(-.5,.5,1./n)])
+
+	corr_range = np.arange(-search_range, search_range+2)-.5
+	corr_data = np.zeros((len(corr_range), correspondance_full.size))
+	for i, corr in enumerate(corr_range):
+		corr = int(corr+0.5)
+		if corr < 0:
+			corr = abs(corr)
+			c = np.hstack((np.zeros(corr), correlations[correspondance_full[corr:], np.arange(len(correspondance_full)-corr)]))
+		elif corr > 0:
+			c = np.hstack((correlations[correspondance_full[:-corr], np.arange(corr,len(correspondance_full))], np.zeros(corr)))
+		else:
+			c = correlations[correspondance_full, np.arange(len(correspondance_full))]
+		corr_data[i,:] = c
+
+	corr_data -= 0.1
+	corr_data[corr_data < 0] = 0.0
+	with np.errstate(divide='ignore', invalid='ignore'):
+		corr_data /= corr_data.sum(axis=0)
+	corr_data[np.isnan(corr_data)] = 0.0
+
+	weighted_average = np.sum(corr_data * corr_range.reshape(-1,1), axis=0)
+
+	n = 5
+	corr_data = np.repeat(corr_data, n, axis=0)
+
+	plt.figure()
+	plt.imshow(corr_data[:,:], cmap='viridis')
+	plt.clim([0,1])
+	plt.plot(n*(weighted_average + search_range + 1)-0.5, 'r.')
+	plt.figure()
+	# plt.plot(u)
+	plt.plot(weighted_average)
+
 if __name__ == "__main__":
 	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/36/')
+	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/57/')
 
 	reference_images = load_images(dir_reference)
 	reference_poses = load_poses(dir_reference)
 
-	test_keyframes = load_images(dir_test)
+	# test_keyframes = load_images(dir_test)
 	test_images = load_images_cv(dir_test + 'norm/')
+	test_keyframes = get_image_keyframes(load_images_cv(dir_test + 'norm/'), load_images_cv(dir_test))
 	test_image_indices = get_image_indices_cv(dir_test + 'norm/')
 	test_poses = load_poses(dir_test + 'pose/')
 	test_offsets = load_poses(dir_test + 'offset/')
@@ -158,8 +231,10 @@ if __name__ == "__main__":
 	correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
 
 	corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)),test_keyframe_correspondances]
-
+	
 	plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
+
+	plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 1)
 
 	plt.show()
 	
