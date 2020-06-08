@@ -58,7 +58,7 @@ class miro_image_matcher:
 			return images
 		else:
 			# need to flip the order of resize for opencv
-			return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_NEAREST) for image in images]
+			return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
 
 	def read_file(self, filename):
 		with open(filename, 'r') as f:

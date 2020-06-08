@@ -89,7 +89,7 @@ def patch_normalise_msg(msg, patch_size, compressed=False, resize=None):
 	if resize is not None:
 		# opencv sizes are the opposite of numpy (width*height)
 		resize = tuple(reversed(resize))
-		image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
+		image = cv2.resize(image, resize, interpolation=cv2.INTER_AREA)
 	return patch_normalise_pad(image, patch_size)
 
 def patch_normalise_image(image, patch_size, resize=None):
@@ -99,7 +99,7 @@ def patch_normalise_image(image, patch_size, resize=None):
 	if resize is not None:
 		# opencv sizes are the opposite of numpy (width*height)
 		resize = tuple(reversed(resize))
-		image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
+		image = cv2.resize(image, resize, interpolation=cv2.INTER_AREA)
 	return patch_normalise_pad(image, patch_size)
 
 def make_size(height, width):
