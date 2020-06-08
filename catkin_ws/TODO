@@ -54,7 +54,7 @@ Development:
 			* Better approach to compare the ratio of correlations between top and second peak
 		☐ Disable along-path localisation during a turn
 		✔ Threshold along-path localisation @done(20-05-20 16:26)
-		☐ Apply small corrections continually
+		✔ Apply small corrections continually @done(20-06-08 10:49)
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
@@ -72,7 +72,7 @@ Development:
 	Visualisation:
 		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)
 		✔ Record poses and offsets in data_matching @30m @started(20-05-11 13:30) @done(20-05-11 14:06) @lasted(36m55s)
-		☐ Some way of visualising the corrections over a run
+		✔ Some way of visualising the corrections over a run @done(20-06-08 10:50)
 
 Bugs: 
 	ROS:

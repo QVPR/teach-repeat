@@ -127,7 +127,7 @@ def update_step():
 	vN = np.random.randn() * MAX_V / 10
 	omegaN = np.random.randn() * MAX_OMEGA / 10
 
-	current_frame_odom.p += tf_conversions.Vector(dt * (v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
+	current_frame_odom.p += tf_conversions.Vector(dt * .7*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
 	current_frame_odom.M.DoRotZ(dt * (omega+omegaN))
 
 	current_frame_world.p += tf_conversions.Vector(dt * v * math.cos(gt_theta), dt * v * math.sin(gt_theta), 0.0)
@@ -183,7 +183,7 @@ def calculate_image_pose_offset(goal_index, half_search_range=None, return_all=F
 
 	if return_all:
 		offsets = [localiser.px_to_rad(get_offset_px(np_to_frame(goals[i]), current_frame_world)) for i in range(start_range, end_range)]
-		correlations = np.exp(-np.array(dists))
+		correlations = list(np.exp(-np.array(dists)))
 		return offsets, correlations
 	else:
 		px_offset = get_offset_px(np_to_frame(goals[goal_index]), current_frame_world)
@@ -246,8 +246,8 @@ def do_continuous_correction():
 		last_offset = offsets[SR]
 		next_offset = offsets[SR+1]
 	else:
-		last_offset = offsets[-SR-2]
-		next_offset = offsets[-SR-1]
+		last_offset = offsets[-SR-3]
+		next_offset = offsets[-SR-2]
 	expected_last_offset = localiser.px_to_rad(localiser.get_expected_px_offset(last_goal_offset_odom))
 	expected_next_offset = localiser.px_to_rad(localiser.get_expected_px_offset(next_goal_offset_odom))
 
@@ -261,7 +261,7 @@ def do_continuous_correction():
 	# 	correction_rad = 0.0
 
 	if goal_index > SR and goal_index < len(goals)-SR:
-		corr = correlations[:2*(1+SR)]
+		corr = np.array(correlations[:2*(1+SR)])
 		corr -= 0.1
 		corr[corr < 0] = 0.0
 		s = corr.sum()

@@ -1,4 +1,4 @@
-#!/usearch_range/bin/python
+#!/usr/bin/python
 
 import rospy
 import numpy as np
@@ -113,15 +113,15 @@ class miro_localiser:
 
 		self.poses = load_poses(pose_files)
 		self.goal_index = 0
-		self.goal = None
+		self.goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.last_goal = tf_conversions.toMsg(tf_conversions.Frame())
-		self.goal_plus_lookahead = None
+		self.goal_plus_lookahead = tf_conversions.toMsg(tf_conversions.Frame())
 
 		self.stop_at_end = rospy.get_param('~stop_at_end', True)
 
 		self.last_odom = None
 		self.sum_theta_correction = 0.0
-		self.sum_path_correction = 0.0
+		self.sum_path_correction = 1.0
 
 		# Image
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
@@ -167,7 +167,7 @@ class miro_localiser:
 	def on_ready(self, msg):
 		if msg.data:
 			if not self.ready:
-				localiser.publish_goal(self.poses[0], 0.1, False)
+				self.update_goal(tf_conversions.fromMsg(self.poses[0]))
 			self.ready = True
 
 	def update_goal_index(self):
@@ -249,7 +249,7 @@ class miro_localiser:
 				print('last goal theta correction: %f' % math.degrees(self.sum_theta_correction))
 				print('last goal path correction: %f' % (self.sum_path_correction))
 				self.sum_theta_correction = 0
-				self.sum_path_correction = 0
+				self.sum_path_correction = 1.0
 			self.mutex.release()
 
 	def process_image_data(self, msg):
@@ -276,7 +276,7 @@ class miro_localiser:
 			self.last_goal = self.goal
 
 		self.goal = tf_conversions.toMsg(goal_frame)
-		normalise_quaternion(self.goal)
+		normalise_quaternion(self.goal.orientation)
 
 		# if goal is a turning goal, or the last goal - don't set virtual waypoint ahead
 		if turning_goal or (self.goal_index == len(self.poses)-1 and self.stop_at_end):
@@ -294,7 +294,7 @@ class miro_localiser:
 		goal.pose.pose.orientation = pose.orientation
 		goal.stop_at_goal.data = stop_at_goal
 		self.goal_pub.publish(goal)
-		self.goal_plus_lookahead = goal.pose
+		self.goal_plus_lookahead = goal.pose.pose
 
 	def do_continuous_correction(self):
 		if self.last_odom is not None and self.goal_index > 0:
@@ -324,12 +324,12 @@ class miro_localiser:
 
 			search_range = 1
 			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+search_range, return_all=True)
-			if goal_index > search_range:
-				rotation_offsets = offsets[search_range:search_range+1]
-				rotation_correlations = correlations[search_range:search_range+1]
+			if self.goal_index > search_range:
+				rotation_offsets = offsets[search_range:search_range+2]
+				rotation_correlations = correlations[search_range:search_range+2]
 			else:
-				rotation_offsets = offsets[-search_range-2:-search_range-1]
-				rotation_correlations = correlations[-search_range-2:-search_range-1]
+				rotation_offsets = offsets[-search_range-3:-search_range-1]
+				rotation_correlations = correlations[-search_range-3:-search_range-1]
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
@@ -338,8 +338,8 @@ class miro_localiser:
 			if max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD:
 				correction_rad = 0.0
 
-			if not turning_goal and goal_index > search_range and goal_index < len(self.poses)-search_range:
-				corr = correlations[:2*(1+search_range)]
+			if not turning_goal and self.goal_index > search_range and self.goal_index < len(self.poses)-search_range:
+				corr = np.array(correlations[:2*(1+search_range)])
 				corr -= IMAGE_RECOGNITION_THRESHOLD
 				corr[corr < 0] = 0.0
 				s = corr.sum()
@@ -359,7 +359,7 @@ class miro_localiser:
 
 			self.update_goal(new_goal, False, turning_goal)
 			self.sum_theta_correction += correction_rad
-			self.sum_path_correction += path_correction
+			self.sum_path_correction *= path_correction
 
 	def calculate_image_pose_offset(self, image_to_search_index, half_search_range=None, return_all=False):
 		HALF_SEARCH_RANGE = 1
@@ -367,7 +367,7 @@ class miro_localiser:
 			half_search_range = HALF_SEARCH_RANGE
 
 		if self.last_image is not None:
-			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(HALF_SEARCH_RANGE))
+			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(half_search_range))
 			match_response = self.match_image(match_request)
 
 			if image_to_search_index >= half_search_range:
@@ -404,5 +404,5 @@ if __name__ == "__main__":
 	rospy.init_node("miro_localiser")
 	localiser = miro_localiser()
 	if localiser.ready:
-		localiser.publish_goal(localiser.poses[0], 0.1)
+		localiser.update_goal(tf_conversions.fromMsg(localiser.poses[0]))
 	rospy.spin()
