@@ -92,11 +92,15 @@ def plot_along_route_localisation(correlations, path_offset, correspondances):
 	fig, ax = plt.subplots()
 
 	corrected_path_offsets = path_offset
-	corrected_path_offsets[corrected_path_offsets == 1.0] = 0.0
-	corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)] = -np.log(corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)])/math.log(0.5)
-	corrected_path_offsets[corrected_path_offsets > 1.0] = np.log(corrected_path_offsets[corrected_path_offsets > 1.0])/math.log(1.5)
-	corrected_path_offsets /= 2*2
+	corrected_path_offsets -= 1.0
+	max_diff = np.abs(corrected_path_offsets).max()
+	corrected_path_offsets /= (2 * max_diff)
 	corrected_path_offsets += 0.5
+	# corrected_path_offsets[corrected_path_offsets == 1.0] = 0.0
+	# corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)] = -np.log(corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)])/math.log(0.5)
+	# corrected_path_offsets[corrected_path_offsets > 1.0] = np.log(corrected_path_offsets[corrected_path_offsets > 1.0])/math.log(1.5)
+	# corrected_path_offsets /= 2*2
+	# corrected_path_offsets += 0.5
 	colours = plt.cm.coolwarm(corrected_path_offsets)
 
 	ax.scatter(np.arange(correlations.shape[1]), np.argmax(correlations, axis=0), color='black', marker='.', alpha=0.4)
@@ -107,15 +111,14 @@ def plot_along_route_localisation(correlations, path_offset, correspondances):
 	cb = fig.colorbar(sm)
 	cb.set_label('along-path correction')
 	cb.set_ticks([0,0.5,1])
-	cb.ax.set_yticklabels(['reduce','none','extend'])
+	cb.ax.set_yticklabels(['*%.2f (reduce)' % (1-max_diff),'*1.00 (none)','*%.2f (extend)' % (1+max_diff)])
 	plt.xlabel('image frame number')
 	plt.ylabel('keyframe number')
 
 def plot_odom_theta_offset(correlations, poses, theta_offsets):
-	# plt.style.use('ggplot')
 	fig, ax = plt.subplots()
 
-	theta_lim = 15
+	theta_lim = math.ceil(math.degrees(np.abs(theta_offsets).max()))
 	corrected_theta_offsets = 0.5 + 0.5*(theta_offsets / math.radians(theta_lim)).clip(min=-1, max=1)
 	colours = plt.cm.coolwarm(corrected_theta_offsets)
 
@@ -125,6 +128,7 @@ def plot_odom_theta_offset(correlations, poses, theta_offsets):
 	sm.set_array([-theta_lim, theta_lim])
 	cb = fig.colorbar(sm)
 	cb.set_label('theta correction (degrees)')
+	ax.axis('equal')
 
 def integrate_corrected_poses(poses, origin, theta_corrections, path_corrections):
 	corrected_poses = [poses.frames[0]]
@@ -214,7 +218,7 @@ def plot_image_along_path_localisation_full(correlations, correspondances, searc
 
 if __name__ == "__main__":
 	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/57/')
+	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/65/')
 
 	reference_images = load_images(dir_reference)
 	reference_poses = load_poses(dir_reference)
@@ -235,6 +239,8 @@ if __name__ == "__main__":
 	plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
 
 	plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 1)
+
+	plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
 
 	plt.show()
 	
