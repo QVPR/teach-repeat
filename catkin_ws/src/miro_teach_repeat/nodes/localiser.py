@@ -333,7 +333,7 @@ class miro_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.05
+			K = 0.01
 			correction_rad = K * offset
 			if max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD:
 				correction_rad = 0.0
@@ -349,10 +349,15 @@ class miro_localiser:
 				pos = w.sum()
 				path_error = pos
 
-				K2 = 0.1
+				K2 = 0.01
 				path_correction = inter_goal_distance_odom / (inter_goal_distance_odom + K2 * path_error)
+				if np.isnan(path_correction):
+					print(corr, s, w, pos, inter_goal_distance_odom)
+				# Note: need a check for if abs(path_error) > inter_goal_distance_odom
+				# RuntimeWarning: invalid value encountered in double_scalars
 			else:
 				path_correction = 1.0
+				pos = 0.0
 
 			goal_offset = get_corrected_goal_offset(last_goal_odom, next_goal_odom, correction_rad, path_correction)
 			new_goal = last_goal_odom * goal_offset
@@ -360,6 +365,9 @@ class miro_localiser:
 			self.update_goal(new_goal, False, turning_goal)
 			self.sum_theta_correction += correction_rad
 			self.sum_path_correction *= path_correction
+			# new_lookahead_goal = tf_conversions.fromMsg(self.goal_plus_lookahead)
+			# d = current_frame_odom.Inverse() * new_lookahead_goal
+			# print('pos = %f, d = %f' % (pos, d.p.Norm()))
 
 	def calculate_image_pose_offset(self, image_to_search_index, half_search_range=None, return_all=False):
 		HALF_SEARCH_RANGE = 1

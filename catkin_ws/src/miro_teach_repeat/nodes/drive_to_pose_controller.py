@@ -23,7 +23,7 @@ def rho_alpha_beta(dx, dy, theta, goal_theta):
 	return rho, alpha, beta
 
 def scale_velocities(v, omega, stop_at_goal):
-	if not stop_at_goal or abs(v) > MAX_V or abs(omega) > max(omega):
+	if not stop_at_goal or abs(v) > MAX_V or abs(omega) > MAX_OMEGA:
 		# Scale to preserve rate of turn
 		if omega == 0:
 			v = MAX_V
@@ -86,7 +86,7 @@ class miro_drive_to_pose_controller:
 			v = self.gain_rho * rho
 			omega = self.gain_alpha * alpha + self.gain_beta * beta
 
-			if rho < 0.1:
+			if rho < 0.05:
 				v = 0
 				omega = self.gain_alpha * wrapToPi(self.goal_theta-theta)
 				print('only turning')
