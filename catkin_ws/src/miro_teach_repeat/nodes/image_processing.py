@@ -367,6 +367,10 @@ def create_correlation_debug_image(img1, img2, corr):
 	debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
 	debug_image = cv2.merge((debug_image, debug_image, debug_image))
 
+	# if the image width is even, we'll get one more correlation value than the image width
+	if corr_positions.size > debug_image.shape[1]:
+		debug_image = np.hstack((debug_image, np.zeros((debug_image.shape[0],corr_positions.size-debug_image.shape[1],3), dtype=np.uint8)))
+
 	cv2.line(debug_image, (int(-offset+img1.shape[1]/2),0), (int(-offset+img1.shape[1]/2),img1.shape[0]-1), (0,255,0))
 	cv2.line(debug_image, (int(img1.shape[1]/2),img1.shape[0]), (int(img1.shape[1]/2), 2*img1.shape[0]-1), (255,0,0))
 	
@@ -398,7 +402,7 @@ if __name__ == "__main__":
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
 
 	t1 = time.time()
-	corr = normxcorr2(img1_pad, img2, mode='valid')
+	corr = normxcorr2(img1_pad, img1, mode='valid')
 	t = time.time() - t1
 	print('full normxcorr time: %f s' % (t))
 
