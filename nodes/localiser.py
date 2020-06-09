@@ -125,6 +125,8 @@ class miro_localiser:
 
 		# Image
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
+		if self.resize[0] is not None:
+			IMAGE_WIDTH = self.resize[0]
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 
