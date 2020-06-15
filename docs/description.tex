@@ -1,0 +1,574 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{mathtools}
+
+\title{Teach repeat description}
+\author{Dominic Dall'Osto}
+
+\begin{document}
+
+\maketitle
+
+\section{Continuous Correction}
+
+\subsection{Rotational}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.8\linewidth]{"orientation localisation".pdf}
+	\caption{Rotation localisation diagram}
+\end{figure}
+
+\begin{align*}
+	\boldsymbol{p} & \text{ -- pose of robot in odometry frame} \\
+	\boldsymbol{g}_n & \text{ -- goal pose (reference)} \\
+	\boldsymbol{\hat g}_n & \text{ -- goal pose (query)} \\
+	\delta_n & \text{ -- offset between current query image and reference image } n \text{ (rad)}\\
+	u & \text{ -- proportion of distance travelled between } \hat g_{n-1} \text{ and } \hat g_n
+\end{align*}
+
+Interpolating between previous and current goal offsets eliminates the effect of moving along the path on the image offset. For example, a large nearby visual feature could dominate the image offset calculation. Moving along the path will cause this visual feature to move left or right, depending on which side of the robot it is, and will drag the calculated offset with it. Interpolating between the previous and next reference images allows this along-path offset to be distinguished from rotational or lateral path offset, which affect both $\delta_{n-1}$ and $\delta_n$ similarly.
+
+Measure offsets and calculate $u$, linearly interpolate to get offset between goals.
+
+\begin{align*}
+	\delta_{n-1} &: \text{ measure offset to previous goal} \\
+	\delta_n &: \text{ measure offset to current goal} \\
+	u &= \frac{||\boldsymbol{p} \ominus \boldsymbol{\hat g}_{n-1}||}{||\boldsymbol{\hat g}_n \ominus \boldsymbol{\hat g}_{n-1}||} \\
+	\Delta\theta &= (1-u)\delta_{n-1} + u\delta_n
+\end{align*}
+
+To correct this error, the current goal is updated by rotating the offset from the previous to current goal in the opposite direction to the calculated offset:
+
+\begin{align*}
+	K_\theta &= 0.01 \\
+	\boldsymbol{\hat g}_n &:= \boldsymbol{\hat g}_{n-1} \oplus \boldsymbol{R}_{(-K_\theta\Delta\theta)}(\boldsymbol{\hat g}_n \ominus \boldsymbol{\hat g}_{n-1})
+\end{align*}
+
+\subsection{Along-path}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.8\linewidth]{"along-path localisation".pdf}
+	\caption{Along-path localisation diagram}
+\end{figure}
+
+\begin{align*}
+	\boldsymbol{p} & \text{ -- pose of robot in odometry frame} \\
+	\boldsymbol{g}_n & \text{ -- goal pose (reference)} \\
+	\boldsymbol{\hat g}_n & \text{ -- goal pose (query)} \\
+	\Delta g & \text{ -- reference target spacing (0.2 m)} \\
+	\rho_n & \text{ -- correlation between current query image and reference image } n
+\end{align*}
+
+Along-path localisation searches a range $\pm 1$ around the previous and current goals (ie. $\boldsymbol{g}_{n-2}$ to $\boldsymbol{g}_{n+1}$). This doesn't allow for global localisation, but makes incremental corrections to account for random and systematic odometry errors, with the assumption that the robot starts at the start of the reference path.
+
+Peak correlations between the query and reference images are normalised to remove low correlations, scaled to have a sum of 1, then weighted and averaged to give an estimate of along-route position, relative to the middle point between the current and previous goals.
+
+\begin{align*}
+	\boldsymbol{\hat\rho} &:= [\rho_{n-2}, \rho_{n-1}, \rho_n, \rho_{n+1}] \\
+	\boldsymbol{\hat\rho} &:= \boldsymbol{\hat\rho} - 0.1 \\
+	\boldsymbol{\hat\rho} &:= \max(\boldsymbol{\hat\rho}, 0) \\
+	\boldsymbol{\hat\rho} &:= \frac{\boldsymbol{\hat\rho}}{\Sigma\boldsymbol{\hat\rho}} \\
+	\Delta p &= -1.5\hat\rho_{n-2} - 0.5 \hat\rho_{n-1} + 0.5\hat\rho_{n} + 1.5\hat\rho_{n+1}
+\end{align*}
+
+This position estimate is scaled based on the goal spacing, then used to scale the distance of the current goal to correct along-path errors.
+
+\begin{align*}
+	K_p &= 0.05 \\
+	d &= ||\boldsymbol{\hat g}_n \ominus \boldsymbol{\hat g}_{n-1}||\\
+	s &= \frac{d - K_p\Delta p \Delta g} {d} \\
+	\boldsymbol{\hat g}_n &:= \boldsymbol{\hat g}_{n-1} \oplus s(\boldsymbol{\hat g}_n \ominus \boldsymbol{\hat g}_{n-1})
+\end{align*}
+
+\section{Discrete Correction}
+
+\subsection{Rotational}
+
+\begin{align*}
+	\boldsymbol{p} & \text{ -- pose of robot in odometry frame} \\
+	\boldsymbol{g}_n & \text{ -- goal pose (reference)} \\
+	\boldsymbol{\hat g}_n & \text{ -- goal pose (query)} \\
+	\delta_n & \text{ -- offset between current query image and reference image } n \text{ (rad)}
+\end{align*}
+
+This is a simpler case because we only need to compare to one goal image. It also lets us incorporate information about the known rotational offset at the goal (due to imperfect control) without causing the correction rule to become unstable.
+
+\begin{align*}
+	\delta_n &: \text{ measure offset to current goal} \\
+	\delta_{\theta_n} &= \theta_{\boldsymbol{p}_n} - \theta_{\boldsymbol{\hat g}_n}\\
+	\Delta\theta &= \delta_n - \delta_{\theta_n} \\
+	K_\theta &= 1 \\
+	\boldsymbol{\hat g}_{n+1} &:= \boldsymbol{\hat g}_{n} \oplus \boldsymbol{R}_{(-K_\theta\Delta\theta)}(\boldsymbol{\hat g}_{n+1} \ominus \boldsymbol{\hat g}_{n})
+\end{align*}
+
+\subsection{Along-path}
+
+\begin{align*}
+	\boldsymbol{p} & \text{ -- pose of robot in odometry frame} \\
+	\boldsymbol{g}_n & \text{ -- goal pose (reference)} \\
+	\boldsymbol{\hat g}_n & \text{ -- goal pose (query)} \\
+	\Delta g & \text{ -- reference target spacing (0.2 m)} \\
+	\rho_n & \text{ -- correlation between current query image and reference image } n
+\end{align*}
+
+In this case we only search a range $\pm 1$ around the current goals (ie. $\boldsymbol{g}_{n-1}$ to $\boldsymbol{g}_{n+1}$).
+
+Peak correlations between the query and reference images are normalised to remove low correlations, scaled to have a sum of 1, then weighted and averaged to give an estimate of along-route position, relative to the middle point between the current and previous goals.
+
+\begin{align*}
+	\boldsymbol{\hat\rho} &:= [\rho_{n-1}, \rho_n, \rho_{n+1}] \\
+	\boldsymbol{\hat\rho} &:= \boldsymbol{\hat\rho} - 0.1 \\
+	\boldsymbol{\hat\rho} &:= \max(\boldsymbol{\hat\rho}, 0) \\
+	\boldsymbol{\hat\rho} &:= \frac{\boldsymbol{\hat\rho}}{\Sigma\boldsymbol{\hat\rho}} \\
+	\Delta p &= - \hat\rho_{n-1} + \hat\rho_{n+1}
+\end{align*}
+
+This position estimate is scaled based on the goal spacing, then used to scale the distance of the current goal to correct along-path errors.
+
+\begin{align*}
+	K_p &= 0.5 \\
+	d &= ||\boldsymbol{\hat g}_{n+1} \ominus \boldsymbol{\hat g}_{n}||\\
+	s &= \frac{d - K_p\Delta p \Delta g} {d} \\
+	\boldsymbol{\hat g}_{n+1} &:= \boldsymbol{\hat g}_{n} \oplus s(\boldsymbol{\hat g}_{n+1} \ominus \boldsymbol{\hat g}_{n})
+\end{align*}
+
+\end{document}
+
+% \begin{abstract}
+% 	Neural networks have long been a promising model for creating high performance robotic systems, from robot navigation and SLAM to modern deep learning techniques for tasks like manipulation. Traditional neural network systems typically relied heavily on a large number of hand-tuned parameters, while many modern implementations perform end-to-end learning, often with extreme data and computational requirements. Past work has focused on achieving high performance in real world environments, but with extensive hand tuning. In this paper, we instead present a new framework for automatically calibrating and optimising the performance of a biologically inspired neural network SLAM system. This framework combines a preset network structure with learning procedures. We use simulations with realistic noise to demonstrate the system's ability to learn the basic components of SLAM: odometry integration, landmark learning and landmark-driven relocalisation. We also show the framework is able to calibrate a large range of network sizes, allowing rapid development and deployment of a bio-inspired SLAM system. Our work serves as a bridging contribution between traditional hand-crafted neural networks and modern end-to-end learning approaches.
+% \end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INTRODUCTION}
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/overall network new".pdf}
+	\caption{Overview of network. (a) shows the head direction network activity as it tracks direction. (b) shows the grid cell network tracking activity as it tracks position. (c) shows a top down view of the environment -- green is the ground truth, blue the estimated path and pose, pink arrow the true pose, black the landmarks, and pink crosses the landmark estimates. (d) shows a simulated first person view of the scene.}
+	\label{OverallNetwork}
+\end{figure}
+One of the biggest challenges for mobile robots is navigation through all but the simplest of environments. For most mobile robots operating indoors, no GPS signal is available, nor any map. SLAM must be used to determine the robot's position in the environment from sensor information. However, biology presents many robust solutions to the problem of navigation. Significant experimental work has proven that rats are capable of complex navigation tasks, superior to most robotic systems. Computational models have been developed based on recordings of rats' brain activity. 
+
+The RatSLAM system has achieved state of the art performance applying biologically inspired models to the task of robot navigation \cite{Milford2008,Milford2009,Ball2013}. Somewhat like the brain, RatSLAM uses a network of many interconnected cells. The strength of each cell connection must be correct for the system to function as desired. Currently, high performance is achieved predominantly through hand calibration. But the calibration parameters are typically very specific to the operating environment of the robotic system. Changing a network calibrated in one environment for use in another would require an almost full re-tuning. 
+
+Additionally, there has been recent research into training a generic neural network for the task of robot navigation with no prior knowledge \cite{Banino2018}. This work had the interesting result that some cells in the network learned similar behaviours to biological grid or head direction cells. However, the computational effort required to train the system presents a difficulty to implementing this approach on a physical system.
+
+Therefore, there is significant potential for a system operating between these two approaches. The requirement for hand calibration can be removed using computational power for learning, while the amount of learning needed can be reduced by using a biologically inspired network structure. Such a system would have the ability to significantly speed up and simplify the development of navigation solutions for mobile robots, and to improve their overall performance. 
+
+In this paper we present the framework for a biologically inspired SLAM system (Figure \ref{OverallNetwork}), using a model based on head direction and grid cells. We then present a process for automatically calibrating this system for navigation performance with modest computing requirements. Finally, we present an evaluation of the calibrated system's performance over repeated laps in two simulated environments with realistic noise. 
+
+The paper will proceed as follows. Section 2 will present a review of related work in the areas of traditional and biologically inspired robot navigation and evolutionary algorithm approaches. The approach introduced here is detailed in Section 3. Experimental details are presented in Section 4, followed by results in Section 5. Finally, the implications of the work, and potential for future research are discussed in Section 6.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Background Research
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{RELATED WORK} 
+Here we discuss mobile robot navigation, biological navigation, and evolutionary algorithms.
+
+\subsection{Mobile Robot Navigation}
+Navigation for mobile robots is the process by which they can move from their current location to a set goal. All but the simplest navigation tasks require a map \cite{Corke2011}. A traditional SLAM approach formulates the problem as a probability distribution of the locations of the robot and ``landmarks'' in the environment. If the SLAM process is successful, these probability estimates converge to the true positions \cite{Bailey2006}. For certain applications, current SLAM approaches achieve satisfactory performance. This typically involves robots moving at slow speeds in well defined, relatively small environments with accurate sensors. But for situations where these 3 conditions are not all met, research work is ongoing \cite{Cadena2016}. 
+
+Nature presents many solutions to the problem of navigation. Animals with small brains are able to successfully navigate in complex environments. Experimental work has shown that the mammalian brain does not store information in a rigid metric map like traditional SLAM approaches. This has led to the development of a number of biologically inspired techniques for SLAM \cite{Lowry2016}, some of which will be reviewed below.
+
+\subsection{Biological Navigation}
+\subsubsection{The Biological Basis for the Brain's Map}
+Research into the neurological basis for navigation in animals began with the proposal of a ``cognitive map'' in the brain in \cite{Tolman1948}. Later research found cells in the rat brain which responded based on the direction the rat was facing -- called \textit{head direction cells} \cite{Ranck1984,Taube1990}. \textit{Grid cells} were then discovered in the rat brain which fired depending on the rat's position in a testing environment \cite{Hafting2005}. Further work found \textit{border cells} \cite{Barry2006} and \textit{speed cells} \cite{Kropff2015} in rats. Together, these discoveries provide the basis of the cognitive map proposed by Tolman.
+
+\subsubsection{Biologically-inspired Computational Models}
+Following the work to quantitatively describe the firing of head direction cells in \cite{Taube1990}, computational models were developed to produce similar behaviour. Most models, such as that in \cite{Redish1996}, are based on continuous attractor networks with connections that allow activity in the network to move in response to velocity input, and to be relocated by visual cues. 
+
+These computational models were applied to the task of robot SLAM in \cite{Milford2004}. This approach, called RatSLAM, used a 3 dimensional attractor network to integrate odometry and relocalise based on visual information. This provided a novel approach to the problem of SLAM compared to those discussed previously. In \cite{Chen2015}, a version of RatSLAM using multiple networks at different scales outperformed the two state of the art traditional SLAM approaches at the time.
+
+RatSLAM suffers from the same limitations as other continuous attractor networks -- that precise calibration is required, often by hand. Additionally, attractor networks must be tuned specifically for the expected inputs, and so only function over a fairly limited range \cite{Redish1996}. These limitations present the opportunity to apply artificial evolution techniques to the task of automatically calibrating a continuous attractor network. Limited work has so far been undertaken in this field, but with recent advances in algorithms and computing power there is the opportunity for significant development.
+
+\subsection{Evolutionary Algorithm Approaches}
+Early work applying an evolutionary approach to tuning a head direction cell network was done in \cite{Degris2004}. The strength and standard deviation of Gaussian weighting curves for head direction and odometry neurons were obtained through a genetic algorithm that optimised the network's response. 
+
+Work presented in \cite{Kyriacou2011} used a ($\mu+\lambda$) evolutionary strategy (described in \cite{Beyer2002}) to determine the relative weightings of recurrent, visual, vestibular and kinaesthetic network connections. Fitness was determined by simulation in realistic scenarios. 
+
+\subsubsection{Evolving a Generic Network for Navigation}
+Recent work \cite{Banino2018,Cueva2018} has involved training completely general networks of cells to integrate velocity information. With suitable regularisation, some cells in these networks developed behaviour similar to biological grid or head direction neurons. Both of these approaches were extremely computationally expensive so are not of practical use. But the result that head direction and grid cells appear when evolving a network specifically for position and orientation tracking suggest they are an efficient means of completing this task. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Approach
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{APPROACH}
+In this section, the attractor model used and the calibration process for this model will be detailed.
+
+\subsection{Head Direction Cell Network Model}
+A simple model architecture, as outlined by \cite{Redish1999} was used as the basis of this work. This model was a 1D continuous attractor network with a fixed number of excitatory neurons, $E$, and one global inhibitory neuron, $I$. Each neuron was connected to all others. The connection strength between excitatory neurons depended on the distance between them, with stronger connections between closer neurons. The connections to and from the inhibitory neuron were all weighted equally across the network. An example structure is shown in Figure \ref{1DNetwork}.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/1d response small".pdf}
+	\caption{Connections for an 8 cell head direction network (a), and activity in the network at a state of $120^\circ$ with a standard deviation of $30^\circ$ (b).}
+	\label{1DNetwork}
+\end{figure}
+
+We extended Redish's model to include velocity and landmark information.  Excitatory neurons were updated using:
+\begin{align}
+	E_i{\left(t+\Delta t\right)} = E_i{\left(t\right)}+\frac{\Delta t}{\tau_E}\left(-E_i{\left(t\right)}+\sigma\left({{V\!E}_i}{\left(t\right)}\right)\right)
+\end{align}
+Where $E_i$ is the activity of excitatory neuron $i$, $\Delta t$ is the timestep, $\tau_E$ is the excitatory neuron time constant, $\sigma$ is the neuron activation function, and ${V\!E}_i$ is the excitatory input for cell $i$. We used the $\tanh$ activation function to limit neuron activity between 0 and 1.
+\begin{align}
+	\sigma\left(x\right)=0.5+0.5\tanh{\left(x\right)}
+\end{align}
+The excitatory input for neuron $i$ was calculated as follows.
+\begin{align}
+	{V\!E}_i = \sum_{j=1}^{N}\left[W_{E(i,j)} E_j\right]+W_{I\rightarrow E}I+\gamma_E+\mathrm{IN} + V_i +L_i \label{eq:VE_i}
+\end{align}
+Where $N$ is the number of excitatory neurons, $W_{E(i,j)}$ is the connection strength between excitatory neurons $i$ and $j$, $W_{I\rightarrow E}$ is the constant connection strength from the one inhibitory neuron to all excitatory neurons, $I$ is the activity of the inhibitory neuron, $\gamma_E$ is the tonic inhibition for all excitatory neurons, $\mathrm{IN}$ is the external input (used to initialise the network), $V_i$ is the velocity input, and $L_i$ is the landmark input. The velocity and landmark inputs are calculated individually for each neuron, and are detailed in equations \eqref{eq:V_i} and \eqref{eq:L_i} respectively. 
+% Figure \ref{IndividualCell} shows the connections to one excitatory neuron.
+
+% \begin{figure}[h]
+% 	\centering
+% 	\includegraphics[width=\linewidth]{"figures/individual cell".pdf}
+% 	\caption{Connections into an individual excitatory neuron. The recurrent excitation is included with the external excitation, but here they are shown separately for clarity.}
+% 	\label{IndividualCell}
+% \end{figure}
+
+The weightings between each of the excitatory neurons are normally distributed to generate approximately normally distributed activity packets.
+\begin{align}
+	W_{E(i,j)}=W_{E\rightarrow E}\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{{d_{ij}}^2}{2\sigma^2}}
+\end{align}
+Where $W_{E\rightarrow E}$ is a constant gain for the excitatory neuron connections, $\sigma$ is the normalised activity packet standard deviation, and $d_{i,j}$ is the distance between two cells (allowing for wrapping) -- given by:
+\begin{align}
+	d_{ij}=\mathrm{min}\left(\left|i-j\right|,\left|N+i-j\right|,\left|N-i+j\right|\right)
+\end{align}
+$\sigma$ is given by:
+\begin{align}
+	\sigma=\frac{\sigma_EN}{{360}^\circ}
+\end{align}
+Where $\sigma_E$ is the desired activity packet standard deviation.
+
+\subsubsection{Path Integration of Velocity Signals}
+For each head direction cell in the network, offset connections were made one cell to the left, $E_{i-1}$, and right, $E_{i+1}$, both wrapping from 0 to $N$. The difference between the previous and next cells' activities was multiplied by the velocity input signal, $v$, and a calibrated gain term, $W_V$. The velocity input for cell $i$ from equation \eqref{eq:VE_i} is:
+\begin{align}
+	V_i = W_Vv\left(E_{i-1}-E_{i+1}\right) \label{eq:V_i}
+\end{align}
+If the difference between the previous and next cells' activities were positive in the direction of the velocity, activity would be injected to the current cell. This allowed the activity to move forwards in the network. In the opposite direction activity would be inhibited, allowing activity to move away from the current cell.
+
+The focus of this work was a practically useful network, rather than one closely adhering to the biology. While this model is a significant abstraction of biological neuron models, it has some similarities to three-ring attractor networks, such as that in \cite{Stratton2011}. 
+
+\subsubsection{Relocalisation using Landmarks}
+We added landmarks to the simulation to allow accumulated errors to be reduced. For example, if detecting a landmark meant the network should be at $30^\circ$, the cells closest to that angle could have activity injected irrespective of their current state. Activity was injected as a normally distributed packet, given by:
+\begin{align}
+	{L^\prime}_i&=W_L\frac{1}{\sqrt{2\pi{\sigma_L}^2}}e^{-\frac{{\mathrm{min}\left(\left|\mu_\theta-\theta_i\right|,\left|\mu_\theta-\theta_i+{360}^\circ\right|,\left|\mu_\theta-\theta_i-{360}^\circ\right|\right)}^2}{2{\sigma_L}^2}}
+\end{align}
+Where $W_L$ and $\sigma_L$ are the calibrated gain and standard deviation of the injected landmark activity, $\mu_\theta$ is the target network direction, and $\theta_i$ is the direction of excitatory neuron $i$. This activity was vertically shifted to have a sum of 0 so no net activity was added to the system.
+\begin{align}
+	L_i&=L_i^\prime-\frac{1}{N}\sum_{i=1}^{N}L_i^\prime \label{eq:L_i}
+\end{align}
+This is the landmark input for each cell, as referenced in equation \eqref{eq:VE_i}.
+
+\subsection{1D Network Calibration Process}
+We established criteria for a successfully calibrated network: that it have a stable packet of activity without any inputs; that it could integrate a velocity signal to track position; and that it could use landmark information to limit accumulated errors in the velocity integration. Satisfying each step required satisfying those previous, so a sequential calibration process was used. The velocity and landmark injected activities were designed to input 0 net activity over the whole network to preserve its stability. For each calibration stage, the genetic algorithm implemented by MATLAB's Global Optimisation Toolbox was used to optimise the relevant network parameters. Parameters were constrained to be either positive or negative to ensure excitatory and inhibitory connections were maintained. The calibration process for each criterion will now be detailed.
+
+\subsubsection{Calibrating a Stable Activity Packet}
+The following parameters affected the network's stable activity, so were calibrated in this step: $W_{E \to E}, W_{I \to E}, \gamma_E, \sigma_E$ (defined above) and the excitatory to inhibitory connection strength, $W_{E \to I}$, inhibitory neuron recurrent connection strength, $W_{I \to I}$, and inhibitory neuron tonic inhibition $\gamma_I$. The neuron time constants, $\tau_E$ and $\tau_I$ were held constant for this work to speed up calibration. The network was calibrated against a template activity packet -- a normal distribution centred at a particular cell with a certain standard deviation. The template was scaled to have a peak of 1, and wrapped between cells 0 and $N$. 
+
+The network timestep, $\Delta t$, the number of cells in the network, $N$, and the standard deviation of the template activity packet were specified manually. Activity was injected into a single cell for 0.1 seconds, then the network allowed to settle for 0.9 seconds. The RMS error between the actual and template responses was used as the calibration loss function. 
+
+The following additional metrics were implemented to describe aspects of the network's response. By attributing an extra error factor to networks with slow or unstable responses, those characteristics could be eliminated. 
+
+85\% rise time: showed how quickly the network responded, and whether it ever reached a state close to the template.
+\begin{align}
+	t_{85\%}=\argmin_t {\left[E\left(t\right)\geq \left(0.85\times\mathrm{goal} \times\left(\mathrm{goal}>0.01\right)\right)\right]}
+\end{align}
+
+Settling activity change: quantified how much overshoot or oscillation was present in the response.
+\begin{align}
+	d=\sum_{t=t_{85\%}}^{t=1}\frac{\sum{\ \left|E_{t-1}-E_t\right|}}{\sum E_t}
+\end{align}
+
+\subsubsection{Calibrating the Velocity Integration}
+The velocity input gain, $W_V$, was calibrated by the following simulation scheme. An input signal was applied for 0.1 seconds to initialise the network's position. After a further 0.4 seconds, a constant velocity input was applied for 1.3 seconds. The network was then given 0.2 seconds to settle with no velocity input. After the initial 0.5 seconds, the error between the network's instantaneous velocity and the truth velocity was calculated. The accumulated error was used as the loss function for calibration.
+
+\subsubsection{Calibrating the Landmark Relocalisation}
+There were 2 parameters to be calibrated: landmark activity weight, $W_L$, and landmark activity standard deviation, $\sigma_L$. The optimal values for the landmark parameters strongly depended on the type and distribution of landmarks in the environment, and the accuracy of the velocity integration. The calibration of the network's landmark activity is discussed in Section 3.5 for the full 2D SLAM case.
+
+\subsection{2D Grid Cell Network Model}
+Scaling the network from one to two dimensions did not require any significant changes to the approach. The network was made symmetrical in the X and Y directions so the number of parameters was the same as for the 1D network. An overview is shown in Figure \ref{2DNetwork}.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/2d response".pdf}
+	\caption{(a) Connections for a $4\times 4$ grid cell network. For clarity, not all connections are shown, but wrapping is illustrated. (b) Activity in the network at a state of [0.3,0.8] with a standard deviation of 0.2.}
+	\label{2DNetwork}
+\end{figure}
+
+\subsubsection{Making the Jump from One to Two Dimensions}
+For the Grid Cell network, each cell in a two-dimensional grid was connected to all others, so a 4D connection matrix was required. This was calculated as follows, with $i$ and $j$ being the coordinates of a cell in the grid, and $x$ and $y$ being the coordinates of the cell to which it was connected.
+\begin{align}
+	W_{E(i,j,x,y)}=W_{E\rightarrow E}\frac{1}{2\pi{\sigma}^2}e^{-\frac{{d_{i,j,x,y}}^2}{2{\sigma}^2}}
+\end{align}
+Where $d_{i,j,x,y}$ is the Euclidean distance between two cells as a fraction of the grid length (allowing for wrapping).
+\begin{equation}
+	\begin{aligned}
+		d_{i,j,x,y}=\frac{1}{N} \sqrt{\min{\left(\left|x-i\right|,\left|x-i+N\right|,\left|x-i-N\right|\right)}^2} \\ 
+		\overline{+ \min{\left(\left|y-j\right|,\left|y-j+N\right|,\left|y-j-N\right|\right)}^2}
+	\end{aligned}
+	\label{eq:d_ijxy}
+\end{equation}
+
+\subsubsection{Velocity Integration for the 2D Network}
+The velocity activity for each dimension in the 2D case was the same as for 1D, but weighted based on the velocity angle, $\theta_v$.
+\begin{equation}
+	\begin{aligned}
+		V_{i,j} = W_Vv \cos(\theta_v)\left(E_{x-1,y}-E_{x+1,y}\right) \\ + W_Vv\sin(\theta_v)\left(E_{x,y-1}-E_{x,y+1}\right)
+	\end{aligned}
+\end{equation}
+
+\subsubsection{2D Network Landmarks}
+The injected landmark activity was a 2D Gaussian centred at the landmark-derived network location, $(\mu_x,\mu_y)$, with a standard deviation, $\sigma_L$ and gain $W_L$.
+\begin{align}
+	{L^{\prime}}_{i,j} &= W_L\frac{1}{2\pi{\sigma_L}^2}e^{-\frac{d_{i,j,\mu_x,\mu_y}^2}{2{\sigma_L}^2}}
+\end{align}
+Where $d_{i,j,\mu_x,\mu_y}$ is the wrapped Euclidean distance between $(i,j)$ and $(\mu_x,\mu_y)$, as in equation \eqref{eq:d_ijxy}. As in \eqref{eq:L_i}, this distribution was vertically shifted to have 0 net activity.
+\begin{align}
+	L_{i,j} &= L_{i,j}^{\prime}-\frac{1}{N^2}\sum_{i=1}^{N}\sum_{j=1}^{N}L_{i,j}^{\prime} \label{eq:L_ij}
+\end{align}
+
+
+\subsection{Calibrating the 2D Network}
+The same process described for the 1D case was used to calibrate the 2D network for a stable activity packet and accurate velocity integration. Landmark calibration will be described for the full 1D+2D system, where we use both the head direction and grid cell networks.
+
+\subsection{Combining the Head Direction and Grid Cell Networks}
+The Head Direction and Grid Cell networks were run simultaneously to track the position and orientation of a simulated agent. The structure of this combined network is shown in Figure \ref{CombinedNetwork}. The Head Direction network integrated the angular velocity signal and provided it to the Grid Cell network. The Grid Cell network used this, along with linear velocity information to integrate the position of the agent over time. The state could be read out from both networks when required.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/3d network architecture".pdf}
+	\caption{Full network structure, inputs and outputs}
+	\label{CombinedNetwork}
+\end{figure}
+
+\subsubsection{Basic SLAM Capabilities of the Network}
+Landmark information was provided as range and bearing measurements, $(r, \beta)$, to distinct landmarks within a set field of view. The following SLAM procedure was used for landmark learning and localisation:
+\begin{itemize}
+	\item Keep a running average of the position of each distinct landmark, calculated from measurements
+	\item Calculate $(\mu_x, \mu_y)$ -- move the position directly towards or away from the landmark, to a distance $r$. 
+	\item Calculate $\mu_\theta$ -- rotate the system's state to match the bearing measurement.
+	\item Stimulate activity at $\mu_\theta$ based on \eqref{eq:L_i} and the calibrated parameters $W_{L(HD)}$ and $\sigma_{L(HD)}$
+	\item Stimulate activity at $(\mu_x, \mu_y)$ based on \eqref{eq:L_ij} and the calibrated parameters $W_{L(GC)}$ and $\sigma_{L(GC)}$
+	\item If multiple landmarks are seen at once, sum the injected activity from each of them.
+\end{itemize}
+
+\subsubsection{Calibrating the Landmark SLAM Parameters}
+The four landmark activity parameters were calibrated by simulating the complete system over a number of laps, and using a genetic algorithm to find the parameters which minimised the accumulated position error. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Experimental Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{EXPERIMENTAL SETUP}
+Here we present the details of our experiments, the simulated environments used, and the calibration settings. 
+
+\subsection{Simulated Environments}
+Paths through simulated environments (shown in Figure \ref{Environments}) were generated to test the SLAM capabilities of the system. All speeds were constant rates, switched between positive/negative/zero as required.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/environments".pdf}
+	\caption{The paths and landmark locations for the two environments used in the testing. Both paths are directed right from the starting point. The figure 8 environment has no net rotation over a lap, while the office environment has a clockwise turn. This influenced the accumulation of heading error over multiple laps.}
+	\label{Environments}
+\end{figure}
+
+\subsection{Calibration Process Details}
+The stability and velocity calibration processes for the 1D and 2D networks were performed as described previously, using the parameters in Table \ref{SystemParams}. Testing was performed at high speeds to induce significant integration errors in the system so the results of the SLAM system were more easily visible.
+\begin{table}[h]
+	\caption{Stability and Velocity calibration parameters}
+	\label{SystemParams}
+	\centering
+	\begin{tabular}{|r|l|}
+		\hline
+		\multicolumn{2}{|c|}{\textbf{System parameters}} \\
+		\hline
+		$\Delta t$	& 0.001 s \\
+		\hline
+		$\tau_E$ & 0.02 s \\
+		\hline
+		$\tau_I$ & 0.005 s \\
+		\hline
+		max $t_{85\%}$ & 0.5 \\
+		\hline
+		max $d$ & 0.1 \\
+		\hline
+		field of view range & 0.6 grids \\
+		\hline
+		field of view angle & $\pm 20^\circ$ \\
+		\hline
+		\multicolumn{2}{|c|}{\textbf{Head direction network}} \\
+		\hline
+		$N$	& 100 \\
+		\hline
+		$\sigma_E$ & $20^\circ$ \\
+		\hline
+		Training speed & $250^\circ$/s \\
+		\hline
+		Testing speed & $500^\circ$/s \\
+		\hline
+		\multicolumn{2}{|c|}{\textbf{Grid Cell network}} \\
+		\hline
+		$N$	& $10\times 10$ \\
+		\hline
+		$\sigma$ & $0.1$ grids \\
+		\hline
+		Training speed & 0.5 grid/s \\
+		\hline
+		Testing speed & 1 grid/s \\
+		\hline
+		\multicolumn{2}{|c|}{\textbf{Genetic Algorithm Parameters}} \\
+		\hline
+		Population size & 200 \\
+		\hline
+		Max generations & 50 \\
+		\hline
+	\end{tabular}
+\end{table}
+
+Landmark parameters were calibrated by minimising the total position error over the fifth lap through the environment. The SLAM process required some time to learn the location of landmarks, which led to increased error initially. Five laps was chosen to eliminate this effect. The genetic algorithm parameters for this process were a population size of 10 and 20 maximum generations.
+
+\subsection{Experimental Data Gathered}
+Normally distributed zero-mean noise was added to the odometry inputs and range/bearing measurements to test the system's robustness. This noise had a standard deviation of 10\% of the signal. The random number generator was seeded at the beginning of each run for consistency. Another test was conducted adding a small noise bias to the velocities (1\% rotational, 5\% linear). The system was tested on the noisy data without retraining.
+
+The following data were gathered for each of the 3 cases (no noise, zero-mean noise, biased noise):
+\begin{itemize}
+	\item \textbf{Dead reckoning:} Euler integration of the raw odometry signals -- only for noisy data
+	\item \textbf{No landmark info:} Odometry integration with our system, without landmark information
+	\item \textbf{SLAM:} Odometry integration with our system, using landmark information
+\end{itemize}
+Comparisons showed the SLAM performance of the system, and whether the system was more robust than integrating the raw odometry information.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Results
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{RESULTS}
+Calibrating the network for stability and velocity integration took approximately 20 minutes on a dual-core consumer laptop. This was only performed once. For each environment, the landmark parameters required about 30 minutes to calibrate. The genetic algorithm used is easily scalable to multi-core machines.
+
+The performance of the system, calibrated as previously described, is presented for each environment.
+\subsection{Figure 8 Environment}
+Calibration of the SLAM parameters produced the parameter values shown in Table \ref{Figure8SLAMParams}. Large standard deviations meant landmark information affected the whole network.
+\begin{table}[h]
+	\caption{SLAM parameters for the Figure 8 environment}
+	\label{Figure8SLAMParams}
+	\centering
+	\begin{tabular}{|l|c|c|c|c|}
+		\hline
+		\textbf{Parameter:} & $W_{L(HD)}$ & $\sigma_{L(HD)}$ & $W_{L(GC)}$ & $\sigma_{L(GC)}$ \\
+		\hline
+		\textbf{Value:} & 15.4530 & 224.0849 & 5.3118 & 0.5355 \\
+		\hline
+	\end{tabular}
+\end{table}
+
+The results with no noise are shown in Figure \ref{Figure8NoNoise}. The no landmark approach integrates the direction perfectly, but has some position error. SLAM successfully reduces error using landmark information. Due to the perfect heading information, the system does not drift over time.
+
+The zero-mean noise case is presented in Figure \ref{Figure8GaussianNoise}. The noisy odometry measurements cause the no landmark approach to drift wildly. The SLAM system suffers some initial drift, but stabilises by lap 10. Dead reckoning error accumulates, but only slowly over 20 laps due to the net zero rotation per lap.
+
+The biased noise case is shown in Figure \ref{Figure8BiasedNoise}. The no landmark approach quickly drifts from the true state. The SLAM system drifts slightly, but maintains a path estimation topologically consistent with the ground truth. Dead reckoning gives a path similar to the ground truth, but with significant orientation drift.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/figure 8 path no noise".pdf}
+	\caption{No noise results for the figure 8 environment. There is no drift without noise because of a net heading change of 0 over a lap. SLAM performance is more metrically accurate than the no landmark approach.}
+	\label{Figure8NoNoise}
+\end{figure}
+
+\begin{figure}[hp]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/figure 8 path 0 mean noise".pdf}
+	\caption{Zero-mean noise results for the figure 8 environment. Noise causes the no landmark approach to drift. SLAM constrains path estimate error. Dead reckoning error builds up slowly due to net zero lap rotation.}
+	\label{Figure8GaussianNoise}
+\end{figure}
+
+\begin{figure}[hp]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/figure 8 path biased noise".pdf}
+	\caption{Biased noise results for the figure 8 environment. The no landmark approach drifts significantly, as does the dead reckoning. SLAM produces a path estimation consistent with the ground truth, despite the noise.}
+	\label{Figure8BiasedNoise}
+\end{figure}
+
+\subsection{Office Environment}
+Calibration of the SLAM parameters produced the parameter values shown in Table \ref{OfficeSLAMParams}. The small standard deviation for the head direction relocalisation meant landmark information affected only a small region of the network. 
+
+\begin{table}[h]
+	\caption{SLAM parameters for the office environment}
+	\label{OfficeSLAMParams}
+	\centering
+	\begin{tabular}{|l|c|c|c|c|}
+		\hline
+		\textbf{Parameter:} & $W_{L(HD)}$ & $\sigma_{L(HD)}$ & $W_{L(GC)}$ & $\sigma_{L(GC)}$ \\
+		\hline
+		\textbf{Value:} & 4.8590 & 12.8689 & 15.2240 & 0.8235 \\
+		\hline
+	\end{tabular}
+\end{table}
+
+The no noise results are shown in Figure \ref{OfficeNoNoise}. A lap of the office environment involves a clockwise loop, so heading errors accumulate even without noise. The no landmark approach drifts from the ground truth, but the SLAM system has stabilised by lap 5.
+
+Figure \ref{OfficeGaussianNoise} presents the zero-mean noise results. The no landmark approach rotates $180^\circ$ from the truth. SLAM constrains error in the estimated path. Dead reckoning errors accumulate slowly, but drift in the path estimate is shown by the significant change between laps 10 \& 20.
+
+The biased noise case in Figure \ref{OfficeBiasedNoise} shows the no landmark approach and dead reckoning drifting significantly. The SLAM approach stabilises by lap 10 with a topologically consistent path representation.
+
+\begin{figure}[hp]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/Office path no noise".pdf}
+	\caption{No noise results for the office environment. Error for the no landmark approach accumulates because a lap involves a full turn, so heading errors build up. SLAM has stabilised a topological map by lap 5.}
+	\label{OfficeNoNoise}
+\end{figure}
+
+\begin{figure}[hp]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/Office path 0 mean noise".pdf}
+	\caption{Zero-mean noise results for the office environment. SLAM constrains the drift seen in the no landmark approach. Dead reckoning error builds up slowly, but the path estimate changes significantly between laps 10 and 20.}
+	\label{OfficeGaussianNoise}
+\end{figure}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/Office path biased noise".pdf}
+	\caption{Biased noise results for the office environment. The noise causes the no landmark approach and dead reckoning to diverge, but SLAM constrains this error.}
+	\label{OfficeBiasedNoise}
+\end{figure}
+
+\subsection{Range of Successful Calibration}
+To test the flexibility of the calibration process, a smaller network was trained, with the Head Direction network using 25 cells with $\sigma = 30^\circ$ and the Grid Cell network using $5\times 5$ cells at $\sigma = 0.2$ grids. This was calibrated and tested in the figure 8 environment with biased noise. The results are shown in Figure \ref{SmallNetworkBiasedNoise}. The no landmark performance is significantly worse than the full size network, but the SLAM performs at a similar level.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\linewidth]{"figures/small network Figure 8 biased noise".pdf}
+	\caption{Biased noise results for the reduced size network in the figure 8 environment. No landmark performance is significantly degraded compared to the full size network (Figure \ref{Figure8BiasedNoise}), but SLAM performance is maintained.}
+	\label{SmallNetworkBiasedNoise}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Discussion and Future Work
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{DISCUSSION AND FUTURE WORK}
+A biologically inspired neural network SLAM system has been presented, along with a process for automatically calibrating its performance. Testing the performance of the system in simulated environments with biased noisy data showed the system was able to successfully integrate velocity information and constrain drift. 
+
+% The estimation did not converge to the true state due to the very simple SLAM process implemented, that considered each landmark in isolation.
+
+The focus of this work was the development of the process for automatic calibration. This allowed a network to be calibrated to perform dead reckoning without any physical data required (if the scaling of the velocity inputs were known). Calibration to perform SLAM from landmark information required only 1 lap of sensor and ground truth data. Only modest amounts of computing power were required. The same process was flexible enough to be used to calibrate all different aspects of the network's function. It could be extended to situations where different or multiple streams of sensor information be available. 
+% Different components could be added to or removed from the system and the calibration process would account for this, removing the need for onerous hand-tuning.
+
+Future work will involve the deployment of a network calibrated through this process to a real robot. This will include incorporating another sensor modality, likely a vision-based method, and using a more advanced SLAM approach.
+
+Another avenue of work is to increase the biological realism of the network. In this work a number of simplifications were made: particularly the velocity propagation cells and the use of firing rate coded cells rather than spiking neurons. These simplifications reduced the number of network parameters and made their function fairly intuitive. Our automatic calibration process would be especially applicable to a more biologically inspired spiking neural network with a greater number of parameters. 
+
+This work serves as the basis for the development of a rapidly configurable and deployable biologically inspired SLAM system for mobile robots.
+
+\bibliographystyle{named}
+\bibliography{references}
+
+\end{document}
+
