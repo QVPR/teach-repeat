@@ -16,7 +16,7 @@
 
 	<!-- Teleop to control Miro -->
 	<arg name="speed_lin" value="0.2" />
-	<arg name="speed_ang" value="1.0" />
+	<arg name="speed_ang" value="1.7" />
 	<!-- <include file="$(find miro_demos)/launch/teleop.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />
@@ -24,6 +24,7 @@
 	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />
+		<arg name="wait_for_ready" value="true" />
 	</include>
 
 	<!-- Collect image data -->
