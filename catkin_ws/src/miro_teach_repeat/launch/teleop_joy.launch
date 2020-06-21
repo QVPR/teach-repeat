@@ -2,6 +2,11 @@
 	<arg name="speed_linear" default="0.2" />
 	<arg name="speed_angular" default="1.0" />
 	<arg name="launch_delay" default="0.0" />
+	<arg name="wait_for_ready" default="false" />
+
+	<group unless="$(arg wait_for_ready)">
+		<rosparam param="wait_for_ready">false</rosparam>
+	</group>
 
 	<!-- Teleop to control Miro -->
 	<node pkg="joy" type="joy_node" name="joy">
