@@ -59,7 +59,8 @@ def get_image_keyframes(images, debug_images):
 	deduped = debug_images[not_dupes]
 	new_goal = [False] + [not np.allclose(deduped[i,44:88,:], deduped[i-1,44:88,:]) for i in range(1,len(deduped))]
 	debug_keyframes = deduped[new_goal,:44,:]
-	keyframes = np.array([images[np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in images])] for keyframe in debug_keyframes])
+	keyframe_indices = [0] + [np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in images]) for keyframe in debug_keyframes]
+	keyframes = np.array(images[keyframe_indices])
 	return keyframes
 
 def load_poses(directory):
@@ -88,35 +89,36 @@ def get_confusion_matrix(directory, reference_images, test_images):
 		offsets = np.load(dir_test + 'offsets.npy')
 	return correlations, offsets
 
-def plot_along_route_localisation(correlations, path_offset, correspondances):
+def plot_along_route_localisation(correlations, path_offsets, correspondances):
 	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)}, sharex=True)
 
-	corrected_path_offsets = path_offset - 1.0
+	# scale path_offsets to between 0 and 1
+	corrected_path_offsets = path_offsets - 1.0
+	corrected_path_offsets[corrected_path_offsets < 0] = -1.0/(corrected_path_offsets[corrected_path_offsets < 0] + 1)
+	corrected_path_offsets[corrected_path_offsets > 0] += 1.0
 	max_diff = np.abs(corrected_path_offsets).max()
+	corrected_path_offsets[corrected_path_offsets < 0] += 1.0
+	corrected_path_offsets[corrected_path_offsets > 0] -= 1.0
 	corrected_path_offsets /= (2 * max_diff)
 	corrected_path_offsets += 0.5
-	# corrected_path_offsets[corrected_path_offsets == 1.0] = 0.0
-	# corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)] = -np.log(corrected_path_offsets[(corrected_path_offsets < 1.0) & (corrected_path_offsets > 0.0)])/math.log(0.5)
-	# corrected_path_offsets[corrected_path_offsets > 1.0] = np.log(corrected_path_offsets[corrected_path_offsets > 1.0])/math.log(1.5)
-	# corrected_path_offsets /= 2*2
-	# corrected_path_offsets += 0.5
 	colours = plt.cm.coolwarm(corrected_path_offsets)
 
 	ax1.scatter(np.arange(correlations.shape[1]), np.argmax(correlations, axis=0), color='black', marker='.', alpha=0.4)
-	ax1.scatter(correspondances, np.arange(len(correspondances)), marker='x', color=colours)
+	ax1.scatter(correspondances, np.arange(len(correspondances)) % correlations.shape[0], marker='x', color=colours)
 	sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.coolwarm)
 	sm.set_array([])
 	cb = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.05, aspect=50)
 	# cb.set_label('along-path correction')
 	cb.set_ticks([0,0.5,1])
-	cb.ax.set_xticklabels(['%.2f (reduce)' % (1-max_diff),'1.0','%.2f (extend)' % (1+max_diff)])
+	cb.ax.set_xticklabels(['$\\div$%.2f (reduce)' % (max_diff),'$\\times$1.0','$\\times$%.2f (extend)' % (max_diff)])
 	ax1.set_ylabel('keyframe number')
 	# ax1.set_xticklabels([])
 
 	ax2.axhline(1.0, linestyle='--', color='grey')
-	ax2.plot(correspondances, path_offset[:len(correspondances)])
+	ax2.plot(correspondances, path_offsets[:len(correspondances)])
 	ax2.set_xlabel('image frame number')
 	ax2.set_ylabel('path correction')
+	ax2.set_yscale('log')
 	plt.tight_layout()
 
 def plot_odom_theta_offset(correlations, poses, theta_offsets):
@@ -186,25 +188,24 @@ def plot_image_along_path_localisation(correlations, correspondances, search_ran
 	plt.plot(weighted_average + search_range, 'r.')
 
 def plot_image_along_path_localisation_full(correlations, correspondances, search_range):
+	if correspondances[0] != 0:
+		correspondances = np.hstack(([0],correspondances))
 	correspondance_full = np.zeros(correlations.shape[1], dtype=np.uint32)
 	correspondance_full[correspondances] = 1
 	correspondance_full = np.cumsum(correspondance_full)
+	
+	if correspondances[-1] != correlations.shape[1]:
+		correspondances = np.hstack((correspondances,[correlations.shape[1]]))
 
-	diffs = [a - b for a,b in zip(list(correspondances)+[correlations.shape[1]], [0] + list(correspondances))]
-	u = np.array([-a for n in diffs for a in np.arange(-.5,.5,1./n)])
+	diffs = [a - b for a,b in zip(correspondances[1:], correspondances[:-1])]
+	u = np.array([a for n in diffs for a in np.arange(-.5,.5,1./n)])
 
 	corr_range = np.arange(-search_range, search_range+2)-.5
 	corr_data = np.zeros((len(corr_range), correspondance_full.size))
-	for i, corr in enumerate(corr_range):
-		corr = int(corr+0.5)
-		if corr < 0:
-			corr = abs(corr)
-			c = np.hstack((np.zeros(corr), correlations[correspondance_full[corr:], np.arange(len(correspondance_full)-corr)]))
-		elif corr > 0:
-			c = np.hstack((correlations[correspondance_full[:-corr], np.arange(corr,len(correspondance_full))], np.zeros(corr)))
-		else:
-			c = correlations[correspondance_full, np.arange(len(correspondance_full))]
-		corr_data[i,:] = c
+	indices = np.int32(np.tile(correspondance_full, (len(corr_range),1)) + (corr_range - 0.5).reshape(-1,1))
+	valid_indices = (indices >= 0) & (indices < correlations.shape[0])
+	for i in range(indices.shape[1]):
+		corr_data[valid_indices[:,i],i] = correlations[indices[valid_indices[:,i],i],i]
 
 	corr_data -= 0.1
 	corr_data[corr_data < 0] = 0.0
@@ -217,17 +218,52 @@ def plot_image_along_path_localisation_full(correlations, correspondances, searc
 	n = 5
 	corr_data = np.repeat(corr_data, n, axis=0)
 
+	# Nbins = 16
+	# bins = np.digitize(u, np.arange(-0.5, 0.6, 1./Nbins))-1
+	# avg_dist = [corr_data[:,i == bins].mean(axis=1) for i in range(Nbins)]
+	# avg = [np.sum(d * corr_range) for d in avg_dist]
+	# avg2 = np.zeros(len(avg))
+
+	# fig, axs = plt.subplots(int(math.sqrt(Nbins)), int(math.sqrt(Nbins)), sharex=True, sharey=True)
+	# for i in range(Nbins):
+	# 	ax = axs[int(i/math.sqrt(Nbins)),int(i%math.sqrt(Nbins))]
+	# 	ax.plot(corr_range, avg_dist[i])
+		# y_32n = avg_dist[i][corr_range == -1.5]
+		# # y_12n = avg_dist[i][corr_range == -0.5]
+		# y_12p = avg_dist[i][corr_range == 0.5]
+		# y_32p = avg_dist[i][corr_range == 1.5]
+		# b = 1./3. / (1./3 + math.log(y_32p/y_12p) / math.log(y_32n/y_32p))
+		# # b = math.log(y_12n/y_12p) / (math.log(y_32p*y_12n/y_12p**2))
+		# k = -math.log(y_32n/y_32p) / 6. / b
+		# A = y_12p / math.exp(-k*(b**2 - b + 1./4))
+		# dense_range = np.arange(-search_range, search_range+1.1, 0.1)-.5
+		# ax.plot(dense_range, A*np.exp(-k * (dense_range - b)**2), '--')
+		# avg2[i] = b
+
+	# plt.figure()
+	# plt.plot(np.arange(-0.5+0.5/Nbins, 0.5, 1./Nbins), avg)
+	# plt.plot(np.arange(-0.5+0.5/Nbins, 0.5, 1./Nbins), avg2)
+
+	# plt.figure()
+	# # plt.plot(weighted_average[correspondance_full == 10])
+	# x = 15
+	# plt.plot(corr_data[:,correspondance_full == x] + 0.0*np.arange(np.sum(correspondance_full == x)))
+	# plt.figure()
+	# plt.plot(u[correspondance_full == x], weighted_average[correspondance_full == x])
+
 	plt.figure()
 	plt.imshow(corr_data[:,:], cmap='viridis')
 	plt.clim([0,1])
 	plt.plot(n*(weighted_average + search_range + 1)-0.5, 'r.')
-	plt.figure()
-	# plt.plot(u)
-	plt.plot(weighted_average)
+	# plt.figure()
+	# plt.plot(correspondance_full + u + 0.5, correspondance_full + weighted_average + 0.5)
+	# plt.figure()
+	# plt.scatter(u, weighted_average)
+	# print(np.corrcoef(u, weighted_average))
 
 if __name__ == "__main__":
-	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests_odom2/1/')
+	dir_reference = os.path.expanduser('~/miro/data/there-back/')
+	dir_test = os.path.expanduser('~/miro/data/there-back_tests/16/')
 
 	reference_images = load_images(dir_reference)
 	reference_poses = load_poses(dir_reference)
@@ -243,13 +279,40 @@ if __name__ == "__main__":
 
 	correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
 
-	corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)),test_keyframe_correspondances]
+	corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)) % correlations.shape[0],test_keyframe_correspondances]
 	
 	plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
 
-	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 1)
+	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 4)
 
 	plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
+
+	def get_mean(x):
+		y = x# - 0.1
+		y[y < 0] = 0.0
+		y /= y.sum()
+		return np.sum(y * np.arange(x.size))
+
+	def get_quadratic_mean(x):
+		poly = np.poly1d(np.polyfit(np.arange(x.size), x, 2))
+		return -poly.coefficients[1] / 2 / poly.coefficients[0]
+
+	def plot_with_mean(x):
+		plt.plot(x)
+		# plt.plot(get_mean(x), x.max(),'x')
+		# poly = np.poly1d(np.polyfit(np.arange(x.size), x, 2))
+		# plt.plot(np.arange(0,x.size-1,0.1),poly(np.arange(0,x.size-1,0.1)))
+		# peak = -poly.coefficients[1] / 2 / poly.coefficients[0]
+		# plt.plot(peak, poly(peak),'x')
+
+	# plot_with_mean(correlations[13:17,236])
+	# plot_with_mean(correlations[13:17,248])
+	# plt.figure()
+	# for i in range(236,249):
+	# 	plot_with_mean(i*0.0 + correlations[13:17,i])
+
+	# plt.plot([get_mean(correlations[13:17,i]) for i in range(236,249)])
+	# plt.plot([get_quadratic_mean(correlations[13:17,i]) for i in range(236,249)])
 
 	plt.show()
 	
