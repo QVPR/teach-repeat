@@ -422,7 +422,11 @@ def image_patch_rotation(image1, image2, min_overlap):
 	offset = np.argmin(means)
 	return offset - pad, means[offset]
 
-def create_correlation_debug_image(img1, img2, corr, subsampling=1):
+def create_correlation_debug_image(img1, img2, corr):
+	if len(corr)-1 > img2.shape[1]:
+		subsampling = (len(corr)-1) / img2.shape[1]
+		corr = corr[::subsampling]
+
 	offset = np.argmax(corr) - int(img2.shape[1]/2)
 	debug_size = 50
 

@@ -11,7 +11,7 @@ from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 import image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
 
-# SEARCH_SIZE = 3
+CORR_SUB_SAMPLING = 10
 
 class miro_image_matcher:
 
@@ -76,7 +76,7 @@ class miro_image_matcher:
 		for i in range(end_range - start_range):
 			img_index = start_range + i
 			if i == best_index:
-				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image)
+				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image, CORR_SUB_SAMPLING)
 				match_data[i] = (offset, corr)
 			else:
 				match_data[i] = image_processing.xcorr_match_images(self.images[img_index], image)

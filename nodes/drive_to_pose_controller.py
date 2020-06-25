@@ -10,8 +10,13 @@ import math
 
 from miro_teach_repeat.msg import Goal
 
-MAX_V = 0.2
-MAX_OMEGA = MAX_V / 0.164 # (width) = 2.439
+WHEELBASE = 0.164
+MAX_V = 0.4
+MAX_OMEGA = 4.878 # (0.4 / (WHEELBASE/2))
+
+# Limit speed
+MAX_V = 0.3
+MIN_OMEGA = 2.5
 
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
@@ -41,6 +46,8 @@ def scale_velocities(v, omega, stop_at_goal):
 			else:
 				omega = MAX_V * turn_rate * omega / abs(omega)
 				v = MAX_V * v / abs(v)
+	elif abs(omega) < MIN_OMEGA and v == 0:
+		omega = math.copysign(MIN_OMEGA, omega)
 	return v, omega
 
 class miro_drive_to_pose_controller:
@@ -55,6 +62,7 @@ class miro_drive_to_pose_controller:
 		self.gain_rho = rospy.get_param('~gain_distance', 0.5)
 		self.gain_alpha = rospy.get_param('~gain_turn_to_point', 5.0)
 		self.gain_beta = rospy.get_param('~gain_turn_to_heading', -3.0)
+		self.gain_theta = rospy.get_param('~gain_turn_on_spot', 7.0)
 		self.goal_pos = None
 		self.goal_theta = None
 		self.stop_at_goal = None
@@ -86,10 +94,10 @@ class miro_drive_to_pose_controller:
 			v = self.gain_rho * rho
 			omega = self.gain_alpha * alpha + self.gain_beta * beta
 
-			if rho < 0.05:
+			# Note: must be equal to TURNING_TARGET_RANGE in localiser
+			if rho < 0.1:
 				v = 0
-				omega = self.gain_alpha * wrapToPi(self.goal_theta-theta)
-				print('only turning')
+				omega = self.gain_theta * wrapToPi(self.goal_theta-theta)
 
 			v, omega = scale_velocities(v, omega, self.stop_at_goal)
 
