@@ -6,6 +6,7 @@ import cv2
 import os
 import math
 import json
+import enum
 import threading
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import CompressedImage
@@ -25,7 +26,16 @@ IMAGE_RECOGNITION_THRESHOLD = 0.1
 FIELD_OF_VIEW_DEG = 2*60.6 + 2*27.0 # deg
 FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
 IMAGE_WIDTH = 115.0 # px
+CORR_SUB_SAMPLING = 10
 GOAL_DISTANCE_SPACING = 0.2 # m
+
+LOOKAHEAD = 0.65 * GOAL_DISTANCE_SPACING
+TURNING_TARGET_RANGE = 0.5 * GOAL_DISTANCE_SPACING
+
+class GOAL_STATE(enum.Enum):
+	normal_goal = 0
+	finished = 1
+	restart = 2
 
 def read_file(filename):
 	with open(filename, 'r') as f:
@@ -46,52 +56,43 @@ def normalise_quaternion(q):
 	q.w /= norm
 
 def px_to_deg(px):
-	return px * FIELD_OF_VIEW_DEG / IMAGE_WIDTH
+	return px * FIELD_OF_VIEW_DEG / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def deg_to_px(deg):
-	return deg * IMAGE_WIDTH / FIELD_OF_VIEW_DEG
+	return deg * IMAGE_WIDTH * CORR_SUB_SAMPLING / FIELD_OF_VIEW_DEG
 
 def px_to_rad(px):
-	return px * FIELD_OF_VIEW_RAD / IMAGE_WIDTH
+	return px * FIELD_OF_VIEW_RAD / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def rad_to_px(rad):
-	return rad * IMAGE_WIDTH / FIELD_OF_VIEW_RAD
+	return rad * IMAGE_WIDTH * CORR_SUB_SAMPLING / FIELD_OF_VIEW_RAD
 
 def delta_frame_in_bounds(delta_frame):
 	distance = delta_frame.p.Norm()
 	angle = wrapToPi(delta_frame.M.GetRPY()[2])
-	if distance < 0.10:
+	if distance < LOOKAHEAD:
 		if abs(angle) < math.radians(5):
 			return True
 		else:
-			print('angle difference from goal = %.2f [rho = %.3f]' % (math.degrees(angle), distance))
+			pass
+			# print('angle difference from goal = %.2f [rho = %.3f]' % (math.degrees(angle), distance))
 	return False
 
 def get_expected_px_offset(offset_frame):
 	# return -0.65*math.degrees(offset_frame.M.GetRPY()[2]) + -15*offset_frame.p.y()
 	return -rad_to_px(offset_frame.M.GetRPY()[2])
 
-def get_corrected_goal_offset(goal1, goal2, correction_rad, path_correction):
-	# # old target -> new target in frame of old target (x = forwards)
-	# goal_offset = old_goal_frame_world.Inverse() * new_goal_frame_world
-	# # rotate to odom frame (x = positive odom) [same frame as current_goal]
-	# goal_offset.p = tf_conversions.Rotation.RotZ(current_goal_frame_odom.M.GetRPY()[2]) * goal_offset.p
-	# # rotate the goal offset by the rotational correction
-	# goal_offset_corrected = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_rad)) * goal_offset
-	# # extend or retract the goal using image-based along-path offset
-	# goal_offset_corrected.p *= image_path_offset
-	# # add the corrected offset to the current goal
-	# new_goal_odom = tf_conversions.Frame(goal_offset_corrected.M * current_goal_frame_odom.M, goal_offset_corrected.p + current_goal_frame_odom.p)
-
+def get_corrected_goal_offset(goal1, goal2, correction_rad, correction_length):
+	''' apply corrections to the offset from goal1 to goal2	'''
 	goal_offset = goal1.Inverse() * goal2
 	goal_offset = tf_conversions.Frame(tf_conversions.Rotation.RotZ(correction_rad)) * goal_offset
-	goal_offset.p *= path_correction
+	goal_offset.p *= correction_length
 	return goal_offset
 
 def is_turning_goal(goal_frame, next_goal_frame):
 	diff = goal_frame.Inverse() * next_goal_frame
 	dist = diff.p.Norm()
-	return dist < (GOAL_DISTANCE_SPACING / 2)
+	return dist < TURNING_TARGET_RANGE
 
 class miro_localiser:
 	def __init__(self):
@@ -181,10 +182,11 @@ class miro_localiser:
 				if self.goal_number < len(self.poses):
 					self.calculate_image_pose_offset(self.goal_index)
 					self.goal_number += 1
-				return True
+				return GOAL_STATE.finished
 			else:
 				self.goal_index = 0 # repeat the path (loop)
-		return False
+				return GOAL_STATE.restart
+		return GOAL_STATE.normal_goal
 
 	def save_data_at_goal(self, pose, goal_odom, goal_world, theta_offset, path_offset):
 		# save current pose info
@@ -218,53 +220,59 @@ class miro_localiser:
 			if delta_frame_in_bounds(delta_frame):
 				old_goal_index = self.goal_index
 
-				if self.update_goal_index(): # at final goal
+				state = self.update_goal_index()
+				
+				if state == GOAL_STATE.finished:
 					return
+				
+				if state == GOAL_STATE.restart:
+					# don't have a big offset from the end of the path, back to the start
+					old_goal_frame_world = tf_conversions.Frame()
 
 				new_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 				turning_goal = is_turning_goal(old_goal_frame_world, new_goal_frame_world)
 				inter_goal_offset_world = old_goal_frame_world.Inverse() * new_goal_frame_world
 				inter_goal_distance_world = inter_goal_offset_world.p.Norm()
 				
-				search_range = 1
-				offsets, correlations = self.calculate_image_pose_offset(self.goal_index, search_range, return_all=True)
-				if self.goal_index >= search_range:
-					rotation_offset = offsets[search_range]
-					rotation_correlation = correlations[search_range]
-				else:
-					rotation_offset = offsets[-search_range-1]
-					rotation_correlation = correlations[-search_range-1]
+				# search_range = 1
+				# offsets, correlations = self.calculate_image_pose_offset(self.goal_index, search_range, return_all=True)
+				# if self.goal_index >= search_range:
+				# 	rotation_offset = offsets[search_range]
+				# 	rotation_correlation = correlations[search_range]
+				# else:
+				# 	rotation_offset = offsets[-search_range-1]
+				# 	rotation_correlation = correlations[-search_range-1]
 
-				offset = rotation_offset
+				# offset = rotation_offset
 
-				K = 0.1
-				correction_rad = K * offset
-				if rotation_correlation < IMAGE_RECOGNITION_THRESHOLD:
-					correction_rad = 0.0
+				# K = 0.1
+				# correction_rad = K * offset
+				# if rotation_correlation < IMAGE_RECOGNITION_THRESHOLD:
+				# 	correction_rad = 0.0
 
-				if not turning_goal and self.goal_index >= search_range and self.goal_index < len(self.poses)-search_range:
-					corr = np.array(correlations)
-					corr -= IMAGE_RECOGNITION_THRESHOLD
-					corr[corr < 0] = 0.0
-					s = corr.sum()
-					if s > 0:
-						corr /= s
-					w = corr * np.arange(-search_range,search_range+1,1)
-					pos = w.sum()
-					path_error = pos
+				# if not turning_goal and self.goal_index >= search_range and self.goal_index < len(self.poses)-search_range:
+				# 	corr = np.array(correlations)
+				# 	corr -= IMAGE_RECOGNITION_THRESHOLD
+				# 	corr[corr < 0] = 0.0
+				# 	s = corr.sum()
+				# 	if s > 0:
+				# 		corr /= s
+				# 	w = corr * np.arange(-search_range,search_range+1,1)
+				# 	pos = w.sum()
+				# 	path_error = pos
 
-					K2 = 0.5
-					if inter_goal_distance_world + K2 * path_error * GOAL_DISTANCE_SPACING < 0:
-						path_correction = 0.0
-					else:
-						path_correction = (inter_goal_distance_world - K2 * path_error * GOAL_DISTANCE_SPACING) / inter_goal_distance_world
-					if np.isnan(path_correction):
-						print(corr, s, w, pos, inter_goal_distance_world)
-					# Note: need a check for if abs(path_error) > inter_goal_distance_odom
-					# RuntimeWarning: invalid value encountered in double_scalars
-				else:
-					path_correction = 1.0
-					pos = 0.0
+				# 	K2 = 0.5
+				# 	if inter_goal_distance_world + K2 * path_error * GOAL_DISTANCE_SPACING < 0:
+				# 		path_correction = 0.0
+				# 	else:
+				# 		path_correction = (inter_goal_distance_world - K2 * path_error * GOAL_DISTANCE_SPACING) / inter_goal_distance_world
+				# 	if np.isnan(path_correction):
+				# 		print(corr, s, w, pos, inter_goal_distance_world)
+				# 	# Note: need a check for if abs(path_error) > inter_goal_distance_odom
+				# 	# RuntimeWarning: invalid value encountered in double_scalars
+				# else:
+				# 	path_correction = 1.0
+				# 	pos = 0.0
 
 				# image_path_offset, image_rad_offset, correlation, best_correlation = self.calculate_image_pose_offset(old_goal_index)
 
@@ -278,26 +286,27 @@ class miro_localiser:
 				# if best_correlation < IMAGE_RECOGNITION_THRESHOLD:
 				# 	path_correction = 1.0
 
-				goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, correction_rad, path_correction)
-				new_goal = current_goal_frame_odom * goal_offset
-
-				self.update_goal(new_goal)
-				self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, correction_rad, path_correction)
-				self.goal_number += 1
-				print('last goal theta correction: %f' % math.degrees(correction_rad))
-				print('last goal path correction: %f' % (path_correction))
-
-				# goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, 0.0, 1.0)
+				# goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, correction_rad, path_correction)
 				# new_goal = current_goal_frame_odom * goal_offset
 
-				# self.update_goal(new_goal, True, turning_goal)
-				# self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, self.sum_theta_correction, self.sum_path_correction)
+				# self.update_goal(new_goal)
+				# self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, correction_rad, path_correction)
 				# self.goal_number += 1
+				# print('last goal theta correction: %f' % math.degrees(correction_rad))
+				# print('last goal path correction: %f' % (path_correction))
 
-				# print('last goal theta correction: %f' % math.degrees(self.sum_theta_correction))
-				# print('last goal path correction: %f' % (self.sum_path_correction))
-				# self.sum_theta_correction = 0
-				# self.sum_path_correction = 1.0
+				goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, 0.0, 1.0)
+				new_goal = current_goal_frame_odom * goal_offset
+
+				self.update_goal(new_goal, True, turning_goal)
+				self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, self.sum_theta_correction, self.sum_path_correction)
+				self.goal_number += 1
+				print('last goal theta correction: %f' % math.degrees(self.sum_theta_correction))
+				print('last goal path correction: %f' % (self.sum_path_correction))
+				if turning_goal:
+					print('turning goal:')
+				self.sum_theta_correction = 0
+				self.sum_path_correction = 1.0
 			self.mutex.release()
 
 	def process_image_data(self, msg):
@@ -316,7 +325,7 @@ class miro_localiser:
 			self.mutex.acquire()
 			self.last_image = normalised_image
 
-			# self.do_continuous_correction()
+			self.do_continuous_correction()
 			self.mutex.release()
 
 	def update_goal(self, goal_frame, new_goal=True, turning_goal=False):
@@ -330,7 +339,7 @@ class miro_localiser:
 		if turning_goal or (self.goal_index == len(self.poses)-1 and self.stop_at_end):
 			self.publish_goal(self.goal, 0.0, True)
 		else:
-			self.publish_goal(self.goal, 0.1, False)
+			self.publish_goal(self.goal, LOOKAHEAD, False)
 
 	def publish_goal(self, pose, lookahead_distance=0.0, stop_at_goal=False):
 		goal = Goal()
@@ -356,19 +365,23 @@ class miro_localiser:
 			last_goal_offset_odom = last_goal_odom.Inverse() * current_frame_odom
 			inter_goal_offset_odom = last_goal_odom.Inverse() * next_goal_odom
 			inter_goal_distance_odom = inter_goal_offset_odom.p.Norm()
+			inter_goal_offset_rotated = tf_conversions.Rotation.RotZ(-last_goal_odom.M.GetRPY()[2]) * inter_goal_offset_odom.p
+			inter_goal_offset_angle = math.atan2(inter_goal_offset_rotated.y(), inter_goal_offset_rotated.x())
 
-			next_goal_distance = next_goal_offset_odom.p.Norm()
-			last_goal_distance = last_goal_offset_odom.p.Norm()
+			next_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-next_goal_odom.M.GetRPY()[2]) * next_goal_offset_odom.p).x()
+			last_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-last_goal_odom.M.GetRPY()[2]) * last_goal_offset_odom.p).x()
 			next_goal_angle = next_goal_offset_odom.M.GetRPY()[2]
 			last_goal_angle = last_goal_offset_odom.M.GetRPY()[2]
 
 			# if it's a distance goal, use distance; if it's a rotation goal, use angle
 			if is_turning_goal(last_goal_world, next_goal_world):
 				turning_goal = True
-				u = last_goal_angle / (last_goal_angle + next_goal_angle)
+				u = last_goal_angle / (last_goal_angle - next_goal_angle) # should have opposite signs
+				# print('turning correction u = ',u)
 			else:
 				turning_goal = False
-				u = last_goal_distance / (last_goal_distance + next_goal_distance)
+				u = last_goal_parallel_distance / (last_goal_parallel_distance - next_goal_parallel_distance)
+				# print('straight correction u = ',u), 'woulda been', last_goal_offset_odom.p.Norm() / (last_goal_offset_odom.p.Norm() + next_goal_offset_odom.p.Norm())
 
 			search_range = 1
 			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+search_range, return_all=True)
@@ -381,9 +394,9 @@ class miro_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.0#1
+			K = 0.05
 			correction_rad = K * offset
-			if max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD:
+			if turning_goal or max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD or u < 0 or u > 1:
 				correction_rad = 0.0
 
 			if not turning_goal and self.goal_index > search_range and self.goal_index < len(self.poses)-search_range:
@@ -406,7 +419,7 @@ class miro_localiser:
 				#   want d -> d + pos
 				#   d *= (d + pos) / d
 
-				K2 = 0.0#5
+				K2 = 0.05
 				path_correction = (inter_goal_distance_odom - K2 * path_error * GOAL_DISTANCE_SPACING) / inter_goal_distance_odom
 				if np.isnan(path_correction):
 					print(corr, s, w, pos, inter_goal_distance_odom)
@@ -416,8 +429,8 @@ class miro_localiser:
 				path_correction = 1.0
 				pos = 0.0
 
-			goal_offset = get_corrected_goal_offset(last_goal_odom, next_goal_odom, correction_rad, path_correction)
-			new_goal = last_goal_odom * goal_offset
+			goal_offset = get_corrected_goal_offset(current_frame_odom, next_goal_odom, correction_rad, path_correction)
+			new_goal = current_frame_odom * goal_offset
 
 			self.update_goal(new_goal, False, turning_goal)
 			self.sum_theta_correction += correction_rad
