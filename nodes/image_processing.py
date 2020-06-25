@@ -175,21 +175,21 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 def xcorr_match_images(image, template_image, subsampling=1):
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	if subsampling == 1:
-		corr = normxcorr2(image, template_image, mode='valid')
+		corr = normxcorr2(image, template_image, mode='valid')[0]
 	else:
 		corr = normxcorr2_subpixel(image, template_image, subsampling, mode='valid')
 	offset = np.argmax(corr)
-	return offset - (len(corr)-1)/2, corr[0,offset]
+	return offset - (len(corr)-1)/2, corr[offset]
 
 def xcorr_match_images_debug(image, template_image, subsampling=1):
 	image_pad = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	if subsampling == 1:
-		corr = normxcorr2(image_pad, template_image, mode='valid')
+		corr = normxcorr2(image_pad, template_image, mode='valid')[0]
 	else:
 		corr = normxcorr2_subpixel(image_pad, template_image, subsampling, mode='valid')
 	offset = np.argmax(corr)
 	debug_image = create_correlation_debug_image(image, template_image, corr)
-	return offset - (len(corr)-1)/2, corr[0,offset], debug_image
+	return offset - (len(corr)-1)/2, corr[offset], debug_image
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
@@ -424,13 +424,13 @@ def image_patch_rotation(image1, image2, min_overlap):
 
 def create_correlation_debug_image(img1, img2, corr):
 	if len(corr)-1 > img2.shape[1]:
-		subsampling = (len(corr)-1) / img2.shape[1]
+		subsampling = (len(corr)-1) / (img2.shape[1]-1)
 		corr = corr[::subsampling]
 
 	offset = np.argmax(corr) - int(img2.shape[1]/2)
 	debug_size = 50
 
-	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr[0,:],0,1))) - 1
+	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr,0,1))) - 1
 
 	debug_image = np.concatenate((img2, img1, -1*np.ones((debug_size,img1.shape[1]))), axis=0)
 	debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
