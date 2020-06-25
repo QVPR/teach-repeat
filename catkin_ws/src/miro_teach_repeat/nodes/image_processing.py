@@ -339,8 +339,8 @@ def normxcorr2_subpixel(image, template, subsamples, mode="full"):
 	corrs = []
 
 	for i in interp:
-		image_interp = np.float64(subpixel_shift_approx(image,-i))
-		# image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
+		# image_interp = np.float64(subpixel_shift_approx(image,-i))
+		image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
 		corrs.append(normxcorr2(image_interp, template, mode))
 
 	out = np.array(corrs).flatten('F')
