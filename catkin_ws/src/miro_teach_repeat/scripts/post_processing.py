@@ -14,6 +14,11 @@ import matplotlib.style
 
 import confusion_matrix
 
+import sys
+import importlib
+sys.path.append(os.path.dirname(__file__) + '/../nodes')
+image_processing = importlib.import_module('image_processing')
+
 class Poses2D(object):
 	def __init__(self, x, y, theta, frames):
 		self.x = x
@@ -40,9 +45,12 @@ def load_images(directory):
 	image_files = get_sorted_files_by_ending(directory, '_image.pkl')
 	return np.array([pickle.loads(read_file(image)) for image in image_files])
 
-def load_images_cv(directory):
+def load_images_cv(directory, normalise=True):
 	image_files = get_sorted_files_by_ending(directory, '.png')
-	return np.array([normalise_image(cv2.imread(image, cv2.IMREAD_GRAYSCALE)) for image in image_files])
+	if normalise:
+		return np.array([normalise_image(cv2.imread(image, cv2.IMREAD_GRAYSCALE)) for image in image_files])
+	else:
+		return np.array([cv2.imread(image, cv2.IMREAD_GRAYSCALE) for image in image_files])
 
 def normalise_image(image):
 	return np.float64(2.0*image/255.0 - 1.0)
@@ -55,11 +63,12 @@ def get_image_indices_cv(directory):
 	return np.array([int(os.path.basename(f)[:-4]) for f in image_files])
 
 def get_image_keyframes(images, debug_images):
+	img_shape = images[0].shape
 	not_dupes = [True] + [not np.allclose(debug_images[i],debug_images[i-1]) for i in range(1,len(debug_images))]
 	deduped = debug_images[not_dupes]
-	new_goal = [False] + [not np.allclose(deduped[i,44:88,:], deduped[i-1,44:88,:]) for i in range(1,len(deduped))]
-	debug_keyframes = deduped[new_goal,:44,:]
-	keyframe_indices = [0] + [np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in images]) for keyframe in debug_keyframes]
+	new_goal = [False] + [not np.allclose(deduped[i,img_shape[0]:2*img_shape[0],:], deduped[i-1,img_shape[0]:2*img_shape[0],:]) for i in range(1,len(deduped))]
+	debug_keyframes = deduped[new_goal,:img_shape[0],:]
+	keyframe_indices = [0] + [np.argmin([np.sum(np.abs(keyframe[:,:img_shape[1]]-test_image)) for test_image in images]) for keyframe in debug_keyframes]
 	keyframes = np.array(images[keyframe_indices])
 	return keyframes
 
@@ -188,11 +197,7 @@ def plot_image_along_path_localisation(correlations, correspondances, search_ran
 	plt.plot(weighted_average + search_range, 'r.')
 
 def plot_image_along_path_localisation_full(correlations, correspondances, search_range):
-	if correspondances[0] != 0:
-		correspondances = np.hstack(([0],correspondances))
-	correspondance_full = np.zeros(correlations.shape[1], dtype=np.uint32)
-	correspondance_full[correspondances] = 1
-	correspondance_full = np.cumsum(correspondance_full)
+	correspondance_full = get_full_correspondances(correspondances, correlations.shape[1])
 	
 	if correspondances[-1] != correlations.shape[1]:
 		correspondances = np.hstack((correspondances,[correlations.shape[1]]))
@@ -261,15 +266,38 @@ def plot_image_along_path_localisation_full(correlations, correspondances, searc
 	# plt.scatter(u, weighted_average)
 	# print(np.corrcoef(u, weighted_average))
 
+def get_full_correspondances(correspdance_indices, length):
+	if correspdance_indices[0] != 0:
+		correspdance_indices = np.hstack(([0],correspdance_indices))
+	correspondance_full = np.zeros(length, dtype=np.uint32)
+	correspondance_full[correspdance_indices] = 1
+	correspondance_full = np.cumsum(correspondance_full)
+	return correspondance_full
+
+def plot_image_path_offsets(correspondances, ref_images, test_images):
+	correspondance_full = get_full_correspondances(correspondances, test_images.shape[0])
+
+	ref_images_pad = [np.pad(img, ((0,),(int(img.shape[1]/2),)), mode='constant', constant_values=0) for img in ref_images]
+
+	corr_data = [image_processing.normxcorr2_subpixel(ref_images_pad[correspondance_full[i]], test_images[i], 1, 'valid') for i in range(len(correspondance_full))]
+	offset_data = [np.argmax(corr) - (len(corr)-1)/2 for corr in corr_data]
+
+	plt.plot(offset_data)
+
 if __name__ == "__main__":
-	dir_reference = os.path.expanduser('~/miro/data/there-back/')
-	dir_test = os.path.expanduser('~/miro/data/there-back_tests/16/')
+	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
+	dir_test = os.path.expanduser('/media/dominic/New Volume/miro/data/follow-long-path_tests_res/44/')
 
 	reference_images = load_images(dir_reference)
+	reference_images_full = load_images_cv(dir_reference+'full/', normalise=False)
 	reference_poses = load_poses(dir_reference)
 
 	# test_keyframes = load_images(dir_test)
 	test_images = load_images_cv(dir_test + 'norm/')
+	test_images_full = load_images_cv(dir_test + 'full/', normalise=False)
+	if reference_images[0].shape != test_images[0].shape:
+		reference_images = [cv2.resize(img, tuple(reversed(test_images[0].shape)), interpolation=cv2.INTER_AREA) for img in reference_images]
+
 	test_keyframes = get_image_keyframes(load_images_cv(dir_test + 'norm/'), load_images_cv(dir_test))
 	test_image_indices = get_image_indices_cv(dir_test + 'norm/')
 	test_poses = load_poses(dir_test + 'pose/')
@@ -277,15 +305,20 @@ if __name__ == "__main__":
 	test_corrections = load_corrections(dir_test + 'correction/')
 	test_keyframe_correspondances = np.array([np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in test_images]) for keyframe in test_keyframes])
 
+
 	correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
 
 	corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)) % correlations.shape[0],test_keyframe_correspondances]
 	
-	plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
+	# plt.imshow(correlations)
+
+	# plot_along_route_localisation(correlations, test_corrections.path_offset, test_keyframe_correspondances)
 
 	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 4)
 
-	plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
+	# plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
+
+	plot_image_path_offsets(test_keyframe_correspondances, reference_images_full, test_images_full)
 
 	def get_mean(x):
 		y = x# - 0.1

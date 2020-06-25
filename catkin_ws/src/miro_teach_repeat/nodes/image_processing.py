@@ -172,18 +172,24 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 	(offset, error) = scan_horizontal_SAD_match(image, template)
 	return offset-template_start, error
 
-def xcorr_match_images(image, template_image):
+def xcorr_match_images(image, template_image, subsampling=1):
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
-	corr = normxcorr2(image, template_image, mode='valid')
+	if subsampling == 1:
+		corr = normxcorr2(image, template_image, mode='valid')
+	else:
+		corr = normxcorr2_subpixel(image, template_image, subsampling, mode='valid')
 	offset = np.argmax(corr)
-	return offset - int(template_image.shape[1]/2), corr[0,offset]
+	return offset - (len(corr)-1)/2, corr[0,offset]
 
-def xcorr_match_images_debug(image, template_image):
+def xcorr_match_images_debug(image, template_image, subsampling=1):
 	image_pad = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
-	corr = normxcorr2(image_pad, template_image, mode='valid')
+	if subsampling == 1:
+		corr = normxcorr2(image_pad, template_image, mode='valid')
+	else:
+		corr = normxcorr2_subpixel(image_pad, template_image, subsampling, mode='valid')
 	offset = np.argmax(corr)
 	debug_image = create_correlation_debug_image(image, template_image, corr)
-	return offset - int(template_image.shape[1]/2), corr[0,offset], debug_image
+	return offset - (len(corr)-1)/2, corr[0,offset], debug_image
 
 def scan_horizontal_SAD_match(image, template, step_size=1):
 	positions = range(0,image.shape[1]-template.shape[1],step_size)
@@ -306,6 +312,65 @@ def normxcorr2_sparse(image, template, sampling=(1,1)):
 	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
 	return correlated
 
+def subpixel_shift_approx(img, x=0, y=0):
+	if x != 0:
+		intX = int(math.floor(x))
+		if intX >= 1:
+			img = np.hstack((np.zeros((img.shape[0],intX)), img[:,:-intX]))
+		elif intX <= -1:
+			img = np.hstack((img[:,-intX:], np.zeros((img.shape[0],-intX))))
+		x = x % 1
+		img = (1-x) * img + x * np.hstack((np.zeros((img.shape[0], 1)), img[:,:-1]))
+	if y != 0:
+		intY = int(math.floor(y))
+		if intY >= 1:
+			img = np.vstack((np.zeros((intY,img.shape[1])), img[:-intY,:]))
+		elif intY <= -1:
+			img = np.vstack((img[-intY:,:], np.zeros((-intY,img.shape[1]))))
+		y = y % 1
+		img = (1-y) * img + y * np.vstack((np.zeros((1,img.shape[1])), img[:-1,:]))
+	
+	return img
+
+def normxcorr2_subpixel(image, template, subsamples, mode="full"):
+	if subsamples < 1:
+		subsamples = 1
+	interp = np.arange(0, 1, 1./subsamples)
+	corrs = []
+
+	for i in interp:
+		image_interp = np.float64(subpixel_shift_approx(image,-i))
+		# image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
+		corrs.append(normxcorr2(image_interp, template, mode))
+
+	out = np.array(corrs).flatten('F')
+	if subsamples > 1:
+		out = out[:-subsamples+1]
+
+	return out
+
+def normxcorr2_subpixel_fast(image, template, subsamples):
+	image_pad = np.pad(image, ((0,),(int(template.shape[1]/2),)), mode='constant', constant_values=0)
+	basic_corr = normxcorr2(image_pad, template, 'valid')[0]
+	best_index = np.argmax(basic_corr)
+	best_offset = best_index - (len(basic_corr)-1)/2
+	best_corr = basic_corr[best_index]
+
+	if subsamples > 1:
+		interp = np.arange(best_offset-1, best_offset+1, 1./subsamples)
+		corrs = []
+
+		for i in interp:
+			image_interp = np.float64(subpixel_shift_approx(image, -i))
+			# image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
+			corrs.append(normxcorr2(image_interp, template, 'valid'))
+
+		best_index = np.argmax(corrs)
+		best_offset = interp[best_index]
+		best_corr = corrs[best_index]
+
+	return best_offset, best_corr
+
 def local_sum_full(A, m, n):
 	B = np.pad(A, ((m,),(n,)), 'constant', constant_values=0)
 	s = np.cumsum(B, axis=0)
@@ -357,7 +422,7 @@ def image_patch_rotation(image1, image2, min_overlap):
 	offset = np.argmin(means)
 	return offset - pad, means[offset]
 
-def create_correlation_debug_image(img1, img2, corr):
+def create_correlation_debug_image(img1, img2, corr, subsampling=1):
 	offset = np.argmax(corr) - int(img2.shape[1]/2)
 	debug_size = 50
 
@@ -387,62 +452,55 @@ if __name__ == "__main__":
 	np.random.seed(0)
 	import pickle
 	def read_file(filename):
-		with open(filename, 'r') as f:
+		with open(filename, 'rb') as f:
 			data = f.read()
 		return data
 
 	import time
-
-	# img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
-	# img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/2 - HUGE VISION FAIL/00000_image.pkl'))
-	
-	img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
-	img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/8/000000_image.pkl'))
-
-	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-
-	t1 = time.time()
-	corr = normxcorr2(img1_pad, img1, mode='valid')
-	t = time.time() - t1
-	print('full normxcorr time: %f s' % (t))
-
-	t1 = time.time()
-	corr_1 = normxcorr2_sparse(img1_pad, img2, (1,1))
-	t_1 = time.time() - t1
-	print('normxcorr 1x1 time: %f s' % (t_1))
-
-	t1 = time.time()
-	corr_2 = normxcorr2_sparse(img1_pad, img2, (2,2))
-	t_2 = time.time() - t1
-	print('normxcorr 2x2 time: %f s' % (t_2))
-
-	t1 = time.time()
-	corr_3 = normxcorr2_sparse(img1_pad, img2, (3,3))
-	t_3 = time.time() - t1
-	print('normxcorr 3x3 time: %f s' % (t_3))
-
-	t1 = time.time()
-	corr_4 = normxcorr2_sparse(img1_pad, img2, (4,4))
-	t_4 = time.time() - t1
-	print('normxcorr 4x4 time: %f s' % (t_4))
-
-	# debug_image = create_correlation_debug_image(img1, img2, corr)
-	# cv2.imshow('img', cv2.resize(debug_image, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST))
-	# cv2.waitKey()
-	
-	corrs = [corr_1, corr_2, corr_3, corr_4]
-	times = [t_1, t_2, t_3, t_4]
 	import matplotlib.pyplot as plt
 
-	for i, (corr, t) in enumerate(zip(corrs,times)):
-		plt.subplot(len(corrs)*100 + 10 + i+1)
-		plt.plot(corr)
-		m = np.argmax(corr)
-		plt.plot(m, corr[m], 'o')
-		plt.xticks([])
-		plt.title('1/%d res; t=%.2f ms' % (i+1,1000*t), rotation=0)
-		plt.ylim([-.1,.25])
-		plt.gca().yaxis.set_label_position("right")
+	# img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
+	# img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/8/000000_image.pkl'))
 
-	plt.tight_layout()
+	# for i in [1, 2, 4, 8, 16]:
+	# 	if i > 1:
+	# 		interp = cv2.INTER_AREA
+	# 	else:
+	# 		interp = cv2.INTER_CUBIC
+	# 	i1 = cv2.resize(img1, None, fx=1./i, fy=1./i, interpolation=interp)
+	# 	i2 = cv2.resize(img2, None, fx=1./i, fy=1./i, interpolation=interp)
+	# 	i1_pad = np.pad(i1, ((0,),(int(i2.shape[1]/2),)), mode='constant', constant_values=0)
+	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 1, 'valid')
+	# 	# plt.plot(np.arange(-i*(len(corr)-1)/2, i*(len(corr)-1)/2+i, i), corr)
+	# 	corr = normxcorr2_subpixel(i1_pad, i2, i, 'valid')
+	# 	t = np.linspace(-int(img2.shape[1]/2), int(img2.shape[1]/2), len(corr))
+	# 	plt.plot(t, corr)
+	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 100, 'valid')
+	# 	# plt.plot(np.arange(-i*int(i2.shape[1]/2),i*int(i2.shape[1]/2)+i,.01*i), corr)
+
+	# plt.show()
+
+	import scipy.ndimage
+
+	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+	c1 = normxcorr2_subpixel(img1_pad, img1, 1, 'valid')
+	img1_s = np.float64(scipy.ndimage.shift(img1, (0,0.1)))
+	c2 = normxcorr2_subpixel(img1_pad, img1_s, 1, 'valid')
+
+	cc = normxcorr2_subpixel(img1_pad, img2, 5, 'valid', 0)
+	cc2 = normxcorr2_subpixel(img1_pad, img2, 5, 'valid', 1)
+
+	# plt.plot(c1)
+	# plt.plot(c2)
+	plt.plot(cc)
+	plt.plot(cc2)
 	plt.show()
+
+	# cv2.imshow('a', img1)
+	# b = np.uint8(subpixel_shift_approx(img1, 0.01, 0))
+	# c = np.uint8(scipy.ndimage.shift(img1, (0, 0.01)))
+	# d = np.uint8(np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(img1), (0, 0.01))).real)
+	# cv2.imshow('b', b)
+	# cv2.imshow('c', c)
+	# cv2.imshow('d', d)
+	# cv2.waitKey()
