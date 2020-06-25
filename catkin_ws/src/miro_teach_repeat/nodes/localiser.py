@@ -368,6 +368,8 @@ class miro_localiser:
 			inter_goal_offset_rotated = tf_conversions.Rotation.RotZ(-last_goal_odom.M.GetRPY()[2]) * inter_goal_offset_odom.p
 			inter_goal_offset_angle = math.atan2(inter_goal_offset_rotated.y(), inter_goal_offset_rotated.x())
 
+			last_goal_distance = last_goal_offset_odom.p.Norm()
+			next_goal_distance = next_goal_offset_odom.p.Norm()
 			next_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-next_goal_odom.M.GetRPY()[2]) * next_goal_offset_odom.p).x()
 			last_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-last_goal_odom.M.GetRPY()[2]) * last_goal_offset_odom.p).x()
 			next_goal_angle = next_goal_offset_odom.M.GetRPY()[2]
@@ -380,7 +382,8 @@ class miro_localiser:
 				# print('turning correction u = ',u)
 			else:
 				turning_goal = False
-				u = last_goal_parallel_distance / (last_goal_parallel_distance - next_goal_parallel_distance)
+				u = last_goal_distance / (last_goal_distance + next_goal_distance)
+				# u = last_goal_parallel_distance / (last_goal_parallel_distance - next_goal_parallel_distance)
 				# print('straight correction u = ',u), 'woulda been', last_goal_offset_odom.p.Norm() / (last_goal_offset_odom.p.Norm() + next_goal_offset_odom.p.Norm())
 
 			search_range = 1
@@ -394,7 +397,7 @@ class miro_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.05
+			K = 0.01
 			correction_rad = K * offset
 			if turning_goal or max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD or u < 0 or u > 1:
 				correction_rad = 0.0
