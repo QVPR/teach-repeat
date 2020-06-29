@@ -135,8 +135,6 @@ class miro_localiser:
 		global CORR_SUB_SAMPLING
 		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
 
-		self.image_offset_gain = rospy.get_param('~image_offset_gain', 2.3)
-		
 		self.last_image = None
 		self.first_img_seq = 0
 
@@ -386,7 +384,7 @@ class miro_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.05
+			K = 0.01
 			correction_rad = K * offset
 			if turning_goal or max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD or u < 0 or u > 1:
 				correction_rad = 0.0
