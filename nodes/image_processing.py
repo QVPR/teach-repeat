@@ -463,8 +463,20 @@ if __name__ == "__main__":
 	import time
 	import matplotlib.pyplot as plt
 
-	# img1 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom/000000_image.pkl'))
-	# img2 = pickle.loads(read_file('/home/dominic/miro/data/follow-straight-odom_tests/8/000000_image.pkl'))
+	img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
+	img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
+
+	img1 = cv2.resize(img1, (57,22), interpolation=cv2.INTER_AREA)
+	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+	 
+	corr = normxcorr2_subpixel(img1_pad, img2, 2, 'valid')
+	print(np.argmax(corr) - (len(corr)-1)/2 )
+
+	offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
+	print(offset)
+
+	cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
+	cv2.waitKey()
 
 	# for i in [1, 2, 4, 8, 16]:
 	# 	if i > 1:
@@ -484,21 +496,21 @@ if __name__ == "__main__":
 
 	# plt.show()
 
-	import scipy.ndimage
+	# import scipy.ndimage
 
-	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-	c1 = normxcorr2_subpixel(img1_pad, img1, 1, 'valid')
-	img1_s = np.float64(scipy.ndimage.shift(img1, (0,0.1)))
-	c2 = normxcorr2_subpixel(img1_pad, img1_s, 1, 'valid')
+	# img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+	# c1 = normxcorr2_subpixel(img1_pad, img1, 1, 'valid')
+	# img1_s = np.float64(scipy.ndimage.shift(img1, (0,0.1)))
+	# c2 = normxcorr2_subpixel(img1_pad, img1_s, 1, 'valid')
 
-	cc = normxcorr2_subpixel(img1_pad, img2, 5, 'valid', 0)
-	cc2 = normxcorr2_subpixel(img1_pad, img2, 5, 'valid', 1)
+	# cc = normxcorr2_subpixel(img1_pad, img2, 5, 'valid')
+	# cc2 = normxcorr2_subpixel(img1_pad, img2, 5, 'valid')
 
 	# plt.plot(c1)
 	# plt.plot(c2)
-	plt.plot(cc)
-	plt.plot(cc2)
-	plt.show()
+	# plt.plot(cc)
+	# plt.plot(cc2)
+	# plt.show()
 
 	# cv2.imshow('a', img1)
 	# b = np.uint8(subpixel_shift_approx(img1, 0.01, 0))

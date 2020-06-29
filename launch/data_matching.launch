@@ -1,9 +1,10 @@
 <launch>
 	<!-- Global params -->
 	<rosparam param="miro_data_load_dir">~/miro/data/follow-long-path</rosparam>
-	<rosparam param="miro_data_save_dir">~/miro/data/follow-long-path_tests/1</rosparam>
-	<rosparam param="image_resize_width">11</rosparam>
-	<rosparam param="image_resize_height">4</rosparam>
+	<rosparam param="miro_data_save_dir">~/miro/data/follow-long-path_tests/17</rosparam>
+	<rosparam param="image_resize_width">28</rosparam>
+	<rosparam param="image_resize_height">11</rosparam>
+	<rosparam param="image_subsampling">10</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
 	<!-- Hold head in place, reset odometry and disable cliff sensors -->

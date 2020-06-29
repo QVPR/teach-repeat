@@ -11,8 +11,6 @@ from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 import image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
 
-CORR_SUB_SAMPLING = 10
-
 class miro_image_matcher:
 
 	def __init__(self):		
@@ -30,6 +28,8 @@ class miro_image_matcher:
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
+
+		self.subsampling = rospy.get_param('/image_subsampling', 1)
 
 		image_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-10:] == '_image.pkl']
 		image_files.sort()
@@ -76,10 +76,10 @@ class miro_image_matcher:
 		for i in range(end_range - start_range):
 			img_index = start_range + i
 			if i == best_index:
-				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image, CORR_SUB_SAMPLING)
+				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image, self.subsampling)
 				match_data[i] = (offset, corr)
 			else:
-				match_data[i] = image_processing.xcorr_match_images(self.images[img_index], image)
+				match_data[i] = image_processing.xcorr_match_images(self.images[img_index], image, self.subsampling)
 		offset = match_data[best_index][0]
 		correlation = match_data[best_index][1]
 

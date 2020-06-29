@@ -26,7 +26,7 @@ IMAGE_RECOGNITION_THRESHOLD = 0.1
 FIELD_OF_VIEW_DEG = 2*60.6 + 2*27.0 # deg
 FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
 IMAGE_WIDTH = 115.0 # px
-CORR_SUB_SAMPLING = 10
+CORR_SUB_SAMPLING = 1
 GOAL_DISTANCE_SPACING = 0.2 # m
 
 LOOKAHEAD = 0.65 * GOAL_DISTANCE_SPACING
@@ -126,10 +126,14 @@ class miro_localiser:
 
 		# Image
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
-		if self.resize[0] is not None:
-			IMAGE_WIDTH = self.resize[0]
+		if self.resize[1] is not None:
+			global IMAGE_WIDTH
+			IMAGE_WIDTH = self.resize[1]
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
+
+		global CORR_SUB_SAMPLING
+		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
 
 		self.image_offset_gain = rospy.get_param('~image_offset_gain', 2.3)
 		
@@ -235,7 +239,7 @@ class miro_localiser:
 				inter_goal_distance_world = inter_goal_offset_world.p.Norm()
 				
 				# search_range = 1
-				# offsets, correlations = self.calculate_image_pose_offset(self.goal_index, search_range, return_all=True)
+				# offsets, correlations = self.calculate_image_pose_offset(self.goal_index, search_range)
 				# if self.goal_index >= search_range:
 				# 	rotation_offset = offsets[search_range]
 				# 	rotation_correlation = correlations[search_range]
@@ -273,21 +277,6 @@ class miro_localiser:
 				# else:
 				# 	path_correction = 1.0
 				# 	pos = 0.0
-
-				# image_path_offset, image_rad_offset, correlation, best_correlation = self.calculate_image_pose_offset(old_goal_index)
-
-				# known_goal_offset = current_goal_frame_odom.Inverse() * current_frame_odom
-				# expected_theta_offset = px_to_rad(get_expected_px_offset(known_goal_offset))
-				# correction_rad = image_rad_offset - expected_theta_offset
-				# path_correction = image_path_offset
-
-				# if correlation < IMAGE_RECOGNITION_THRESHOLD:
-				# 	correction_rad = 0.0
-				# if best_correlation < IMAGE_RECOGNITION_THRESHOLD:
-				# 	path_correction = 1.0
-
-				# goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, correction_rad, path_correction)
-				# new_goal = current_goal_frame_odom * goal_offset
 
 				# self.update_goal(new_goal)
 				# self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, correction_rad, path_correction)
@@ -387,7 +376,7 @@ class miro_localiser:
 				# print('straight correction u = ',u), 'woulda been', last_goal_offset_odom.p.Norm() / (last_goal_offset_odom.p.Norm() + next_goal_offset_odom.p.Norm())
 
 			search_range = 1
-			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+search_range, return_all=True)
+			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+search_range)
 			if self.goal_index > search_range:
 				rotation_offsets = offsets[search_range:search_range+2]
 				rotation_correlations = correlations[search_range:search_range+2]
@@ -397,7 +386,7 @@ class miro_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.01
+			K = 0.05
 			correction_rad = K * offset
 			if turning_goal or max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD or u < 0 or u > 1:
 				correction_rad = 0.0
@@ -442,7 +431,7 @@ class miro_localiser:
 			# d = current_frame_odom.Inverse() * new_lookahead_goal
 			# print('pos = %f, d = %f' % (pos, d.p.Norm()))
 
-	def calculate_image_pose_offset(self, image_to_search_index, half_search_range=None, return_all=False):
+	def calculate_image_pose_offset(self, image_to_search_index, half_search_range=None):
 		HALF_SEARCH_RANGE = 1
 		if half_search_range is None:
 			half_search_range = HALF_SEARCH_RANGE
@@ -451,33 +440,11 @@ class miro_localiser:
 			match_request = ImageMatchRequest(image_processing.image_to_msg(self.last_image), UInt32(image_to_search_index), UInt32(half_search_range))
 			match_response = self.match_image(match_request)
 
-			if image_to_search_index >= half_search_range:
-				centre_image_index = half_search_range
-			else:
-				centre_image_index = image_to_search_index
-
-			image_match_offset = match_response.offsets.data[centre_image_index]
-			image_match_corr = match_response.correlations.data[centre_image_index]
-			best_match = np.argmax(match_response.correlations.data)
-
-			path_offset_magnitude = best_match - centre_image_index
-			if path_offset_magnitude > 0:
-				path_offset = 0.5 ** path_offset_magnitude
-			elif path_offset_magnitude < 0:
-				path_offset = 1.5 ** (-path_offset_magnitude)
-			else:
-				path_offset = 1.0		
-
 			# positive image offset: query image is shifted left from reference image
 			# this means we have done a right (negative turn) which we should correct with a positive turn
 			# positive offset -> positive turn, gain = positive
 			# (normalise the pixel offset by the width of the image)
-			theta_offset = px_to_rad(image_match_offset)
-
-			if return_all:
-				return [px_to_rad(offset) for offset in match_response.offsets.data], match_response.correlations.data
-			else:
-				return path_offset, theta_offset, image_match_corr, match_response.correlations.data[best_match]
+			return [px_to_rad(offset) for offset in match_response.offsets.data], match_response.correlations.data
 		else:
 			raise RuntimeError('Localiser: tried to localise before image data is received!')
 
