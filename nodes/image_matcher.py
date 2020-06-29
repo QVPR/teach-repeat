@@ -31,7 +31,8 @@ class miro_image_matcher:
 
 		self.subsampling = rospy.get_param('/image_subsampling', 1)
 
-		image_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-10:] == '_image.pkl']
+		# image_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-10:] == '_image.pkl']
+		image_files = [self.load_dir+'full/'+f for f in os.listdir(self.load_dir+'full/') if f[-4:] == '.png']
 		image_files.sort()
 
 		print('loading images...')
@@ -53,12 +54,16 @@ class miro_image_matcher:
 		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
 
 	def load_images(self, image_files):
-		images = [pickle.loads(self.read_file(f)) for f in image_files]
-		if self.resize is None or self.resize == images[0].shape[:2]:
-			return images
-		else:
-			# need to flip the order of resize for opencv
-			return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
+		# images = [pickle.loads(self.read_file(f)) for f in image_files]
+		# if self.resize is None or self.resize == images[0].shape[:2]:
+		# 	return images
+		# else:
+		# 	# need to flip the order of resize for opencv
+		# 	return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
+		images = [cv2.imread(f, cv2.IMREAD_GRAYSCALE) for f in image_files]
+		images = [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
+		images = [image_processing.patch_normalise_pad(image, (9,9)) for image in images]
+		return images
 
 	def read_file(self, filename):
 		with open(filename, 'r') as f:
