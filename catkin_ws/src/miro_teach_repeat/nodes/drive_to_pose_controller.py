@@ -35,17 +35,17 @@ def scale_velocities(v, omega, stop_at_goal):
 			omega = 0
 		elif v == 0:
 			v = 0
-			omega = MAX_OMEGA * omega / abs(omega)
+			omega = math.copysign(MIN_OMEGA, omega)
 		else:
 			turn_rate = abs(omega / v)
 			turn_rate_at_max = MAX_OMEGA / MAX_V
 
 			if turn_rate > turn_rate_at_max:
-				omega = MAX_OMEGA * omega / abs(omega)
-				v = MAX_OMEGA / turn_rate * v / abs(v)
+				omega = math.copysign(MAX_OMEGA, omega)
+				v = MAX_OMEGA / turn_rate
 			else:
-				omega = MAX_V * turn_rate * omega / abs(omega)
-				v = MAX_V * v / abs(v)
+				omega = math.copysign(MAX_V * turn_rate, omega)
+				v = MAX_V
 	elif abs(omega) < MIN_OMEGA and v == 0:
 		omega = math.copysign(MIN_OMEGA, omega)
 	return v, omega
@@ -100,6 +100,9 @@ class miro_drive_to_pose_controller:
 				omega = self.gain_theta * wrapToPi(self.goal_theta-theta)
 
 			v, omega = scale_velocities(v, omega, self.stop_at_goal)
+
+			# if rho < 0.1:
+			# 	print('only turning - omega = %f' % omega)
 
 			motor_command = TwistStamped()
 			motor_command.header.stamp = rospy.Time.now()
