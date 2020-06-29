@@ -463,20 +463,37 @@ if __name__ == "__main__":
 	import time
 	import matplotlib.pyplot as plt
 
-	img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
-	img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
+	# img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
+	# img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
+	img1 = cv2.imread('/home/dominic/miro/data/there-back/full/000001.png', cv2.IMREAD_GRAYSCALE)
+	img2 = cv2.imread('/home/dominic/miro/data/there-back_tests/28/full/000004.png', cv2.IMREAD_GRAYSCALE)
 
-	img1 = cv2.resize(img1, (57,22), interpolation=cv2.INTER_AREA)
-	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+	SZ = (11,4)
+	PN = (3,3)
+
+	img1_RS = cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA)
+	img1_RSPN = patch_normalise_pad(cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA), PN)
+	img1_RSPNRS = cv2.resize(patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), PN), SZ, interpolation=cv2.INTER_AREA)
+	img2_RS = cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA)
+	img2_RSPN = patch_normalise_pad(cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA), PN)
+	img1_RS_pad = np.pad(img1_RS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
+	img1_RSPN_pad = np.pad(img1_RSPN, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
+	img1_RSPNRS_pad = np.pad(img1_RSPNRS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
 	 
-	corr = normxcorr2_subpixel(img1_pad, img2, 2, 'valid')
-	print(np.argmax(corr) - (len(corr)-1)/2 )
+	def plot_corr(corr):
+		print((np.argmax(corr) - (len(corr)-1)/2 )/10.)
+		plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
+	
+	plot_corr(normxcorr2_subpixel(img1_RS_pad, img2_RS, 10, 'valid'))
+	plot_corr(normxcorr2_subpixel(img1_RSPN_pad, img2_RSPN, 10, 'valid'))
+	plot_corr(normxcorr2_subpixel(img1_RSPNRS_pad, img2_RSPN, 10, 'valid'))
+	plt.show()
 
-	offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
-	print(offset)
+	# offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
+	# print(offset/2.)
 
-	cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
-	cv2.waitKey()
+	# cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
+	# cv2.waitKey()
 
 	# for i in [1, 2, 4, 8, 16]:
 	# 	if i > 1:
