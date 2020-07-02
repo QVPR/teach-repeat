@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
 	<rosparam param="miro_data_load_dir">~/miro/data/follow-long-path</rosparam>
-	<rosparam param="miro_data_save_dir">~/miro/data/follow-long-path_tests_res2/1</rosparam>
+	<rosparam param="miro_data_save_dir">~/miro/data/follow-long-path_tests_res2/68</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="image_subsampling">1</rosparam>
@@ -22,6 +22,7 @@
 	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
 	<node pkg="miro_teach_repeat" type="localiser.py" name="miro_localiser" output="screen" >
 		<rosparam param="stop_at_end">true</rosparam>
+		<rosparam param="discrete-correction">false</rosparam>
 	</node>
 
 	<!-- Drive to goal pose -->
