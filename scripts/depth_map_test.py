@@ -213,6 +213,32 @@ img1_full = cv2.imread('/home/dominic/miro/data/under-table2/full/000046.png', c
 img2_full = cv2.imread('/home/dominic/miro/data/under-table2_tests/3/full/000802.png', cv2.IMREAD_GRAYSCALE)
 # img1_full = cv2.imread('/home/dominic/miro/data/follow-long-path/full/000003.png', cv2.IMREAD_GRAYSCALE)
 # img2_full = cv2.imread('/home/dominic/miro/data/follow-long-path_tests/1/full/000061.png', cv2.IMREAD_GRAYSCALE)
+img1_depth = np.load('/home/dominic/miro/data/under-table2/full/000046_disp.npy').squeeze()
+img1_depth = cv2.resize(img1_depth, img1_full.shape[::-1])
+
+# img1_full, img1_depth, img2_full = resize_images([img1_full, img1_depth, img2_full], (44,115))
+# img1_pn = patch_normalise_images([img1_full])[0]
+
+a = np.clip(1.0 - 1.0*(np.abs(np.arange(img1_full.shape[1]) - (img1_full.shape[1]/2.)).reshape((1,-1)) / (img1_full.shape[1]/2.))**2, 0, 1)
+b = np.clip(0.2 + np.linspace(0,1,img1_full.shape[0]).reshape(-1,1)**0.5, 0, 1)
+a = b * a
+
+cv2.imshow('a',a*img1_depth)
+cv2.imshow('img1', np.uint8(a*img1_depth*img1_full))
+# cv2.imshow('img1_depth', np.uint8(256/2*a*img1_depth*(1+img1_pn)))
+cv2.waitKey()
+
+_, best1 = plot_corr(img1_full, img2_full)
+# plot_corr((0.25+0.75*a*img1_depth)*img1_full, img2_full)``
+_, best2 = plot_corr(a*img1_depth*img1_full, img2_full)
+print(best1, best2)
+# plt.show()
+
+im1 = 0.5*img1_full + 0.5*image_processing.subpixel_shift_approx(img2_full, best1)
+im2 = 0.5*img1_full + 0.5*image_processing.subpixel_shift_approx(img2_full, best2)
+cv2.imshow('1', np.uint8(im1))
+cv2.imshow('2', np.uint8(im2))
+cv2.waitKey()
 
 #### Test image aliasing:
 ## Is there a point where the image is the same when resized by 1/n and 1/(n+1)
@@ -233,8 +259,8 @@ img2_full = cv2.imread('/home/dominic/miro/data/under-table2_tests/3/full/000802
 
 #### Test different resolutions and subpixel correlation over a whole run
 ## RMS error decreases and generally looks good
-ref_dir = '/home/dominic/miro/data/under-table2/'
-test_dir = '/home/dominic/miro/data/under-table2_tests/3/'
-test_full_path_offsets(ref_dir, test_dir, [1, 8])
+# ref_dir = '/home/dominic/miro/data/under-table2/'
+# test_dir = '/home/dominic/miro/data/under-table2_tests/3/'
+# test_full_path_offsets(ref_dir, test_dir, [1, 8])
 
-plt.show()
+# plt.show()

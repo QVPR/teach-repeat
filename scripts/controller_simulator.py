@@ -61,19 +61,21 @@ gain_beta = -3.0
 
 np.random.seed(7)
 
-directory = os.path.expanduser('~/miro/data/follow-long-path/')
+# directory = os.path.expanduser('~/miro/data/follow-long-path/')
+directory = os.path.expanduser('~/miro/data/under-table/')
 pose_files = get_pose_files(directory)
 poses = read_pose_files(pose_files)
 pose_data = get_pose_x_y_theta(poses)
 
 goals = np.hstack([data.reshape(-1,1) for data in pose_data])
-goals = goals[:-2:1,:]
-goals = np.vstack((np.arange(0.2,10,0.2),np.zeros(49),np.zeros(49))).T
+# goals = goals[:-2:1,:]
+# goals = np.vstack((np.arange(0.2,10,0.2),np.zeros(49),np.zeros(49))).T
 # goals = np.array([[1,0.3,math.radians(-10)]])
 goal_index = 0
 last_goal = np.array([0,0,0])
 goal = goals[goal_index]
-goal_to_navigate_to = goal + np.array([0.1*math.cos(goal[2]),0.1*math.sin(goal[2]),0])
+goal_to_navigate_to = goal + np.array([localiser.LOOKAHEAD*math.cos(goal[2]),localiser.LOOKAHEAD*math.sin(goal[2]),0])
+turning_goal = False
 
 actual_goals_odom = []
 actual_goals_world = []
@@ -107,6 +109,7 @@ gt_ys = []
 gt_thetas = []
 
 def update_step():
+	global turning_goal
 	theta = current_frame_odom.M.GetRPY()[2]
 	gt_theta = current_frame_world.M.GetRPY()[2]
 	target_pos = (goal_to_navigate_to[0], goal_to_navigate_to[1], 0)
@@ -118,16 +121,17 @@ def update_step():
 	v = gain_rho * rho
 	omega = gain_alpha * alpha + gain_beta * beta
 
-	if rho < 0.1:
+	# Note: rho builds up over time if we turn for one goal, but using turning goal it never moves...
+	if rho < localiser.TURNING_TARGET_RANGE:
 		v = 0
 		omega = gain_alpha * wrapToPi(target_theta-theta)
 
-	v, omega = drive_to_pose_controller.scale_velocities(v, omega, False)
+	v, omega = drive_to_pose_controller.scale_velocities(v, omega, turning_goal)
 
-	vN = np.random.randn() * MAX_V / 10
-	omegaN = np.random.randn() * MAX_OMEGA / 10
+	vN = 0#np.random.randn() * MAX_V / 10
+	omegaN = 0#np.random.randn() * MAX_OMEGA / 10
 
-	current_frame_odom.p += tf_conversions.Vector(dt * .7*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
+	current_frame_odom.p += tf_conversions.Vector(dt * 1*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
 	current_frame_odom.M.DoRotZ(dt * (omega+omegaN))
 
 	current_frame_world.p += tf_conversions.Vector(dt * v * math.cos(gt_theta), dt * v * math.sin(gt_theta), 0.0)
@@ -142,8 +146,8 @@ def update_step():
 	gt_thetas.append(current_frame_world.M.GetRPY()[2])
 
 def get_offset_px(goal, pose):
-	visual_feature_range = np.random.uniform(3.0, 5.0)
-	visual_feature_angle = np.random.uniform(-math.radians(10), math.radians(10))
+	visual_feature_range = 4#np.random.uniform(3.0, 5.0)
+	visual_feature_angle = 0.02#np.random.uniform(-math.radians(10), math.radians(10))
 
 	visual_feature_offset = tf_conversions.Frame()
 	visual_feature_offset.M.DoRotZ(visual_feature_angle)
@@ -183,7 +187,7 @@ def calculate_image_pose_offset(goal_index, half_search_range=None, return_all=F
 
 	if return_all:
 		offsets = [localiser.px_to_rad(get_offset_px(np_to_frame(goals[i]), current_frame_world)) for i in range(start_range, end_range)]
-		correlations = list(np.exp(-np.array(dists)))
+		correlations = list(np.exp(-4*np.array(dists)))
 		return offsets, correlations
 	else:
 		px_offset = get_offset_px(np_to_frame(goals[goal_index]), current_frame_world)
@@ -191,22 +195,23 @@ def calculate_image_pose_offset(goal_index, half_search_range=None, return_all=F
 		return path_offset, theta_offset
 
 def update_goal(goal_frame, new_goal=False):
-	global goal, goal_to_navigate_to, last_goal
+	global goal, goal_to_navigate_to, last_goal, turning_goal
 	if new_goal:
-		current_goal = np_to_frame(goal)
-		diff = current_goal.Inverse() * goal_frame
-		
 		last_goal = goal
-		goal = frame_to_np(goal_frame)
-
-		# if goal is a turning goal, or is the last goal - don't set a virtual waypoint ahead
-		if diff.p.Norm() < 0.1:
-			goal_to_navigate_to = goal
-		else:
-			goal_to_navigate_to = goal + np.array([0.1*math.cos(goal[2]),0.1*math.sin(goal[2]),0])
+		diff = np_to_frame(goal).Inverse() * goal_frame
 	else:
-		goal = frame_to_np(goal_frame)
-		goal_to_navigate_to = goal + np.array([0.1*math.cos(goal[2]),0.1*math.sin(goal[2]),0])
+		diff = np_to_frame(last_goal).Inverse() * goal_frame
+
+	goal = frame_to_np(goal_frame)
+
+	# if goal is a turning goal, don't set a virtual waypoint ahead
+	print(diff.p.Norm())
+	if diff.p.Norm() < localiser.TURNING_TARGET_RANGE:
+		turning_goal = True
+		goal_to_navigate_to = goal
+	else:
+		turning_goal = False
+		goal_to_navigate_to = goal + np.array([localiser.LOOKAHEAD*math.cos(goal[2]),localiser.LOOKAHEAD*math.sin(goal[2]),0])
 
 def save_data_at_goal(old_goal_frame_world, new_goal):
 	actual_goals_odom.append(goal)
@@ -251,10 +256,10 @@ def do_continuous_correction():
 	expected_last_offset = localiser.px_to_rad(localiser.get_expected_px_offset(last_goal_offset_odom))
 	expected_next_offset = localiser.px_to_rad(localiser.get_expected_px_offset(next_goal_offset_odom))
 
-	offset = (1-u) * last_offset + u * next_offset
-	# expected_offset = (1-u) * expected_last_offset + u * expected_next_offset
+	offset = (1-u) * (last_offset) + u * (next_offset)
+	expected_offset = (1-u) * expected_last_offset + u * expected_next_offset
 
-	K = 0.05
+	K = 0#.2
 	correction_rad = K * (offset)#- expected_offset)
 
 	# if math.copysign(1, correction_rad) != math.copysign(1, offset):
@@ -269,21 +274,22 @@ def do_continuous_correction():
 			corr /= s
 		w = corr * np.arange(-0.5-SR,0.6+SR,1)
 		pos = w.sum()
-		path_error = pos #- (u - 0.5)
+		path_error = pos - (u - 0.5)
 
-		K2 = 0.1
-		path_correction = inter_goal_distance_odom / (inter_goal_distance_odom + K2 * path_error)
+		K2 = 0#.5
+		path_correction = (next_goal_distance - K2 * path_error * localiser.GOAL_DISTANCE_SPACING) / next_goal_distance
 	else:
 		path_correction = 1.0
 
-	goal_offset = localiser.get_corrected_goal_offset(last_goal_odom, next_goal_odom, correction_rad, path_correction)
-	new_goal = last_goal_odom * goal_offset
+	goal_offset = localiser.get_corrected_goal_offset(current_frame_odom, next_goal_odom, correction_rad, path_correction)
+	new_goal = current_frame_odom * goal_offset
 
 	update_goal(new_goal, False)
 
 	continuous_offsets.append(offset)
 	continuous_expected_offsets.append((1-u) * expected_last_offset + u * expected_next_offset)
-	continuous_path_offsets.append(path_correction)
+	continuous_path_offsets.append(expected_offset)
+	# continuous_path_offsets.append(path_correction)
 
 for i in range(N):
 	update_step()
@@ -326,7 +332,7 @@ else:
 actual_goals_world = np.array(actual_goals_world)
 actual_goals_odom = np.array(actual_goals_odom)
 update_locations = np.array(update_locations)
-print('ERROR = %f' % math.sqrt(np.mean((goals_right_length[:,:2] - actual_goals_world[:,:2])**2)))
+# print('ERROR = %f' % math.sqrt(np.mean((goals_right_length[:,:2] - actual_goals_world[:,:2])**2)))
 print('ERROR = %f' % math.sqrt(np.mean((goals_right_length[:,:2] - update_locations[:,:2])**2)))
 
 display_spacing = 10
@@ -339,6 +345,7 @@ display_spacing = 10
 # plt.figure()
 # plt.quiver(actual_goals_odom[:,0], actual_goals_odom[:,1], np.cos(actual_goals_odom[:,2]), np.sin(actual_goals_odom[:,2]))
 # plt.quiver(xs[::display_spacing], ys[::display_spacing], np.cos(thetas[::display_spacing]), np.sin(thetas[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
+plt.plot(continuous_offsets)
 plt.plot(continuous_path_offsets)
 plt.figure()
 plt.plot(np.vstack((goals_right_length[:len(update_locations),0],np.array([t[0] for t in update_locations]))), 

@@ -27,9 +27,9 @@ def confusion_matrix(images1, images2):
 	for i,image1 in enumerate(images1):
 		print('progress = %.2f%% [%d/%d]'%(i*100.0/len(images1),i*len(images2), N))
 		for j,image2 in enumerate(images2):
-			offset, correlation = image_processing.xcorr_match_images(image1, image2)
+			offset, correlation = image_processing.xcorr_match_images(image1, image2, 2)
 			correlations[i,j] = correlation
-			offsets[i,j] = offset
+			offsets[i,j] = offset / 2.
 
 	return correlations, offsets
 

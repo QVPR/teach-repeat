@@ -57,12 +57,14 @@ def normalise_quaternion(q):
 	q.w /= norm
 
 def px_to_deg(px):
+	# px = round(px / 10) * 10
 	return px * FIELD_OF_VIEW_DEG / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def deg_to_px(deg):
 	return deg * IMAGE_WIDTH * CORR_SUB_SAMPLING / FIELD_OF_VIEW_DEG
 
 def px_to_rad(px):
+	# px = round(px / 10) * 10
 	return px * FIELD_OF_VIEW_RAD / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def rad_to_px(rad):

@@ -278,19 +278,9 @@ def get_full_correspondances(correspdance_indices, length):
 	correspondance_full = np.cumsum(correspondance_full)
 	return correspondance_full
 
-def plot_image_path_offsets(correspondances, ref_images, test_images):
-	correspondance_full = get_full_correspondances(correspondances, test_images.shape[0])
-
-	ref_images_pad = [np.pad(img, ((0,),(int(img.shape[1]/2),)), mode='constant', constant_values=0) for img in ref_images]
-
-	corr_data = [image_processing.normxcorr2_subpixel(ref_images_pad[correspondance_full[i]], test_images[i], 1, 'valid') for i in range(len(correspondance_full))]
-	offset_data = [np.argmax(corr) - (len(corr)-1)/2 for corr in corr_data]
-
-	plt.plot(offset_data)
-
 if __name__ == "__main__":
 	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('/media/dominic/New Volume/miro/data/follow-long-path_tests_res/44/')
+	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/8/')
 
 	reference_images = load_images(dir_reference)
 	reference_images_full = load_images_cv(dir_reference+'full/', normalise=False)
@@ -322,7 +312,10 @@ if __name__ == "__main__":
 
 	# plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
 
-	plot_image_path_offsets(test_keyframe_correspondances, reference_images_full, test_images_full)
+	plt.imshow(offsets)
+
+	plt.figure()
+	plt.plot(offsets[get_full_correspondances(test_keyframe_correspondances, offsets.shape[1]),np.arange(offsets.shape[1])])
 
 	def get_mean(x):
 		y = x# - 0.1
