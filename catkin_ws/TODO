@@ -29,6 +29,22 @@ Testing:
 	✔ Testing the breaking point of along-route localisation (what % odom corruption) @done(20-05-14 14:06)
 	✔ Test effect of moving the robot +/- 1 metre along the path -> along path localisation @done(20-05-20 15:52)
 	☐ Test robot in more complex environments (turning on spot, there and back)
+	☐ What happens when running path correction but no orientation correction?
+
+	Issues and Ideas:
+		☐ Background tends to dominate correlation offset -> driving from open to enclosed space unreliable
+			* eg. under-table2_tests/3/733
+			* Have a weighting kernel applied over the reference image: centre is most important (direction of travel)
+		☐ Centre correction on last goal or on robot - which is better?
+			* last goal: has issues with big corrections at high u (new goal becomes unreachable)
+			* robot: seems to make corrections converge more slowly? Maybe up gain?
+				* this seems to be working well
+		☐ Should there be path or orientation corrections during turns?
+			* path correction: have no effect, so it's pointless
+			* orientation correction should work ok -> need to test
+				* It's actually more like along-path correction...	
+		☐ Definite issue if Miro stops rotating - big errors accumulate
+		☐ Big theta correction errors at the start/end of turns
 
 Development:
 	Setup:
@@ -52,7 +68,7 @@ Development:
 		✔ Larger along-route localisation window @done(20-05-13 10:20)
 		✔ Filter out obvious bad offset localisations (threshold) @done(20-05-13 09:40)
 			* Better approach to compare the ratio of correlations between top and second peak
-		☐ Disable along-path localisation during a turn
+		✔ Disable along-path localisation during a turn @done(20-06-29 13:29)
 		✔ Threshold along-path localisation @done(20-05-20 16:26)
 		✔ Apply small corrections continually @done(20-06-08 10:49)
 
@@ -68,6 +84,9 @@ Development:
 		✔ Publish the offset between odom and "map" frame @done(20-05-11 14:09)
 		✔ Specify "intermediate" or "stop" goals - allow faster movement @15m @started(20-04-28 16:39) @done(20-04-28 16:59) @lasted(20m10s)
 		✔ Refactor localiser and odom_follower into one node @30m @started(20-04-28 15:59) @done(20-04-28 16:30) @lasted(31m51s)
+		☐ Allow the search range to be one-sided to allow localisation at the start and end
+		☐ Write params to file on startup - each run
+		☐ Sync image numbers between debug and full/norm?
 
 	Visualisation:
 		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)

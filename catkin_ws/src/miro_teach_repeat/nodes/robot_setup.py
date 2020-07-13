@@ -54,6 +54,7 @@ class miro_robot_setup:
 			if self.ready_frames == 0:
 				self.ready = True
 				self.pub_ready.publish(Bool(data=True))
+				print('Miro setup: setup complete')
 		else:
 			self.ready_frames = self.frames_to_wait_for_ready
 
@@ -66,6 +67,7 @@ class miro_robot_setup:
 			# flag to disable cliff reflex, from miro constants
 			self.pub_flags.publish(UInt32(data = 1 << 21))
 		self.ready = False
+		print('Miro setup: starting setup')
 
 	def stop(self):
 		self.disable_fixed_state()

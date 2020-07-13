@@ -532,6 +532,7 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 
 if __name__ == "__main__":
 	np.random.seed(0)
+	import matplotlib.pyplot as plt
 	
 	imgL = cv2.imread('/home/dominic/Pictures/L.png', cv2.IMREAD_GRAYSCALE)
 	imgR = cv2.imread('/home/dominic/Pictures/R.png', cv2.IMREAD_GRAYSCALE)
@@ -540,10 +541,85 @@ if __name__ == "__main__":
 	info_right = yaml_to_camera_info(yaml.load(read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/right_360.yaml')))
 
 	stitched, fov_map = rectify_stitch_stereo_image(imgL, imgR, info_left, info_right)
+	# img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
+	# img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
+	img1 = cv2.imread('/home/dominic/miro/data/under-table2/full/000043.png', cv2.IMREAD_GRAYSCALE)
+	img2 = cv2.imread('/home/dominic/miro/data/under-table2_tests/3/full/000733.png', cv2.IMREAD_GRAYSCALE)
+
+	img1 = patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), (9,9))
+	img2 = patch_normalise_pad(cv2.resize(img2, (115,44), interpolation=cv2.INTER_AREA), (9,9))
+
+	# cv2.imshow('a', img1[:,30:-30])
+	# cv2.imshow('b', img2)
+	# cv2.waitKey()
+
+	def get_corr(img1, img2):
+		img1 = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
+		return normxcorr2_subpixel(img1, img2, 10, 'valid')
+
+	def plot_corr(corr):
+		print(np.argmax(corr) - (len(corr)-1)/2)
+		plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
+
+	a = np.clip(1.0 - (np.abs(np.arange(img1.shape[1]) - (img1.shape[1]/2.)).reshape((1,-1)) / (img1.shape[1]/2.))**1.5, 0, 1)
+	b = np.clip(0.2 + np.linspace(0,1,img1.shape[0]).reshape(-1,1)**0.5, 0, 1)
+	a = b * a
+	# plot_corr(get_corr(img1, img2))
+	# plot_corr(get_corr(a*img1, img2))
+	# plot_corr(get_corr(img1[:,30:-30], img2))
+	plt.imshow(a)
+	plt.show()
+
+	cv2.imshow('a', img1)
+	cv2.imshow('b', a*img1)
+	cv2.waitKey()
+
+	# SZ = (11,4)
+	# PN = (3,3)
+
+	# img1_RS = cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA)
+	# img1_RSPN = patch_normalise_pad(cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA), PN)
+	# img1_RSPNRS = cv2.resize(patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), PN), SZ, interpolation=cv2.INTER_AREA)
+	# img2_RS = cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA)
+	# img2_RSPN = patch_normalise_pad(cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA), PN)
+	# img1_RS_pad = np.pad(img1_RS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
+	# img1_RSPN_pad = np.pad(img1_RSPN, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
+	# img1_RSPNRS_pad = np.pad(img1_RSPNRS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
+	 
+	# def plot_corr(corr):
+	# 	print((np.argmax(corr) - (len(corr)-1)/2 )/10.)
+	# 	plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
+	
+	# plot_corr(normxcorr2_subpixel(img1_RS_pad, img2_RS, 10, 'valid'))
+	# plot_corr(normxcorr2_subpixel(img1_RSPN_pad, img2_RSPN, 10, 'valid'))
+	# plot_corr(normxcorr2_subpixel(img1_RSPNRS_pad, img2_RSPN, 10, 'valid'))
+	# plt.show()
+
+	# offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
+	# print(offset/2.)
+
+	# cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
+	# cv2.waitKey()
+
+	# for i in [1, 2, 4, 8, 16]:
+	# 	if i > 1:
+	# 		interp = cv2.INTER_AREA
+	# 	else:
+	# 		interp = cv2.INTER_CUBIC
+	# 	i1 = cv2.resize(img1, None, fx=1./i, fy=1./i, interpolation=interp)
+	# 	i2 = cv2.resize(img2, None, fx=1./i, fy=1./i, interpolation=interp)
+	# 	i1_pad = np.pad(i1, ((0,),(int(i2.shape[1]/2),)), mode='constant', constant_values=0)
+	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 1, 'valid')
+	# 	# plt.plot(np.arange(-i*(len(corr)-1)/2, i*(len(corr)-1)/2+i, i), corr)
+	# 	corr = normxcorr2_subpixel(i1_pad, i2, i, 'valid')
+	# 	t = np.linspace(-int(img2.shape[1]/2), int(img2.shape[1]/2), len(corr))
+	# 	plt.plot(t, corr)
+	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 100, 'valid')
+	# 	# plt.plot(np.arange(-i*int(i2.shape[1]/2),i*int(i2.shape[1]/2)+i,.01*i), corr)
 
 	old_stitch = stitch_stereo_image(imgL, imgR)
 
-	import matplotlib.pyplot as plt
+	
 	# plt.plot(fov_map)
 	# plt.show()
 

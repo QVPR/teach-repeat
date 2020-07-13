@@ -83,7 +83,19 @@ class miro_image_matcher:
 		return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), (9,9))
 
 	def load_images(self, image_files):
-		return [self.load_image(*image_pair) for image_pair in image_files]
+		images = [self.load_image(*image_pair) for image_pair in image_files]
+
+		disp_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
+		disp_images = [np.clip(cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA), 0, 1) for image in disp_images]
+		disp_images = [np.maximum(image, image > 0.5) for image in disp_images]
+		a = np.clip(1.0 - 1.0*(np.abs(np.arange(self.resize[1]) - (self.resize[1]/2.)).reshape((1,-1)) / (self.resize[1]/2.))**2, 0, 1)
+		a = a > 0.5
+		b = np.clip(1.0 + 0*np.linspace(0,1,self.resize[0]).reshape(-1,1)**0.5, 0, 1)
+		a = b * a
+		# images = [a * disp_image * image for image, disp_image in zip(images, disp_images)]
+		# images = [disp_image * image for image, disp_image in zip(images, disp_images)]
+		# images = [a * image for image in images]
+		return images
 
 	def read_file(self, filename):
 		with open(filename, 'r') as f:

@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import collections
 
 # 9th June 2f03a28ea03fa45fb54d060462bf99c977deb5ea (INTER_AREA size reduction)
+# both gains were set to 0.01
+# Note: corrections weren't properly scaled with the image size, 11 px image was 1/10th gain of normal
 data = collections.OrderedDict((
 	('1/1 \n(115x44)', [1, 1, 1, 1, 1]),
 	('1/1.5 \n(76x29)', [1, 1, 1, 1, 0]),
