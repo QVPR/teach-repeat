@@ -6,12 +6,8 @@
 		<rosparam param="pitch">8</rosparam>
 	</node>
 
-	<!-- Uncompress images -->
-	<node pkg="image_transport" type="republish" name="left_republish" args="compressed in:=/miro/sensors/cam/left raw out:=/miro/sensors/cam/left/image"/>
-	<node pkg="image_transport" type="republish" name="right_republish" args="compressed in:=/miro/sensors/cam/right raw out:=/miro/sensors/cam/right/image"/>
-
-	<!-- Sync and timestamp images for matching -->
-	<node pkg="miro_teach_repeat" type="image_sync.py" name="miro_image_sync" output="screen" >
+	<!-- Uncompress synced messages and publish info -->
+	<node pkg="miro_teach_repeat" type="camera_calibrator.py" name="miro_camera_calibrator" output="screen" >
 		<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
 		<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
 	</node>

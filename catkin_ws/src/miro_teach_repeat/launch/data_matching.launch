@@ -6,6 +6,8 @@
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="image_subsampling">1</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
+	<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
+	<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
 
 	<!-- Hold head in place, reset odometry and disable cliff sensors -->
 	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 2; $0 $@' " output="screen">

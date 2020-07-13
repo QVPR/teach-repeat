@@ -45,12 +45,16 @@ def load_images(directory):
 	image_files = get_sorted_files_by_ending(directory, '_image.pkl')
 	return np.array([pickle.loads(read_file(image)) for image in image_files])
 
-def load_images_cv(directory, normalise=True):
+def load_images_cv(directory, normalise=True, convert_to_grayscale=False):
 	image_files = get_sorted_files_by_ending(directory, '.png')
-	if normalise:
-		return np.array([normalise_image(cv2.imread(image, cv2.IMREAD_GRAYSCALE)) for image in image_files])
+	if convert_to_grayscale:
+		images = [image_processing.grayscale(cv2.imread(image)) for image in image_files]
 	else:
-		return np.array([cv2.imread(image, cv2.IMREAD_GRAYSCALE) for image in image_files])
+		images = [cv2.imread(image, cv2.IMREAD_GRAYSCALE) for image in image_files]
+	if normalise:
+		return np.array([normalise_image(image) for image in images])
+	else:
+		return np.array(images)
 
 def normalise_image(image):
 	return np.float64(2.0*image/255.0 - 1.0)

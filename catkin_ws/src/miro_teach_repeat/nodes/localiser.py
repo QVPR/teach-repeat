@@ -6,10 +6,11 @@ import cv2
 import os
 import math
 import json
+import yaml
 import enum
 import threading
 from rospy_message_converter import message_converter
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, CameraInfo
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
@@ -133,6 +134,23 @@ class miro_localiser:
 			IMAGE_WIDTH = self.resize[1]
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
+
+		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
+		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
+
+		if self.left_cal_file is not None:
+			with open(self.left_cal_file,'r') as f:
+				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+		else:
+			rospy.loginfo('[Localiser] no calibration file for left camera specified. Assuming not calibrated')
+			self.cam_left_calibration = CameraInfo()
+		
+		if self.right_cal_file is not None:
+			with open(self.right_cal_file,'r') as f:
+				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+		else:
+			rospy.loginfo('[Localiser] no calibration file for right camera specified. Assuming not calibrated')
+			self.cam_right_calibration = CameraInfo()
 
 		global CORR_SUB_SAMPLING
 		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
@@ -259,13 +277,12 @@ class miro_localiser:
 				self.first_img_seq = n
 			n -= self.first_img_seq
 
-			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
+			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
 			normalised_image = image_processing.patch_normalise_image(full_image, (9,9), resize=self.resize)
-			# normalised_image = cv2.resize(full_image, self.resize[::-1], interpolation=cv2.INTER_AREA)
 			
 			cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
 			cv2.imwrite(self.save_dir+('norm/%06d.png' % n), np.uint8(255.0 * (1 + normalised_image) / 2.0))
-
+			
 			self.mutex.acquire()
 			self.last_image = normalised_image
 
