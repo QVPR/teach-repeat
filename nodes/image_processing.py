@@ -3,9 +3,13 @@
 import cv_bridge
 import cv2
 import math
+import yaml
 import numpy as np
 import numpy.lib
 import scipy.signal
+import scipy.spatial.transform
+import image_geometry
+from sensor_msgs.msg import CameraInfo
 
 bridge = cv_bridge.CvBridge()
 
@@ -237,6 +241,12 @@ def stitch_stereo_image_message(msg_left, msg_right, compressed=False):
 	else:
 		return stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right))
 
+def rectify_stitch_stereo_image_message(msg_left, msg_right, info_left, info_right, compressed=False):
+	if compressed:
+		return rectify_stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right), info_left, info_right)
+	else:
+		return rectify_stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right), info_left, info_right)
+
 def normxcorr2(image, template, mode="full"):
 	image = image.copy()
 	template = template.copy()
@@ -451,89 +461,114 @@ def create_correlation_debug_image(img1, img2, corr):
 	debug_image[corr_positions,np.arange(corr_positions.size),:] = 255
 	return debug_image
 
+def rectify_image(cam, img, size, offset=0):
+	mapx, mapy = cv2.initUndistortRectifyMap(cam.K, cam.D, cam.R, cam.P, size[::-1], cv2.CV_32FC1)
+	return cv2.remap(img, mapx, mapy, cv2.INTER_CUBIC), mapx
+
+def read_file(filename):
+	with open(filename,'r') as file:
+		data = file.read()
+	return data
+
+def yaml_to_camera_info(yaml_data):
+	camera_info = CameraInfo()
+	camera_info.header.frame_id = yaml_data['camera_name']
+	camera_info.D = yaml_data['distortion_coefficients']['data']
+	camera_info.K = yaml_data['camera_matrix']['data']
+	camera_info.P = yaml_data['projection_matrix']['data']
+	camera_info.R = yaml_data['rectification_matrix']['data']
+	camera_info.distortion_model = yaml_data['distortion_model']
+	camera_info.height = yaml_data['image_height']
+	camera_info.width = yaml_data['image_width']
+	return camera_info
+
+def camera_info_to_yaml(camera_info):
+	yaml_data = {}
+	yaml_data['camera_name'] = camera_info.header.frame_id
+	yaml_data['distortion_coefficients'] = {'data':camera_info.D,'cols':5,'rows':1}
+	yaml_data['camera_matrix'] = {'data':camera_info.K,'cols':3,'rows':3}
+	yaml_data['projection_matrix'] = {'data':camera_info.P,'cols':4,'rows':3}
+	yaml_data['rectification_matrix'] = {'data':camera_info.R,'cols':3,'rows':3}
+	yaml_data['distortion_model'] = camera_info.distortion_model
+	yaml_data['image_height'] = camera_info.height
+	yaml_data['image_width'] = camera_info.width
+	return yaml_data
+
+def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
+	cam_left = image_geometry.PinholeCameraModel()
+	cam_left.fromCameraInfo(info_left)
+	cam_right = image_geometry.PinholeCameraModel()
+	cam_right.fromCameraInfo(info_right)
+
+	if len(image_left.shape) > 2 and image_left.shape[2] > 1:
+		image_left = grayscale(image_left)
+		image_right = grayscale(image_right)
+
+	extra_space = 200
+	cam_left.P[0,2] += extra_space
+
+	warped_image_size = (image_left.shape[0],image_left.shape[1]+extra_space)
+	warped_left, left_mapx = rectify_image(cam_left, image_left, warped_image_size)
+	warped_right, right_mapx = rectify_image(cam_right, image_right, warped_image_size)
+	stitched = np.zeros((warped_left.shape[0],warped_left.shape[1]+extra_space))
+	non_overlap_pixels = extra_space+200
+	blank_pixels = 200
+	overlap_pixels = warped_left.shape[1] - non_overlap_pixels - blank_pixels
+	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(blank_pixels)))
+	stitched[:,:warped_left.shape[1]] = warped_left * blend_map_linear
+	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear)
+
+	fov = np.zeros((stitched.shape[1]))
+	fl = np.linspace(60.6+27,-60.6+27,image_left.shape[1]).reshape(1,-1)
+	fr = np.linspace(60.6-27,-60.6-27,image_right.shape[1]).reshape(1,-1)
+	left_mapx = left_mapx.mean(axis=0)
+	right_mapx = right_mapx.mean(axis=0)
+	fov_l = cv2.remap(fl, left_mapx, np.zeros_like(left_mapx), cv2.INTER_CUBIC).flatten()
+	fov_r = cv2.remap(fr, right_mapx, np.zeros_like(right_mapx), cv2.INTER_CUBIC).flatten()
+	fov[:fov_l.size] = fov_l * blend_map_linear
+	fov[-fov_r.size:] += fov_r * np.flip(blend_map_linear)
+
+	return stitched, fov
 
 if __name__ == "__main__":
 	np.random.seed(0)
-	import pickle
-	def read_file(filename):
-		with open(filename, 'rb') as f:
-			data = f.read()
-		return data
-
-	import time
-	import matplotlib.pyplot as plt
-
-	# img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
-	# img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
-	img1 = cv2.imread('/home/dominic/miro/data/there-back/full/000001.png', cv2.IMREAD_GRAYSCALE)
-	img2 = cv2.imread('/home/dominic/miro/data/there-back_tests/28/full/000004.png', cv2.IMREAD_GRAYSCALE)
-
-	SZ = (11,4)
-	PN = (3,3)
-
-	img1_RS = cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA)
-	img1_RSPN = patch_normalise_pad(cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA), PN)
-	img1_RSPNRS = cv2.resize(patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), PN), SZ, interpolation=cv2.INTER_AREA)
-	img2_RS = cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA)
-	img2_RSPN = patch_normalise_pad(cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA), PN)
-	img1_RS_pad = np.pad(img1_RS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	img1_RSPN_pad = np.pad(img1_RSPN, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	img1_RSPNRS_pad = np.pad(img1_RSPNRS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	 
-	def plot_corr(corr):
-		print((np.argmax(corr) - (len(corr)-1)/2 )/10.)
-		plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
 	
-	plot_corr(normxcorr2_subpixel(img1_RS_pad, img2_RS, 10, 'valid'))
-	plot_corr(normxcorr2_subpixel(img1_RSPN_pad, img2_RSPN, 10, 'valid'))
-	plot_corr(normxcorr2_subpixel(img1_RSPNRS_pad, img2_RSPN, 10, 'valid'))
-	plt.show()
+	imgL = cv2.imread('/home/dominic/Pictures/L.png', cv2.IMREAD_GRAYSCALE)
+	imgR = cv2.imread('/home/dominic/Pictures/R.png', cv2.IMREAD_GRAYSCALE)
 
-	# offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
-	# print(offset/2.)
+	info_left = yaml_to_camera_info(yaml.load(read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/left_360.yaml')))
+	info_right = yaml_to_camera_info(yaml.load(read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/right_360.yaml')))
 
-	# cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
-	# cv2.waitKey()
+	stitched, fov_map = rectify_stitch_stereo_image(imgL, imgR, info_left, info_right)
 
-	# for i in [1, 2, 4, 8, 16]:
-	# 	if i > 1:
-	# 		interp = cv2.INTER_AREA
-	# 	else:
-	# 		interp = cv2.INTER_CUBIC
-	# 	i1 = cv2.resize(img1, None, fx=1./i, fy=1./i, interpolation=interp)
-	# 	i2 = cv2.resize(img2, None, fx=1./i, fy=1./i, interpolation=interp)
-	# 	i1_pad = np.pad(i1, ((0,),(int(i2.shape[1]/2),)), mode='constant', constant_values=0)
-	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 1, 'valid')
-	# 	# plt.plot(np.arange(-i*(len(corr)-1)/2, i*(len(corr)-1)/2+i, i), corr)
-	# 	corr = normxcorr2_subpixel(i1_pad, i2, i, 'valid')
-	# 	t = np.linspace(-int(img2.shape[1]/2), int(img2.shape[1]/2), len(corr))
-	# 	plt.plot(t, corr)
-	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 100, 'valid')
-	# 	# plt.plot(np.arange(-i*int(i2.shape[1]/2),i*int(i2.shape[1]/2)+i,.01*i), corr)
+	old_stitch = stitch_stereo_image(imgL, imgR)
 
+	import matplotlib.pyplot as plt
+	# plt.plot(fov_map)
 	# plt.show()
 
-	# import scipy.ndimage
+	stitched = -1 + 2.0/255.0 * cv2.resize(stitched, None, fx = 0.25, fy=0.25, interpolation=cv2.INTER_AREA)
 
-	# img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-	# c1 = normxcorr2_subpixel(img1_pad, img1, 1, 'valid')
-	# img1_s = np.float64(scipy.ndimage.shift(img1, (0,0.1)))
-	# c2 = normxcorr2_subpixel(img1_pad, img1_s, 1, 'valid')
+	overlay = stitched * 1.0
+	overlay[:,100:200] = stitched[:,20:120]
+	overlay_weighted = overlay * np.hstack((0.5*np.ones((100)),np.ones((100)),0.3*np.ones((60))))
+	# stitched_pad = np.pad(stitched, ((0,),(overlay.shape[1]/2,)), 'constant', constant_values=0)
+	# corr = normxcorr2_subpixel(stitched_pad, overlay, 1, 'valid')
+	# corr = normxcorr2_subpixel(, overlay, 1, 'valid')
+	# t = np.linspace(-(corr.size-1)/2, (corr.size-1)/2, corr.size)
+	_, _, image1 = xcorr_match_images_debug(overlay, stitched)
+	_, _, image2 = xcorr_match_images_debug(overlay_weighted, stitched)
 
-	# cc = normxcorr2_subpixel(img1_pad, img2, 5, 'valid')
-	# cc2 = normxcorr2_subpixel(img1_pad, img2, 5, 'valid')
+	cv2.imshow('normal',np.uint8(cv2.resize(image1, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST)))
+	cv2.imshow('weighted',np.uint8(cv2.resize(image2, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST)))
+	
+	# cv2.imshow('normal', np.uint8(stitched))
+	# cv2.imshow('overlay', np.uint8(overlay))
+	cv2.waitKey()
 
-	# plt.plot(c1)
-	# plt.plot(c2)
-	# plt.plot(cc)
-	# plt.plot(cc2)
+	# plt.plot(t, corr)
 	# plt.show()
 
-	# cv2.imshow('a', img1)
-	# b = np.uint8(subpixel_shift_approx(img1, 0.01, 0))
-	# c = np.uint8(scipy.ndimage.shift(img1, (0, 0.01)))
-	# d = np.uint8(np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(img1), (0, 0.01))).real)
-	# cv2.imshow('b', b)
-	# cv2.imshow('c', c)
-	# cv2.imshow('d', d)
+	# cv2.imshow('new', np.uint8(stitched))
+	# cv2.imshow('old', np.uint8(old_stitch))
 	# cv2.waitKey()

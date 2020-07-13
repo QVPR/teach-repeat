@@ -58,7 +58,7 @@ class miro_data_save:
 
 	def process_image_and_pose(self, msg):
 		if self.ready:
-			image = image_processing.stitch_stereo_image(image_processing.compressed_msg_to_image(msg.image_left), image_processing.compressed_msg_to_image(msg.image_right))
+			image = image_processing.stitch_stereo_image_message(msg.image_left, msg.image_right, True)
 			pose = msg.pose
 			id = "%06d" % (self.save_id)
 			normalised_image = image_processing.patch_normalise_image(image, (9,9), resize=self.resize)

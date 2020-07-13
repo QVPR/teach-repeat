@@ -5,11 +5,17 @@ import numpy as np
 import cv2
 import os
 import pickle
-from sensor_msgs.msg import Image
+import yaml
+from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
 import image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
+
+def get_image_files_from_dir(file_dir, file_ending):
+	files = [f for f in os.listdir(file_dir) if f.endswith(file_ending)]
+	files.sort()
+	return [file_dir+f for f in files]
 
 class miro_image_matcher:
 
@@ -20,6 +26,23 @@ class miro_image_matcher:
 
 	def setup_parameters(self):
 		self.pub_image_match_debug = rospy.Publisher('/miro/match_image_debug', Image, queue_size=0)
+
+		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
+		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
+
+		if self.left_cal_file is not None:
+			with open(self.left_cal_file,'r') as f:
+				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+		else:
+			rospy.loginfo('[Image Matcher] no calibration file for left camera specified. Assuming not calibrated')
+			self.cam_left_calibration = CameraInfo()
+		
+		if self.right_cal_file is not None:
+			with open(self.right_cal_file,'r') as f:
+				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+		else:
+			rospy.loginfo('[Image Matcher] no calibration file for right camera specified. Assuming not calibrated')
+			self.cam_right_calibration = CameraInfo()
 
 		self.load_dir = os.path.expanduser(rospy.get_param('/miro_data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
@@ -32,8 +55,8 @@ class miro_image_matcher:
 		self.subsampling = rospy.get_param('/image_subsampling', 1)
 
 		# image_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-10:] == '_image.pkl']
-		image_files = [self.load_dir+'full/'+f for f in os.listdir(self.load_dir+'full/') if f[-4:] == '.png']
-		image_files.sort()
+		# image_files = [self.load_dir+'full/'+f for f in os.listdir(self.load_dir+'full/') if f[-4:] == '.png']
+		image_files = zip(get_image_files_from_dir(self.load_dir+'left/', '.png'), get_image_files_from_dir(self.load_dir+'right/', '.png'))
 
 		print('loading images...')
 		self.images = self.load_images(image_files)
@@ -53,17 +76,14 @@ class miro_image_matcher:
 	def setup_subscribers(self):
 		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
 
+	def load_image(self, file_left, file_right):
+		image_left = image_processing.grayscale(cv2.imread(file_left))
+		image_right = image_processing.grayscale(cv2.imread(file_right))
+		image_both, _ = image_processing.rectify_stitch_stereo_image(image_left, image_right, self.cam_left_calibration, self.cam_right_calibration)
+		return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), (9,9))
+
 	def load_images(self, image_files):
-		# images = [pickle.loads(self.read_file(f)) for f in image_files]
-		# if self.resize is None or self.resize == images[0].shape[:2]:
-		# 	return images
-		# else:
-		# 	# need to flip the order of resize for opencv
-		# 	return [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
-		images = [cv2.imread(f, cv2.IMREAD_GRAYSCALE) for f in image_files]
-		images = [cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA) for image in images]
-		images = [image_processing.patch_normalise_pad(image, (9,9)) for image in images]
-		return images
+		return [self.load_image(*image_pair) for image_pair in image_files]
 
 	def read_file(self, filename):
 		with open(filename, 'r') as f:
