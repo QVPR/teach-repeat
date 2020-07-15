@@ -6,7 +6,7 @@
 	<rosparam param="wait_for_ready">true</rosparam>
 
 	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 2; $0 $@' ">
+	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup" output="screen">
 		<rosparam param="lift">30</rosparam>
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>
@@ -16,7 +16,7 @@
 
 	<!-- Teleop to control Miro -->
 	<arg name="speed_lin" value="0.2" />
-	<arg name="speed_ang" value="1.7" />
+	<arg name="speed_ang" value="2.0" />
 	<!-- <include file="$(find miro_demos)/launch/teleop.launch">
 		<arg name="speed_linear" value="$(arg speed_lin)" />
 		<arg name="speed_angular" value="$(arg speed_ang)" />

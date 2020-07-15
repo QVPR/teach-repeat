@@ -34,15 +34,15 @@ class miro_robot_setup:
 
 	def setup_publishers(self):
 		rospy.wait_for_service('/miro/sensors/odom/reset')
-		rospy.wait_for_service('miro/control/kinematic_joints/set_fixed_state')
-		rospy.wait_for_service('miro/control/kinematic_joints/fixed/enable')
-		rospy.wait_for_service('miro/control/kinematic_joints/fixed/disable')
-		self.set_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
-		self.enable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
-		self.disable_fixed_state = rospy.ServiceProxy('miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
+		rospy.wait_for_service('/miro/control/kinematic_joints/set_fixed_state')
+		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/enable')
+		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/disable')
+		self.set_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
+		self.enable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
+		self.disable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
 		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
-		self.pub_flags = rospy.Publisher('miro/control/flags', UInt32, queue_size=0)
+		self.pub_flags = rospy.Publisher('/miro/control/flags', UInt32, queue_size=0)
 		self.pub_ready = rospy.Publisher("/miro/ready", Bool, queue_size=1)
 
 	def setup_subscribers(self):
@@ -54,24 +54,33 @@ class miro_robot_setup:
 			if self.ready_frames == 0:
 				self.ready = True
 				self.pub_ready.publish(Bool(data=True))
-				print('Miro setup: setup complete')
+				print('Miro setup: ready')
 		else:
 			self.ready_frames = self.frames_to_wait_for_ready
 
 	def start(self):
+		print('Miro setup: starting setup')
 		self.set_fixed_state(self.joint_states)
 		self.enable_fixed_state()
 		if self.should_reset_odom:
 			self.reset_odom()
 		if self.should_disable_cliff_sensors:
-			# flag to disable cliff reflex, from miro constants
-			self.pub_flags.publish(UInt32(data = 1 << 21))
+			self.disable_cliff_sensors()
 		self.ready = False
-		print('Miro setup: starting setup')
+		print('Miro setup: setup complete. Waiting until ready.')
 
 	def stop(self):
+		print('Miro setup: cleaning up')
 		self.disable_fixed_state()
-		self.pub_flags.publish(UInt32(data = 0)) # reenable cliff reflex
+
+	def disable_cliff_sensors(self):
+		# Experimentation shows that this message is unreliable
+		# Better to continually publish it than hope it arrives once
+		# flag to disable status LEDs is on by default (1)
+		# flag to disable cliff reflex, from miro constants (21)
+		msg = UInt32()
+		msg.data = (1 << 1) + (1 << 21)
+		self.pub_flags.publish(msg)
 
 if __name__ == "__main__":
 	rospy.init_node("miro_robot_setup")
@@ -80,4 +89,8 @@ if __name__ == "__main__":
 	setup.start()
 	rospy.on_shutdown(setup.stop)
 
-	rospy.spin()
+	r = rospy.Rate(10)
+	while not rospy.is_shutdown():
+		if setup.should_disable_cliff_sensors:
+			setup.disable_cliff_sensors()
+		r.sleep()
