@@ -7,7 +7,7 @@ from geometry_msgs.msg import TwistStamped
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Bool
 
-class miro_teleop_joy:
+class teleop_joy:
 
 	def __init__(self):
 		self.setup_parameters()
@@ -22,12 +22,12 @@ class miro_teleop_joy:
 		self.scale_angular = rospy.get_param('~scale_angular', 1.0)
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("/miro/ready", Bool, self.on_ready, queue_size=1)
-		self.sub_odom = rospy.Subscriber("/joy", Joy, self.process_joy_data, queue_size=1)
+			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+		self.sub_odom = rospy.Subscriber("joy", Joy, self.process_joy_data, queue_size=1)
 
 	def on_ready(self, msg):
 		if msg.data:
@@ -43,6 +43,6 @@ class miro_teleop_joy:
 			self.pub_cmd_vel.publish(motor_command)
 
 if __name__ == "__main__":
-	rospy.init_node("miro_teleop_joy")
-	teleop = miro_teleop_joy()
+	rospy.init_node("teleop_joy")
+	teleop = teleop_joy()
 	rospy.spin()

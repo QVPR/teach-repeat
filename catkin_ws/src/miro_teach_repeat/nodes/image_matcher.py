@@ -6,6 +6,7 @@ import cv2
 import os
 import pickle
 import yaml
+import json
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
@@ -17,7 +18,7 @@ def get_image_files_from_dir(file_dir, file_ending):
 	files.sort()
 	return [file_dir+f for f in files]
 
-class miro_image_matcher:
+class image_matcher:
 
 	def __init__(self):		
 		self.setup_parameters()
@@ -53,13 +54,38 @@ class miro_image_matcher:
 			self.resize = None
 
 		self.subsampling = rospy.get_param('/image_subsampling', 1)
+		self.patch_size = image_processing.parse_patch_size_parameter(rospy.get_param('/patch_size', (9,9)))
 
-		# image_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-10:] == '_image.pkl']
-		# image_files = [self.load_dir+'full/'+f for f in os.listdir(self.load_dir+'full/') if f[-4:] == '.png']
-		image_files = zip(get_image_files_from_dir(self.load_dir+'left/', '.png'), get_image_files_from_dir(self.load_dir+'right/', '.png'))
+		self.use_old_dataset_format = rospy.get_param('~use_old_dataset_format', False)
+		self.use_depth = rospy.get_param('~use_depth', False)
+		self.use_middle_weighting = rospy.get_param('~use_middle_weighting', False)
 
 		print('loading images...')
-		self.images = self.load_images(image_files)
+		if self.use_old_dataset_format:
+			if os.path.isdir(self.load_dir+'left/') and os.path.isdir(self.load_dir+'right/'):
+				image_files = zip(get_image_files_from_dir(self.load_dir+'left/', '.png'), get_image_files_from_dir(self.load_dir+'right/', '.png'))
+				self.images = self.load_images_left_right(image_files)
+			else:
+				rospy.logerr('[Image matcher] use_old_dataset_format selected, but dataset is not in old format (seperate folders for left and right images)')
+		else:
+			if os.path.exists(self.load_dir+'params.txt'):
+				params = json.loads(self.read_file(self.load_dir+'params.txt'))
+				# if dataset collection params match what we want, use pre-processed images
+				if self.resize == params['resize'] and self.patch_size == params['patch_size']:
+					image_files = get_image_files_from_dir(self.load_dir+'norm/', '.png')
+					self.images = self.load_images(image_files)
+				else:
+					image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
+					self.images = self.load_images_resize_norm(image_files)
+			else:
+				image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
+				self.images = self.load_images_resize_norm(image_files)
+
+		if self.use_depth:
+			# get depth maps from full images (not patch normed)
+			self.images = self.weight_images_depth(self.images, get_image_files_from_dir(self.load_dir+'full/', '.png'))
+		if self.use_middle_weighting:
+			self.images = self.weight_images_middle(self.images)
 		print('loading complete: %d images' % (len(self.images)))
 
 		self.save_dir = os.path.expanduser(rospy.get_param('/miro_data_save_dir','~/miro/data'))
@@ -74,28 +100,35 @@ class miro_image_matcher:
 		pass
 
 	def setup_subscribers(self):
-		self.service = rospy.Service('/miro/match_image', ImageMatch, self.match_image)
+		self.service = rospy.Service('match_image', ImageMatch, self.match_image)
 
-	def load_image(self, file_left, file_right):
+	def load_image_left_right(self, file_left, file_right):
 		image_left = image_processing.grayscale(cv2.imread(file_left))
 		image_right = image_processing.grayscale(cv2.imread(file_right))
 		image_both, _ = image_processing.rectify_stitch_stereo_image(image_left, image_right, self.cam_left_calibration, self.cam_right_calibration)
-		return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), (9,9))
+		return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size)
+
+	def load_images_left_right(self, image_files):
+		return [self.load_image_left_right(*image_pair) for image_pair in image_files]
+
+	def load_images_resize_norm(self, image_files):
+		images = self.load_images(image_files)
+		return [image_processing.patch_normalise_pad(cv2.resize(image,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size) for image in images]
 
 	def load_images(self, image_files):
-		images = [self.load_image(*image_pair) for image_pair in image_files]
+		return [cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
 
-		disp_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
-		disp_images = [np.clip(cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA), 0, 1) for image in disp_images]
-		disp_images = [np.maximum(image, image > 0.5) for image in disp_images]
-		a = np.clip(1.0 - 1.0*(np.abs(np.arange(self.resize[1]) - (self.resize[1]/2.)).reshape((1,-1)) / (self.resize[1]/2.))**2, 0, 1)
-		a = a > 0.5
-		b = np.clip(1.0 + 0*np.linspace(0,1,self.resize[0]).reshape(-1,1)**0.5, 0, 1)
-		a = b * a
-		# images = [a * disp_image * image for image, disp_image in zip(images, disp_images)]
-		# images = [disp_image * image for image, disp_image in zip(images, disp_images)]
-		# images = [a * image for image in images]
-		return images
+	def weight_images_depth(self, images, image_files):
+		depth_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
+		depth_images = [np.clip(cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA), 0, 1) for image in depth_images]
+		# depth_images = [np.maximum(image, image > 0.5) for image in depth_images]
+		return [image * depth for image, depth in zip(images, depth_images)]
+
+	def weight_images_middle(self, images):
+		horizontal_weighting = np.clip(1.0 - 1.0*(np.abs(np.arange(self.resize[1]) - (self.resize[1]/2.)).reshape((1,-1)) / (self.resize[1]/2.))**2, 0, 1)
+		vertical_weighting = np.clip(1.0 + 0*np.linspace(0,1,self.resize[0]).reshape(-1,1)**0.5, 0, 1)
+		image_weighting = vertical_weighting * horizontal_weighting
+		return [image * image_weighting for image in images]
 
 	def read_file(self, filename):
 		with open(filename, 'r') as f:
@@ -144,6 +177,6 @@ class miro_image_matcher:
 
 
 if __name__ == "__main__":
-	rospy.init_node("miro_image_matcher")
-	matcher = miro_image_matcher()
+	rospy.init_node("image_matcher")
+	matcher = image_matcher()
 	rospy.spin()

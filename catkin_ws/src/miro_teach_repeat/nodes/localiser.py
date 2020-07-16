@@ -6,11 +6,10 @@ import cv2
 import os
 import math
 import json
-import yaml
 import enum
 import threading
 from rospy_message_converter import message_converter
-from sensor_msgs.msg import CompressedImage, CameraInfo
+from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
@@ -18,7 +17,6 @@ import tf_conversions
 import tf
 
 import image_processing
-from miro_onboard.msg import CompressedImageSynchronised
 from miro_teach_repeat.msg import Goal
 from miro_teach_repeat.srv import ImageMatch, ImageMatchRequest
 
@@ -97,7 +95,7 @@ def is_turning_goal(goal_frame, next_goal_frame):
 	dist = diff.p.Norm()
 	return dist < TURNING_TARGET_RANGE
 
-class miro_localiser:
+class teach_repeat_localiser:
 	def __init__(self):
 		self.setup_parameters()
 		self.setup_publishers()
@@ -108,7 +106,7 @@ class miro_localiser:
 		self.mutex = threading.Lock()
 
 		# Odom
-		self.load_dir = os.path.expanduser(rospy.get_param('miro_data_load_dir', '~/miro/data'))
+		self.load_dir = os.path.expanduser(rospy.get_param('/miro_data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
 			self.load_dir += '/'
 
@@ -140,20 +138,6 @@ class miro_localiser:
 		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
-		if self.left_cal_file is not None:
-			with open(self.left_cal_file,'r') as f:
-				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
-		else:
-			rospy.loginfo('[Localiser] no calibration file for left camera specified. Assuming not calibrated')
-			self.cam_left_calibration = CameraInfo()
-		
-		if self.right_cal_file is not None:
-			with open(self.right_cal_file,'r') as f:
-				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
-		else:
-			rospy.loginfo('[Localiser] no calibration file for right camera specified. Assuming not calibrated')
-			self.cam_right_calibration = CameraInfo()
-
 		global CORR_SUB_SAMPLING
 		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
 
@@ -179,17 +163,17 @@ class miro_localiser:
 		self.goal_number = 0
 		
 	def setup_publishers(self):	
-		self.goal_pub = rospy.Publisher('/miro/control/goal', Goal, queue_size=1)
+		self.goal_pub = rospy.Publisher('goal', Goal, queue_size=1)
 
-		rospy.wait_for_service('/miro/match_image')
-		self.match_image = rospy.ServiceProxy('/miro/match_image', ImageMatch, persistent=True)
+		rospy.wait_for_service('match_image')
+		self.match_image = rospy.ServiceProxy('match_image', ImageMatch, persistent=True)
 		self.tf_pub = tf.TransformBroadcaster()
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("/miro/ready", Bool, self.on_ready, queue_size=1)
-		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
-		self.sub_images = rospy.Subscriber('/miro/sensors/cam/both/compressed', CompressedImageSynchronised, self.process_image_data, queue_size=1, buff_size=2**22)
+			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
+		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
 
 	def on_ready(self, msg):
 		if msg.data:
@@ -274,12 +258,9 @@ class miro_localiser:
 
 	def process_image_data(self, msg):
 		if self.ready:
-			n = msg.left.header.seq
-			if self.last_image is None:
-				self.first_img_seq = n
-			n -= self.first_img_seq
+			n = msg.header.seq
 
-			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
+			full_image = image_processing.msg_to_image(msg)
 			normalised_image = image_processing.patch_normalise_image(full_image, (9,9), resize=self.resize)
 			
 			cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
@@ -479,8 +460,8 @@ class miro_localiser:
 			raise RuntimeError('Localiser: tried to localise before image data is received!')
 
 if __name__ == "__main__":
-	rospy.init_node("miro_localiser")
-	localiser = miro_localiser()
+	rospy.init_node("teach_repeat_localiser")
+	localiser = teach_repeat_localiser()
 	if localiser.ready:
 		localiser.update_goal(tf_conversions.fromMsg(localiser.poses[0]))
 	rospy.spin()

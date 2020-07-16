@@ -7,9 +7,9 @@ class twist_stamper:
 
 	def __init__(self):
 		# subscribe to teleop commands
-		self.sub_cmd_vel = rospy.Subscriber("/miro/teleop/cmd_vel", Twist, self.got_teleop_command, queue_size=1)
+		self.sub_cmd_vel = rospy.Subscriber("cmd_vel_unstamped", Twist, self.got_teleop_command, queue_size=1)
 		# publish motor commands
-		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=0)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=0)
 
 	def got_teleop_command(self, msg):
 		msg_stamped = TwistStamped()

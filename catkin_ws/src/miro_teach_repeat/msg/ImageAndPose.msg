@@ -1,3 +1,2 @@
-sensor_msgs/CompressedImage image_left
-sensor_msgs/CompressedImage image_right
+sensor_msgs/Image image
 geometry_msgs/Pose pose

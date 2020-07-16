@@ -5,7 +5,7 @@ from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 import tf_conversions
 
-class miro_drive_straight_controller:
+class drive_straight_controller:
 
 	def __init__(self):
 		self.setup_parameters()
@@ -17,10 +17,10 @@ class miro_drive_straight_controller:
 		self.gain_turn = rospy.get_param('~gain_turn', 2.0)
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=0)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=0)
 
 	def setup_subscribers(self):
-		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
+		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 
 	def process_odom_data(self, msg):
 		current_frame = tf_conversions.fromMsg(msg.pose.pose)
@@ -37,6 +37,6 @@ class miro_drive_straight_controller:
 		self.pub_cmd_vel.publish(motor_command)
 
 if __name__ == "__main__":
-	rospy.init_node("miro_drive_straight_controller")
-	controller = miro_drive_straight_controller()
+	rospy.init_node("drive_straight_controller")
+	controller = drive_straight_controller()
 	rospy.spin()

@@ -3,6 +3,7 @@
 	<arg name="speed_angular" default="1.0" />
 	<arg name="launch_delay" default="0.0" />
 	<arg name="wait_for_ready" default="false" />
+	<arg name="cmd_vel_topic" default="/miro/control/cmd_vel" />
 
 	<group unless="$(arg wait_for_ready)">
 		<rosparam param="wait_for_ready">false</rosparam>
@@ -15,8 +16,9 @@
 	</node>
 
 	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="miro_teleop_joy" launch-prefix="bash -c 'sleep $(arg launch_delay); $0 $@'" >
+	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="teleop_joy" launch-prefix="bash -c 'sleep $(arg launch_delay); $0 $@'" >
 		<rosparam command="load" file="$(find miro_teach_repeat)/config/xbox_one.yaml" />
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
 		<rosparam param="scale_linear" subst_value="true">$(arg speed_linear)</rosparam>
 		<rosparam param="scale_angular" subst_value="true">$(arg speed_angular)</rosparam>
 	</node>
