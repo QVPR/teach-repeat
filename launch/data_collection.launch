@@ -3,39 +3,49 @@
 	<!-- <rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam> -->
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="patch_size">(9,9)</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
-	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup" output="screen">
-		<rosparam param="lift">30</rosparam>
-		<rosparam param="yaw">0</rosparam>
-		<rosparam param="pitch">8</rosparam>
-		<rosparam param="reset_odom">true</rosparam>
-		<rosparam param="disable_cliff_sensors">true</rosparam>
-	</node>
+	<group ns="miro">
+		<!-- Hold head in place and reset odometry -->
+		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+			<rosparam param="lift">30</rosparam>
+			<rosparam param="yaw">0</rosparam>
+			<rosparam param="pitch">8</rosparam>
+			<rosparam param="reset_odom">true</rosparam>
+			<rosparam param="disable_cliff_sensors">true</rosparam>
+		</node>
 
-	<!-- Teleop to control Miro -->
-	<arg name="speed_lin" value="0.2" />
-	<arg name="speed_ang" value="2.0" />
-	<!-- <include file="$(find miro_demos)/launch/teleop.launch">
-		<arg name="speed_linear" value="$(arg speed_lin)" />
-		<arg name="speed_angular" value="$(arg speed_ang)" />
-	</include> -->
-	<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
-		<arg name="speed_linear" value="$(arg speed_lin)" />
-		<arg name="speed_angular" value="$(arg speed_ang)" />
-		<arg name="wait_for_ready" value="true" />
-	</include>
+		<!-- Teleop to control Miro -->
+		<arg name="speed_lin" value="0.2" />
+		<arg name="speed_ang" value="2.0" />
+		<!-- <include file="$(find miro_demos)/launch/teleop.launch">
+			<arg name="cmd_vel_topic" value="control/cmd_vel" />
+			<arg name="speed_linear" value="$(arg speed_lin)" />
+			<arg name="speed_angular" value="$(arg speed_ang)" />
+		</include> -->
+		<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
+			<arg name="cmd_vel_topic" value="control/cmd_vel" />
+			<arg name="speed_linear" value="$(arg speed_lin)" />
+			<arg name="speed_angular" value="$(arg speed_ang)" />
+			<arg name="wait_for_ready" value="true" />
+		</include>
 
-	<!-- Collect image data -->
-	<node pkg="miro_teach_repeat" type="data_collect.py" name="miro_data_collect" output="screen">
-		<rosparam param="distance_threshold">0.2</rosparam>
-		<rosparam param="angle_threshold_deg">15.0</rosparam>                           
-	</node>
+		<!-- Stitch image files for matching -->
+		<node pkg="miro_teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />
 
-	<!-- Save Images and pose in a directory -->
-	<node pkg="miro_teach_repeat" type="data_save.py" name="miro_data_save" output="screen">
-		<rosparam param="save_dir">~/miro/data</rosparam>
-		<rosparam param="timestamp_folder">1</rosparam>
-	</node>
+		<!-- Collect image data -->
+		<node pkg="miro_teach_repeat" type="data_collect.py" name="data_collect" output="screen">
+			<remap from="odom" to="sensors/odom/integrated" />
+			<remap from="image" to="sensors/cam/both" />
+			<rosparam param="distance_threshold">0.2</rosparam>
+			<rosparam param="angle_threshold_deg">15.0</rosparam>                           
+		</node>
+
+		<!-- Save Images and pose in a directory -->
+		<node pkg="miro_teach_repeat" type="data_save.py" name="data_save" output="screen">
+			<rosparam param="save_dir">~/miro/data</rosparam>
+			<rosparam param="timestamp_folder">true</rosparam>
+		</node>
+	</group>
 </launch>

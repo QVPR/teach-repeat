@@ -13,7 +13,7 @@ from rospy_message_converter import message_converter
 import image_processing
 from miro_teach_repeat.msg import ImageAndPose
 
-class miro_data_save:
+class data_save:
 
 	def __init__(self):	
 		self.setup_parameters()
@@ -31,10 +31,6 @@ class miro_data_save:
 			self.save_dir += datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S/')
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
-		if not os.path.isdir(self.save_dir+'left/'):
-			os.makedirs(self.save_dir+'left/')
-		if not os.path.isdir(self.save_dir+'right/'):
-			os.makedirs(self.save_dir+'right/')
 		if not os.path.isdir(self.save_dir+'full/'):
 			os.makedirs(self.save_dir+'full/')
 		if not os.path.isdir(self.save_dir+'norm/'):
@@ -44,30 +40,40 @@ class miro_data_save:
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 
+		self.patch_size = image_processing.parse_patch_size_parameter(rospy.get_param('/patch_size', (9,9)))
+
+		self.save_params()
+
 	def setup_publishers(self):
 		pass
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("/miro/ready", Bool, self.on_ready, queue_size=1)
-		self.sub_image_pose = rospy.Subscriber("/miro/image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
+			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+		self.sub_image_pose = rospy.Subscriber("image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
 	
+	def save_params(self):
+		params = {
+			'resize': self.resize,
+			'patch_size': self.patch_size
+		}
+		with open(self.save_dir + 'params.txt', 'w') as params_file:
+			params_file.write(json.dumps(params))
+
 	def on_ready(self, msg):
 		if msg.data:
 			self.ready = True
 
 	def process_image_and_pose(self, msg):
 		if self.ready:
-			image = image_processing.stitch_stereo_image_message(msg.image_left, msg.image_right, True)
+			image = image_processing.msg_to_image(msg.image)
 			pose = msg.pose
 			id = "%06d" % (self.save_id)
-			normalised_image = image_processing.patch_normalise_image(image, (9,9), resize=self.resize)
+			normalised_image = image_processing.patch_normalise_image(image, self.patch_size, resize=self.resize)
 			message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 			image_as_text = pickle.dumps(normalised_image)
 
-			cv2.imwrite(self.save_dir+'left/'+id+'.png', np.uint8(image_processing.compressed_msg_to_image(msg.image_left)))
-			cv2.imwrite(self.save_dir+'right/'+id+'.png', np.uint8(image_processing.compressed_msg_to_image(msg.image_right)))
-			cv2.imwrite(self.save_dir+'full/'+id+'.png', np.uint8(image))
+			cv2.imwrite(self.save_dir+'full/'+id+'.png', image)
 			cv2.imwrite(self.save_dir+'norm/'+id+'.png', np.uint8(255.0 * (1 + normalised_image) / 2.0))
 			with open(self.save_dir+id+'_pose.txt', 'w') as pose_file:
 				pose_file.write(message_as_text)
@@ -78,6 +84,6 @@ class miro_data_save:
 
 
 if __name__ == "__main__":
-	rospy.init_node("miro_data_save")
-	saver = miro_data_save()
+	rospy.init_node("data_save")
+	saver = data_save()
 	rospy.spin()

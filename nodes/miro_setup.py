@@ -9,7 +9,7 @@ from std_msgs.msg import UInt32, Bool
 
 from miro_onboard.srv import SetJointState
 
-class miro_robot_setup:
+class miro_setup:
 
 	def __init__(self):
 		self.setup_parameters()
@@ -43,7 +43,7 @@ class miro_robot_setup:
 		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
 		self.pub_flags = rospy.Publisher('/miro/control/flags', UInt32, queue_size=0)
-		self.pub_ready = rospy.Publisher("/miro/ready", Bool, queue_size=1)
+		self.pub_ready = rospy.Publisher("ready", Bool, queue_size=1)
 
 	def setup_subscribers(self):
 		self.sub_at_set_point = rospy.Subscriber("/miro/control/kinematic_joints/at_set_point", Bool, self.process_joint_at_set_point, queue_size=1)
@@ -83,8 +83,8 @@ class miro_robot_setup:
 		self.pub_flags.publish(msg)
 
 if __name__ == "__main__":
-	rospy.init_node("miro_robot_setup")
-	setup = miro_robot_setup()
+	rospy.init_node("miro_setup")
+	setup = miro_setup()
 
 	setup.start()
 	rospy.on_shutdown(setup.stop)

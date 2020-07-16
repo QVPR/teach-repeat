@@ -50,7 +50,7 @@ def scale_velocities(v, omega, stop_at_goal):
 		omega = math.copysign(MIN_OMEGA, omega)
 	return v, omega
 
-class miro_drive_to_pose_controller:
+class drive_to_pose_controller:
 
 	def __init__(self):
 		self.setup_parameters()
@@ -68,13 +68,13 @@ class miro_drive_to_pose_controller:
 		self.stop_at_goal = None
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("/miro/control/cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("/miro/ready", Bool, self.on_ready, queue_size=1)
-		self.sub_odom = rospy.Subscriber("/miro/sensors/odom/integrated", Odometry, self.process_odom_data, queue_size=1)
-		self.sub_goal = rospy.Subscriber("/miro/control/goal", Goal, self.set_goal, queue_size=1)
+			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
+		self.sub_goal = rospy.Subscriber("goal", Goal, self.set_goal, queue_size=1)
 
 	def on_ready(self, msg):
 		if msg.data:
@@ -118,6 +118,6 @@ class miro_drive_to_pose_controller:
 
 
 if __name__ == "__main__":
-	rospy.init_node("miro_drive_to_pose_controller")
-	controller = miro_drive_to_pose_controller()
+	rospy.init_node("drive_to_pose_controller")
+	controller = drive_to_pose_controller()
 	rospy.spin()

@@ -173,8 +173,9 @@ catkin_install_python(PROGRAMS
 	nodes/drive_to_pose_controller.py
 	nodes/image_matcher.py
 	nodes/image_processing.py
+	nodes/image_stitcher.py
 	nodes/localiser.py
-	nodes/robot_setup.py
+	nodes/miro_setup.py
 	nodes/teleop_joy.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

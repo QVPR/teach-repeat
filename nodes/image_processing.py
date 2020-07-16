@@ -233,6 +233,8 @@ def stitch_stereo_image(image_left, image_right):
 	stitched_image[:,:image_left.shape[1]] += image_left * blend_map_linear
 	stitched_image[:,-image_right.shape[1]:] += image_right * np.flip(blend_map_linear)
 
+	stitched_image = np.asarray(stitched_image, image_left.dtype) # get the same type out as we put in
+
 	return stitched_image
 
 def stitch_stereo_image_message(msg_left, msg_right, compressed=False):
@@ -517,6 +519,8 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(blank_pixels)))
 	stitched[:,:warped_left.shape[1]] = warped_left * blend_map_linear
 	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear)
+	
+	stitched = np.asarray(stitched, image_left.dtype) # get the same type out as we put in
 
 	fov = np.zeros((stitched.shape[1]))
 	fl = np.linspace(60.6+27,-60.6+27,image_left.shape[1]).reshape(1,-1)
@@ -529,6 +533,14 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 	fov[-fov_r.size:] += fov_r * np.flip(blend_map_linear)
 
 	return stitched, fov
+
+def parse_patch_size_parameter(patch_size):
+	if type(patch_size) == tuple:
+		return patch_size
+	if type(patch_size) == str:
+		return tuple([int(sz) for sz in patch_size[1:-1].split(',')])
+	elif type(patch_size) == int:
+		return (patch_size, patch_size)
 
 if __name__ == "__main__":
 	np.random.seed(0)
