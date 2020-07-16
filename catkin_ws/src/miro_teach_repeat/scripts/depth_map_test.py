@@ -223,7 +223,9 @@ a = np.clip(1.0 - 1.0*(np.abs(np.arange(img1_full.shape[1]) - (img1_full.shape[1
 b = np.clip(0.2 + np.linspace(0,1,img1_full.shape[0]).reshape(-1,1)**0.5, 0, 1)
 a = b * a
 
-cv2.imshow('a',a*img1_depth)
+cv2.imshow('a',a)
+cv2.imshow('depth',img1_depth)
+cv2.imshow('both',a*img1_depth)
 cv2.imshow('img1', np.uint8(a*img1_depth*img1_full))
 # cv2.imshow('img1_depth', np.uint8(256/2*a*img1_depth*(1+img1_pn)))
 cv2.waitKey()
