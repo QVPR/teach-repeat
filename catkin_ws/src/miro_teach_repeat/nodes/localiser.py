@@ -20,16 +20,14 @@ import image_processing
 from miro_teach_repeat.msg import Goal
 from miro_teach_repeat.srv import ImageMatch, ImageMatchRequest
 
-IMAGE_RECOGNITION_THRESHOLD = 0.1
-
-FIELD_OF_VIEW_DEG = 2*60.6 + 2*27.0 # deg
-FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
+FIELD_OF_VIEW_DEG = 2*60.6 + 2*27.0
 IMAGE_WIDTH = 115.0 # px
 CORR_SUB_SAMPLING = 1
-GOAL_DISTANCE_SPACING = 0.2 # m
 
-LOOKAHEAD = 0.65 * GOAL_DISTANCE_SPACING
-TURNING_TARGET_RANGE = 0.5 * GOAL_DISTANCE_SPACING
+GOAL_DISTANCE_SPACING = 0.2 # m
+LOOKAHEAD_DISTANCE_RATIO = 0.65 # x GOAL_DISTANCE_SPACING
+TURNING_TARGET_RANGE_DISTANCE_RATIO = 0.5 # x GOAL_DISTANCE_SPACING
+# LOOKAHEAD_DISTANCE_RATIO > TURNING_TARGET_RANGE_DISTANCE_RATIO (otherwise stops and turns on spot when arriving at goal)
 
 class GOAL_STATE(enum.Enum):
 	normal_goal = 0
@@ -55,23 +53,21 @@ def normalise_quaternion(q):
 	q.w /= norm
 
 def px_to_deg(px):
-	# px = round(px / 10) * 10
 	return px * FIELD_OF_VIEW_DEG / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def deg_to_px(deg):
 	return deg * IMAGE_WIDTH * CORR_SUB_SAMPLING / FIELD_OF_VIEW_DEG
 
 def px_to_rad(px):
-	# px = round(px / 10) * 10
-	return px * FIELD_OF_VIEW_RAD / IMAGE_WIDTH / CORR_SUB_SAMPLING
+	return px * math.radians(FIELD_OF_VIEW_DEG) / IMAGE_WIDTH / CORR_SUB_SAMPLING
 
 def rad_to_px(rad):
-	return rad * IMAGE_WIDTH * CORR_SUB_SAMPLING / FIELD_OF_VIEW_RAD
+	return rad * IMAGE_WIDTH * CORR_SUB_SAMPLING / math.radians(FIELD_OF_VIEW_DEG)
 
 def delta_frame_in_bounds(delta_frame):
 	distance = delta_frame.p.Norm()
 	angle = wrapToPi(delta_frame.M.GetRPY()[2])
-	if distance < LOOKAHEAD:
+	if distance < (LOOKAHEAD_DISTANCE_RATIO * GOAL_DISTANCE_SPACING):
 		if abs(angle) < math.radians(5):
 			return True
 		else:
@@ -93,7 +89,7 @@ def get_corrected_goal_offset(goal1, goal2, correction_rad, correction_length):
 def is_turning_goal(goal_frame, next_goal_frame):
 	diff = goal_frame.Inverse() * next_goal_frame
 	dist = diff.p.Norm()
-	return dist < TURNING_TARGET_RANGE
+	return dist < (TURNING_TARGET_RANGE_DISTANCE_RATIO * GOAL_DISTANCE_SPACING)
 
 class teach_repeat_localiser:
 	def __init__(self):
@@ -102,6 +98,7 @@ class teach_repeat_localiser:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
+		# Wait for ready
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.mutex = threading.Lock()
 
@@ -109,23 +106,24 @@ class teach_repeat_localiser:
 		self.load_dir = os.path.expanduser(rospy.get_param('/miro_data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
 			self.load_dir += '/'
+		self.sum_theta_correction = 0.0
+		self.sum_path_correction = 1.0
+		self.stop_at_end = rospy.get_param('~stop_at_end', True)
+		self.discrete_correction = rospy.get_param('~discrete-correction', False)
 
+		# Load pose data
 		pose_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-9:] == '_pose.txt']
 		pose_files.sort()
-
 		self.poses = load_poses(pose_files)
 		self.goal_index = 0
 		self.goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.last_goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.goal_plus_lookahead = tf_conversions.toMsg(tf_conversions.Frame())
-
-		self.stop_at_end = rospy.get_param('~stop_at_end', True)
-
-		self.discrete_correction = rospy.get_param('~discrete-correction', False)
-
 		self.last_odom = None
-		self.sum_theta_correction = 0.0
-		self.sum_path_correction = 1.0
+		global GOAL_DISTANCE_SPACING, LOOKAHEAD_DISTANCE_RATIO, TURNING_TARGET_RANGE_DISTANCE_RATIO
+		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_seperation', 0.2)
+		LOOKAHEAD_DISTANCE_RATIO = rospy.get_param('/lookahead_distance_ratio', 0.65)
+		TURNING_TARGET_RANGE_DISTANCE_RATIO = rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 
 		# Image
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
@@ -134,16 +132,19 @@ class teach_repeat_localiser:
 			IMAGE_WIDTH = self.resize[1]
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
+		self.last_image = None
+		self.first_img_seq = 0
+		global CORR_SUB_SAMPLING, FIELD_OF_VIEW_DEG
+		self.image_recognition_threshold = rospy.get_param('/image_recognition_threshold', 0.1)
+		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
+		FIELD_OF_VIEW_DEG = rospy.get_param('/image_field_of_view_width_deg', 2*60.6 + 2*27.0)
+		FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
 
+		# camera calibration
 		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
-		global CORR_SUB_SAMPLING
-		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
-
-		self.last_image = None
-		self.first_img_seq = 0
-
+		# data saving
 		self.save_dir = os.path.expanduser(rospy.get_param('/miro_data_save_dir','~/miro/data/follow-straight_tests/5'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
@@ -159,7 +160,6 @@ class teach_repeat_localiser:
 			os.makedirs(self.save_dir+'offset/')
 		if not os.path.isdir(self.save_dir+'correction/'):
 			os.makedirs(self.save_dir+'correction/')
-
 		self.goal_number = 0
 		
 	def setup_publishers(self):	
@@ -284,7 +284,7 @@ class teach_repeat_localiser:
 		if turning_goal or (self.goal_index == len(self.poses)-1 and self.stop_at_end):
 			self.publish_goal(self.goal, 0.0, True)
 		else:
-			self.publish_goal(self.goal, LOOKAHEAD, False)
+			self.publish_goal(self.goal, (LOOKAHEAD_DISTANCE_RATIO * GOAL_DISTANCE_SPACING), False)
 
 	def publish_goal(self, pose, lookahead_distance=0.0, stop_at_goal=False):
 		goal = Goal()
@@ -344,12 +344,12 @@ class teach_repeat_localiser:
 
 			K = 0.01
 			correction_rad = K * offset
-			if turning_goal or max(rotation_correlations) < IMAGE_RECOGNITION_THRESHOLD or u < 0 or u > 1:
+			if turning_goal or max(rotation_correlations) < self.image_recognition_threshold or u < 0 or u > 1:
 				correction_rad = 0.0
 
 			if not turning_goal and self.goal_index > search_range and self.goal_index < len(self.poses)-search_range:
 				corr = np.array(correlations[:2*(1+search_range)])
-				corr -= IMAGE_RECOGNITION_THRESHOLD
+				corr -= self.image_recognition_threshold
 				corr[corr < 0] = 0.0
 				s = corr.sum()
 				if s > 0:
@@ -406,12 +406,12 @@ class teach_repeat_localiser:
 
 		K = 0.1
 		correction_rad = K * offset
-		if rotation_correlation < IMAGE_RECOGNITION_THRESHOLD:
+		if rotation_correlation < self.image_recognition_threshold:
 			correction_rad = 0.0
 
 		if not turning_goal and self.goal_index >= search_range and self.goal_index < len(self.poses)-search_range:
 			corr = np.array(correlations)
-			corr -= IMAGE_RECOGNITION_THRESHOLD
+			corr -= self.image_recognition_threshold
 			corr[corr < 0] = 0.0
 			s = corr.sum()
 			if s > 0:

@@ -66,6 +66,7 @@ class drive_to_pose_controller:
 		self.goal_pos = None
 		self.goal_theta = None
 		self.stop_at_goal = None
+		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 
 	def setup_publishers(self):
 		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
@@ -94,8 +95,7 @@ class drive_to_pose_controller:
 			v = self.gain_rho * rho
 			omega = self.gain_alpha * alpha + self.gain_beta * beta
 
-			# Note: must be equal to TURNING_TARGET_RANGE in localiser
-			if rho < 0.1:
+			if rho < self.turning_goal_distance:
 				v = 0
 				omega = self.gain_theta * wrapToPi(self.goal_theta-theta)
 
