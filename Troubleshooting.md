@@ -11,3 +11,11 @@ The charger cable just fits under the robot normally, but after significant use 
 * Stick a sharp object (screw driver / skewer) into the charging point and press the contact down, try to free it up and Miro will then turn on
 * Make sure Miro isn't resting on the charging cable while charging
 * Replace the caster (3D print a new one)
+
+## Miro won't boot up, two blue lights slowly flashing
+
+This means Miro's onboard computer (Raspberry Pi) isn't booting up successfully. The cause of this isn't completely clear, but it has been triggered by crashing the SSH connection to Miro when running `catkin_make` using all cores (the default).
+
+### Solution
+
+No proper fix found. But turning Miro off, charging the battery, then restarting fixed the issue.
