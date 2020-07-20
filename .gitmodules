@@ -1,3 +1,12 @@
 [submodule "miro-datasets"]
 	path = miro-datasets
 	url = https://dominic-d@bitbucket.org/dominic-d/miro-datasets.git
+[submodule "catkin_ws/src/miro_onboard_packages/diagnostics"]
+	path = catkin_ws/src/miro_onboard_packages/diagnostics
+	url = https://github.com/ros/diagnostics.git
+[submodule "catkin_ws/src/miro_onboard_packages/roslint"]
+	path = catkin_ws/src/miro_onboard_packages/roslint
+	url = https://github.com/ros/roslint.git
+[submodule "catkin_ws/src/miro_onboard_packages/joystick_drivers"]
+	path = catkin_ws/src/miro_onboard_packages/joystick_drivers
+	url = https://github.com/ros-drivers/joystick_drivers.git
