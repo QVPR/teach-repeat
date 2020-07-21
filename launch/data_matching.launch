@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="miro_data_load_dir">~/miro/data/office2</rosparam>
-	<rosparam param="miro_data_save_dir">~/miro/data/office2_tests/5</rosparam>
+	<rosparam param="data_load_dir">~/miro/data/office5</rosparam>
+	<rosparam param="data_save_dir">~/miro/data/office5_tests/2</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -18,7 +18,7 @@
 
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
-		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 5; $0 $@' " output="screen">
+		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 10; $0 $@' " output="screen">
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">0</rosparam>
 			<rosparam param="pitch">8</rosparam>
