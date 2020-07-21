@@ -29,7 +29,7 @@
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
-			<arg name="wait_for_ready" value="true" />
+			<arg name="wait_for_ready" value="$(arg wait_for_ready)" />
 		</include>
 
 		<!-- Stitch image files for matching -->
