@@ -45,7 +45,7 @@ class image_matcher:
 			rospy.loginfo('[Image Matcher] no calibration file for right camera specified. Assuming not calibrated')
 			self.cam_right_calibration = CameraInfo()
 
-		self.load_dir = os.path.expanduser(rospy.get_param('/miro_data_load_dir', '~/miro/data'))
+		self.load_dir = os.path.expanduser(rospy.get_param('/data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
 			self.load_dir += '/'
 
@@ -88,7 +88,7 @@ class image_matcher:
 			self.images = self.weight_images_middle(self.images)
 		print('loading complete: %d images' % (len(self.images)))
 
-		self.save_dir = os.path.expanduser(rospy.get_param('/miro_data_save_dir','~/miro/data'))
+		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir','~/miro/data'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 		if not os.path.isdir(self.save_dir):

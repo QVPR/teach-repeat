@@ -16,4 +16,10 @@
 
 	<!-- Read IP on touching nose -->
 	<node pkg="miro_onboard" type="ontouch_read_ip.py" name="miro_ontouch_read_ip" />
+
+	<!-- Teleop to control Miro -->
+	<node pkg="joy" type="joy_node" name="joy">
+		<rosparam param="joy">/dev/input/js0</rosparam>
+		<rosparam param="autorepeat_rate">25</rosparam>
+	</node>
 </launch>

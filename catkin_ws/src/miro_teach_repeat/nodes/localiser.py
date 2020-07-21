@@ -103,7 +103,7 @@ class teach_repeat_localiser:
 		self.mutex = threading.Lock()
 
 		# Odom
-		self.load_dir = os.path.expanduser(rospy.get_param('/miro_data_load_dir', '~/miro/data'))
+		self.load_dir = os.path.expanduser(rospy.get_param('/data_load_dir', '~/miro/data'))
 		if self.load_dir[-1] != '/':
 			self.load_dir += '/'
 		self.sum_theta_correction = 0.0
@@ -145,7 +145,7 @@ class teach_repeat_localiser:
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
 		# data saving
-		self.save_dir = os.path.expanduser(rospy.get_param('/miro_data_save_dir','~/miro/data/follow-straight_tests/5'))
+		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir','~/miro/data/follow-straight_tests/5'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 		if not os.path.isdir(self.save_dir):

@@ -1,0 +1,6 @@
+<launch>
+	<node pkg="joy" type="joy_node" name="joy">
+		<rosparam param="joy">/dev/input/js0</rosparam>
+		<rosparam param="autorepeat_rate">25</rosparam>
+	</node>
+</launch>

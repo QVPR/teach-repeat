@@ -1,9 +1,10 @@
 <launch>
 	<!-- Global params -->
-	<!-- <rosparam param="miro_data_load_dir">~/miro/data/follow11</rosparam> -->
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
+	<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
 	<group ns="miro">
@@ -17,7 +18,7 @@
 		</node>
 
 		<!-- Teleop to control Miro -->
-		<arg name="speed_lin" value="0.2" />
+		<arg name="speed_lin" value="0.4" />
 		<arg name="speed_ang" value="2.0" />
 		<!-- <include file="$(find miro_demos)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
