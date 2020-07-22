@@ -159,10 +159,6 @@ class image_matcher:
 		else:
 			raise RuntimeError('image matcher - debug_image is None but it should always be assigned.')
 
-		image_as_text = pickle.dumps(image)
-		with open(self.save_dir+('%06d_image.pkl' % self.match_number), 'w') as image_file:
-			image_file.write(image_as_text)
-
 		self.match_number += 1
 
 		# self.current_position = best_index + start_search_range
