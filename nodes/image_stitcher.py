@@ -51,6 +51,7 @@ class image_stitcher:
 		n -= self.first_img_seq
 
 		if self.cam_left_calibration is not None and self.cam_right_calibration is not None:
+			# todo: take fov from _ and publish it on a topic (float32array)
 			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
 		else:
 			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)

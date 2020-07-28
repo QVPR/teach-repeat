@@ -248,8 +248,7 @@ class teach_repeat_localiser:
 					self.update_goal(new_goal, True, turning_goal)
 					self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, self.sum_theta_correction, self.sum_path_correction)
 					self.goal_number += 1
-					print('last goal theta correction: %f' % math.degrees(self.sum_theta_correction))
-					print('last goal path correction: %f' % (self.sum_path_correction))
+					print('theta [%f]\tpath [%f]' % (math.degrees(self.sum_theta_correction), self.sum_path_correction))
 					if turning_goal:
 						print('turning goal:')
 					self.sum_theta_correction = 0

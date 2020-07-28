@@ -134,7 +134,7 @@ def plot_along_route_localisation(correlations, path_offsets, correspondances):
 	ax2.set_yscale('log')
 	plt.tight_layout()
 
-def plot_odom_theta_offset(correlations, poses, theta_offsets):
+def plot_odom_theta_offset(poses, theta_offsets):
 	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)})
 
 	theta_lim = math.ceil(math.degrees(np.abs(theta_offsets).max()))
@@ -279,30 +279,30 @@ def get_full_correspondances(correspdance_indices, length):
 	return correspondance_full
 
 if __name__ == "__main__":
-	dir_reference = os.path.expanduser('~/miro/data/follow-long-path/')
-	dir_test = os.path.expanduser('~/miro/data/follow-long-path_tests/8/')
+	dir_reference = os.path.expanduser('~/miro/data/office5/')
+	dir_test = os.path.expanduser('~/miro/data/office5_tests/3/')
 
 	reference_images = load_images(dir_reference)
 	reference_images_full = load_images_cv(dir_reference+'full/', normalise=False)
 	reference_poses = load_poses(dir_reference)
 
 	# test_keyframes = load_images(dir_test)
-	test_images = load_images_cv(dir_test + 'norm/')
-	test_images_full = load_images_cv(dir_test + 'full/', normalise=False)
-	if reference_images[0].shape != test_images[0].shape:
-		reference_images = [cv2.resize(img, tuple(reversed(test_images[0].shape)), interpolation=cv2.INTER_AREA) for img in reference_images]
+	# test_images = load_images_cv(dir_test + 'norm/')
+	# test_images_full = load_images_cv(dir_test + 'full/', normalise=False)
+	# if reference_images[0].shape != test_images[0].shape:
+	# 	reference_images = [cv2.resize(img, tuple(reversed(test_images[0].shape)), interpolation=cv2.INTER_AREA) for img in reference_images]
 
-	test_keyframes = get_image_keyframes(load_images_cv(dir_test + 'norm/'), load_images_cv(dir_test))
-	test_image_indices = get_image_indices_cv(dir_test + 'norm/')
+	# test_keyframes = get_image_keyframes(load_images_cv(dir_test + 'norm/'), load_images_cv(dir_test))
+	# test_image_indices = get_image_indices_cv(dir_test + 'norm/')
 	test_poses = load_poses(dir_test + 'pose/')
 	test_offsets = load_poses(dir_test + 'offset/')
 	test_corrections = load_corrections(dir_test + 'correction/')
-	test_keyframe_correspondances = np.array([np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in test_images]) for keyframe in test_keyframes])
+	# test_keyframe_correspondances = np.array([np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in test_images]) for keyframe in test_keyframes])
 
 
-	correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
+	# correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
 
-	corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)) % correlations.shape[0],test_keyframe_correspondances]
+	# corr_at_keyframes = correlations[np.arange(len(test_keyframe_correspondances)) % correlations.shape[0],test_keyframe_correspondances]
 	
 	# plt.imshow(correlations)
 
@@ -310,12 +310,12 @@ if __name__ == "__main__":
 
 	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 4)
 
-	# plot_odom_theta_offset(correlations, test_poses, test_corrections.theta_offset)
+	plot_odom_theta_offset(test_poses, test_corrections.theta_offset)
 
-	plt.imshow(offsets)
+	# plt.imshow(offsets)
 
-	plt.figure()
-	plt.plot(offsets[get_full_correspondances(test_keyframe_correspondances, offsets.shape[1]),np.arange(offsets.shape[1])])
+	# plt.figure()
+	# plt.plot(offsets[get_full_correspondances(test_keyframe_correspondances, offsets.shape[1]),np.arange(offsets.shape[1])])
 
 	def get_mean(x):
 		y = x# - 0.1
