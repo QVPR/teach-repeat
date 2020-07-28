@@ -33,10 +33,10 @@ Testing:
 	☐ What happens when running path correction but no orientation correction?
 
 	Issues and Ideas:
-		☐ Background tends to dominate correlation offset -> driving from open to enclosed space unreliable
+		✔ Background tends to dominate correlation offset -> driving from open to enclosed space unreliable @done(20-07-23 16:06)
 			* eg. under-table2_tests/3/733
 			* Have a weighting kernel applied over the reference image: centre is most important (direction of travel)
-		☐ Centre correction on last goal or on robot - which is better?
+		✔ Centre correction on last goal or on robot - which is better? @done(20-07-23 16:06)
 			* last goal: has issues with big corrections at high u (new goal becomes unreachable)
 			* robot: seems to make corrections converge more slowly? Maybe up gain?
 				* this seems to be working well
