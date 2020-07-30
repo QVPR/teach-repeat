@@ -13,6 +13,8 @@ from rospy_message_converter import message_converter
 import json
 import os
 import sys
+from mpl_toolkits.mplot3d import Axes3D
+import scipy.ndimage
 
 # ugly hack to import things from the nodes folder
 sys.path.append(os.path.dirname(__file__) + '/../nodes')
@@ -51,12 +53,32 @@ def np_to_frame(pose_tuple):
 def frame_to_np(pose_frame):
 	return np.array((pose_frame.p.x(), pose_frame.p.y(), pose_frame.M.GetRPY()[2]))
 
+def shift_1d_vector(vector, distance):
+	if abs(distance) >= 1:
+		integer_component = int(distance)
+		vector = shift_1d_vector_integer(vector, integer_component)
+		distance -= integer_component
+	
+	if distance > 0:
+		return (1 - distance) * vector + distance * shift_1d_vector_integer(vector, 1)
+	else:
+		return (1 - distance) * vector + -distance * shift_1d_vector_integer(vector, -1)
+
+def shift_1d_vector_integer(vector, distance):
+	if distance > 0:
+		vector = np.hstack((np.zeros(distance), vector[:-distance]))
+	else:
+		distance = -distance
+		vector = np.hstack((vector[distance:], np.zeros(distance)))
+	return vector
+
 MAX_V = 0.2
 MAX_OMEGA = 2.439
 dt = 0.02
 
-LOOKAHEAD_DISTANCE = localiser.LOOKAHEAD_DISTANCE_RATIO*localiser.GOAL_DISTANCE_SPACING
-TURNING_TARGET_RANGE = localiser.TURNING_TARGET_RANGE_DISTANCE_RATIO*localiser.GOAL_DISTANCE_SPACING
+TARGET_SPACING = localiser.GOAL_DISTANCE_SPACING
+LOOKAHEAD_DISTANCE = localiser.LOOKAHEAD_DISTANCE_RATIO * TARGET_SPACING
+TURNING_TARGET_RANGE = localiser.TURNING_TARGET_RANGE_DISTANCE_RATIO * TARGET_SPACING
 
 gain_rho = 0.3
 gain_alpha = 5.0
@@ -104,7 +126,30 @@ world.orientation.z = odom.pose.pose.orientation.z
 world.orientation.w = odom.pose.pose.orientation.w
 current_frame_world = tf_conversions.fromMsg(world)
 
-N = 10000
+# Markov state
+STATES_PER_GOAL = 5
+STATE_DISTANCE = TARGET_SPACING / STATES_PER_GOAL
+ODOM_VARIANCE_PER_METRE = 0.01
+STATES_UPDATED_AT_ONCE = 71
+STATE_UPDATE_HALF_SEARCH_RANGE = (STATES_UPDATED_AT_ONCE-1) / STATES_PER_GOAL / 2
+STATE_OBSERVATION_ADDITIVE_NOISE = 5. / STATES_UPDATED_AT_ONCE
+d = np.zeros(STATES_PER_GOAL * (len(goals) - 1) + 1)
+d[0]  = 1 # initialise at the start
+dist_moved = 0
+
+ds = [d]
+
+# EKF
+theta_delta = 0
+theta_delta_variance = 0.1
+WHEEL_VARIANCE_PER_METRE = 0.0003
+WHEELBASE = 0.164
+R_ALPHA = 0.01
+
+theta_deltas = [theta_delta]
+theta_delta_variances = [theta_delta_variance]
+
+N = 5000
 xs = []
 ys = []
 thetas = []
@@ -112,8 +157,92 @@ gt_xs = []
 gt_ys = []
 gt_thetas = []
 
+def along_path_prediction(delta_d):
+	global d, dist_moved
+	# This is a bit horrible, but we need a hack to get this to work
+	# from https://github.com/AtsushiSakai/PythonRobotics/blob/a3808bca79e22a7fc7a131d6f357fca2f30c6d75/Localization/histogram_filter/histogram_filter.py
+	# They say "Prediction update is only performed when the distance traveled is larger than the distance between states."
+	# so this seems reasonable
+	dist_moved += delta_d
+	if dist_moved >= STATE_DISTANCE:
+		states_moved = int(dist_moved / STATE_DISTANCE)
+		d = shift_1d_vector(d, states_moved)
+		odom_var = states_moved * ODOM_VARIANCE_PER_METRE / STATE_DISTANCE
+		d = scipy.ndimage.gaussian_filter1d(d, math.sqrt(odom_var))
+
+		dist_moved = dist_moved % STATE_DISTANCE
+		ds.append(d)
+
+def along_path_observation():
+	global d
+	current_goal = int(np.argmax(d) / STATES_PER_GOAL)
+	offsets, correlations = calculate_image_pose_offset(current_goal, STATE_UPDATE_HALF_SEARCH_RANGE, return_all=True)
+	
+	observation_probabilities = np.zeros_like(d)
+
+	correlations = np.array(correlations).reshape(-1,1)
+	interpolated_correlations = np.hstack((
+		np.hstack((correlations[:-1],correlations[1:])).dot(
+			np.vstack((np.linspace(1,0,STATES_PER_GOAL+1)[:-1],np.linspace(0,1,STATES_PER_GOAL+1)[:-1]))).flatten()
+		,correlations[-1]))
+
+	interpolated_correlations /= interpolated_correlations.sum()
+	interpolated_correlations += STATE_OBSERVATION_ADDITIVE_NOISE
+	interpolated_correlations /= interpolated_correlations.sum()
+
+	if current_goal > STATE_UPDATE_HALF_SEARCH_RANGE:
+		observation_probabilities[(current_goal-STATE_UPDATE_HALF_SEARCH_RANGE) * STATES_PER_GOAL:1+(current_goal+STATE_UPDATE_HALF_SEARCH_RANGE) * STATES_PER_GOAL] = interpolated_correlations
+	else:
+		observation_probabilities[:len(interpolated_correlations)] = interpolated_correlations
+
+	d *= observation_probabilities
+	d /= d.sum()
+
+def orientation_prediction(delta_theta_reference, delta_theta_measurement, dL, dR):
+	global theta_delta, theta_delta_variance
+	theta_delta += delta_theta_measurement - delta_theta_reference
+	theta_delta_variance += WHEEL_VARIANCE_PER_METRE * (abs(dL) + abs(dR)) / WHEELBASE**2
+
+	theta_deltas.append(theta_delta)
+	theta_delta_variances.append(theta_delta_variance)
+
+def orientation_observation():
+	global theta_delta, theta_delta_variance
+	current_goal = int(np.argmax(d) / STATES_PER_GOAL)
+	u = float(np.argmax(d)) / STATES_PER_GOAL - float(current_goal)
+	offsets, correlations = calculate_image_pose_offset(current_goal, 1, return_all=True)
+
+	if current_goal == 0:
+		theta_delta_A = -offsets[0]
+		theta_delta_B = -offsets[1]
+	elif current_goal+1 < len(goals):
+		theta_delta_A = -offsets[1]
+		theta_delta_B = -offsets[2]
+	else:
+		return
+
+	if u != 1:
+		S_A = 1./(1-u) * theta_delta_variance + R_ALPHA
+		W_A = theta_delta_variance * 1./S_A
+		V_A = theta_delta_A - theta_delta
+		expectation_likelihood_A = V_A * 1./(S_A / (1-u)) * V_A
+
+		if expectation_likelihood_A < 6.3:
+			theta_delta += W_A*V_A
+			theta_delta_variance -= W_A*theta_delta_variance
+
+	if u != 0:
+		S_B = 1./u * theta_delta_variance + R_ALPHA
+		W_B = theta_delta_variance * 1./S_B
+		V_B = theta_delta_B - theta_delta
+		expectation_likelihood_B = V_B * 1./(S_B / (1-u)) * V_B
+
+		if expectation_likelihood_B < 6.3:
+			theta_delta += W_B*V_B
+			theta_delta_variance -= W_B*theta_delta_variance
+
 def update_step():
-	global turning_goal
+	global turning_goal, theta_delta
 	theta = current_frame_odom.M.GetRPY()[2]
 	gt_theta = current_frame_world.M.GetRPY()[2]
 	target_pos = (goal_to_navigate_to[0], goal_to_navigate_to[1], 0)
@@ -122,24 +251,42 @@ def update_step():
 	d_pos = tf_conversions.Vector(*target_pos) - current_frame_odom.p
 	rho, alpha, beta = drive_to_pose_controller.rho_alpha_beta(d_pos.x(), d_pos.y(), theta, target_theta)
 
-	v = gain_rho * rho
-	omega = gain_alpha * alpha + gain_beta * beta
+	# v = gain_rho * rho
+	# omega = gain_alpha * alpha + gain_beta * beta
+	v = 0.10
+	omega = -1.5 * theta_delta
 
-	# Note: rho builds up over time if we turn for one goal, but using turning goal it never moves...
-	if rho < TURNING_TARGET_RANGE:
+	turning_goal = False
+	if goal_index > 0:
+		turning_goal = math.sqrt(np.sum((goals[goal_index][:2] - goals[goal_index-1][:2])**2)) < 0.1
+
+	if turning_goal:
+		# todo: do I need to disable the correction on sharp turns?
 		v = 0
 		omega = gain_alpha * wrapToPi(target_theta-theta)
 
-	v, omega = drive_to_pose_controller.scale_velocities(v, omega, turning_goal)
+	# Note: rho builds up over time if we turn for one goal, but using turning goal it never moves...
+	# if rho < TURNING_TARGET_RANGE:
+	# 	v = 0
+	# 	omega = gain_alpha * wrapToPi(target_theta-theta)
 
-	vN = 0#np.random.randn() * MAX_V / 10
-	omegaN = 0#np.random.randn() * MAX_OMEGA / 10
+	# v, omega = drive_to_pose_controller.scale_velocities(v, omega, turning_goal)
 
-	current_frame_odom.p += tf_conversions.Vector(dt * 1*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
-	current_frame_odom.M.DoRotZ(dt * (omega+omegaN))
+	v_encoder = v + np.random.randn() * MAX_V / 10
+	omega_encoder = omega + np.random.randn() * MAX_OMEGA / 10
+
+	current_frame_odom.p += tf_conversions.Vector(dt * 1*v_encoder * math.cos(theta), dt * v_encoder * math.sin(theta), 0.0)
+	current_frame_odom.M.DoRotZ(dt * omega_encoder)
 
 	current_frame_world.p += tf_conversions.Vector(dt * v * math.cos(gt_theta), dt * v * math.sin(gt_theta), 0.0)
 	current_frame_world.M.DoRotZ(dt * omega)
+
+	# todo: make it so that this still works during sharp turns
+	along_path_prediction(dt * v_encoder)
+
+	dR = (WHEELBASE*dt*omega_encoder + 2*dt*v_encoder) / 2.
+	dL = 2.*dt*v - dR
+	orientation_prediction(dt * omega, dt * omega_encoder, dL, dR)
 
 	xs.append(current_frame_odom.p.x())
 	ys.append(current_frame_odom.p.y())
@@ -150,8 +297,8 @@ def update_step():
 	gt_thetas.append(current_frame_world.M.GetRPY()[2])
 
 def get_offset_px(goal, pose):
-	visual_feature_range = 4#np.random.uniform(3.0, 5.0)
-	visual_feature_angle = 0.02#np.random.uniform(-math.radians(10), math.radians(10))
+	visual_feature_range = 1#np.random.uniform(3.0, 5.0)
+	visual_feature_angle = 0#np.random.uniform(-math.radians(10), math.radians(10))
 
 	visual_feature_offset = tf_conversions.Frame()
 	visual_feature_offset.M.DoRotZ(visual_feature_angle)
@@ -209,7 +356,7 @@ def update_goal(goal_frame, new_goal=False):
 	goal = frame_to_np(goal_frame)
 
 	# if goal is a turning goal, don't set a virtual waypoint ahead
-	print(diff.p.Norm())
+	# print(diff.p.Norm())
 	if diff.p.Norm() < TURNING_TARGET_RANGE:
 		turning_goal = True
 		goal_to_navigate_to = goal
@@ -303,9 +450,9 @@ for i in range(N):
 
 	delta_frame = current_frame_odom.Inverse() * np_to_frame(goal_to_navigate_to)
 
-	if goal_index > 0:
-		do_continuous_correction()
-
+	along_path_observation()
+	orientation_observation()
+		
 	if localiser.delta_frame_in_bounds(delta_frame):
 		old_goal_index = goal_index
 
@@ -349,8 +496,8 @@ display_spacing = 10
 # plt.figure()
 # plt.quiver(actual_goals_odom[:,0], actual_goals_odom[:,1], np.cos(actual_goals_odom[:,2]), np.sin(actual_goals_odom[:,2]))
 # plt.quiver(xs[::display_spacing], ys[::display_spacing], np.cos(thetas[::display_spacing]), np.sin(thetas[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
-plt.plot(continuous_offsets)
-plt.plot(continuous_path_offsets)
+# plt.plot(continuous_offsets)
+# plt.plot(continuous_path_offsets)
 plt.figure()
 plt.plot(np.vstack((goals_right_length[:len(update_locations),0],np.array([t[0] for t in update_locations]))), 
 	np.vstack((goals_right_length[:len(update_locations),1],np.array([t[1] for t in update_locations]))), 
@@ -366,5 +513,20 @@ plt.axis('equal')
 plt.legend([q1],['ground truth'])
 plt.title('Navigation test - Correction - 5% Gaussian Noise [6 min]')
 
+ds_2d = np.array(ds)
+x = np.arange(0,len(goals)-1+1./STATES_PER_GOAL, 1./STATES_PER_GOAL)
+
+plt.figure()
+# plt.plot(np.sum(ds_2d * x, axis=1))
+plt.imshow(ds_2d)
+plt.figure()
+plt.plot(theta_deltas)
+
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+# x = np.arange(0, len(goals)-1 + 1./STATES_PER_GOAL, 1./STATES_PER_GOAL)
+# y = np.arange(0, ds_2d.shape[0])
+# X, Y = np.meshgrid(x, y)
+# ax.plot_surface(X, Y, ds_2d)
 
 plt.show()
