@@ -1,0 +1,41 @@
+<launch>
+	<!-- Global params -->
+	<rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-08-03_22:58:58</rosparam>
+	<rosparam param="data_save_dir">~/robot/teach-repeat-data/2020-08-03_22:58:58-repeat</rosparam>
+	<rosparam param="wait_for_ready">false</rosparam>
+	<rosparam param="image_resize_width">115</rosparam>
+	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="image_subsampling">1</rosparam>
+	<rosparam param="image_field_of_view_width_deg">75</rosparam>
+	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="image_recognition_threshold">0.1</rosparam>
+	<rosparam param="goal_pose_seperation">0.3</rosparam>
+	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
+	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
+
+	<!-- Load image files for matching -->
+	<node pkg="miro_teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
+		<rosparam param="use_old_dataset_format">false</rosparam>
+		<rosparam param="use_depth">false</rosparam>
+		<rosparam param="use_middle_weighting">false</rosparam>
+	</node>
+
+	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
+	<node pkg="miro_teach_repeat" type="localiser.py" name="localiser" output="screen" >
+		<remap from="odom" to="odometry/filtered" />
+		<remap from="image" to="ros_indigosdk_occam/image0" />
+		<rosparam param="stop_at_end">true</rosparam>
+		<rosparam param="discrete-correction">false</rosparam>
+	</node>
+
+	<!-- Drive to goal pose -->
+	<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
+		<remap from="cmd_vel" to="jackal_velocity_controller/cmd_vel" />
+		<remap from="odom" to="odometry/filtered" />
+	</node>
+
+	<!-- Show image matching -->
+	<!--node pkg="image_view" type="image_view" name="image_match_debug_view" >
+		<remap from="image" to="match_image_debug" />
+	</node-->
+</launch>
