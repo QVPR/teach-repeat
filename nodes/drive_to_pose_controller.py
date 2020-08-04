@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import rospy
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped, Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
 import tf_conversions
@@ -10,13 +10,12 @@ import math
 
 from miro_teach_repeat.msg import Goal
 
-WHEELBASE = 0.164
-MAX_V = 0.4
-MAX_OMEGA = 4.878 # (0.4 / (WHEELBASE/2))
+WHEELBASE = 0.43
+MAX_OMEGA = 0.93 # 4.878 # (0.4 / (WHEELBASE/2))
 
 # Limit speed
-MAX_V = 0.3
-MIN_OMEGA = 2.5
+MAX_V = 0.2
+MIN_OMEGA = 0.15
 
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
@@ -69,7 +68,8 @@ class drive_to_pose_controller:
 		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		# self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -104,10 +104,13 @@ class drive_to_pose_controller:
 			# if rho < 0.1:
 			# 	print('only turning - omega = %f' % omega)
 
-			motor_command = TwistStamped()
-			motor_command.header.stamp = rospy.Time.now()
-			motor_command.twist.linear.x = v
-			motor_command.twist.angular.z = omega
+			# motor_command = TwistStamped()
+			# motor_command.header.stamp = rospy.Time.now()
+			# motor_command.twist.linear.x = v
+			# motor_command.twist.angular.z = omega
+			motor_command = Twist()
+			motor_command.linear.x = v
+			motor_command.angular.z = omega
 
 			self.pub_cmd_vel.publish(motor_command)
 
