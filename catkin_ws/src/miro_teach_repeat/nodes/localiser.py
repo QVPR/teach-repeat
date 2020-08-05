@@ -178,8 +178,17 @@ class teach_repeat_localiser:
 	def on_ready(self, msg):
 		if msg.data:
 			if not self.ready:
-				self.update_goal(tf_conversions.fromMsg(self.poses[0]))
+				self.start()
 			self.ready = True
+
+	def start(self):
+		if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
+			# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
+			print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
+			self.goal_index = 1
+			self.update_goal(tf_conversions.fromMsg(self.poses[1]))
+		else:
+			self.update_goal(tf_conversions.fromMsg(self.poses[0]))
 
 	def update_goal_index(self):
 		self.goal_index += 1
@@ -462,5 +471,5 @@ if __name__ == "__main__":
 	rospy.init_node("teach_repeat_localiser")
 	localiser = teach_repeat_localiser()
 	if localiser.ready:
-		localiser.update_goal(tf_conversions.fromMsg(localiser.poses[0]))
+		localiser.start()
 	rospy.spin()
