@@ -31,6 +31,7 @@ Testing:
 	✔ Test robot in more complex environments (turning on spot, there and back) @done(20-07-14 13:55)
 		* Turning on the spot doesn't work perfectly, but seems ok enough
 	☐ What happens when running path correction but no orientation correction?
+	☐ What happens if we run it without any odom?
 
 	Issues and Ideas:
 		✔ Background tends to dominate correlation offset -> driving from open to enclosed space unreliable @done(20-07-23 16:06)
@@ -62,10 +63,10 @@ Development:
 		✔ Using full range of xcorr matching because currently the sides of the image are thrown away (most useful part) @started(20-03-25 15:03) @done(20-03-25 15:07) @lasted(4m49s)
 		✔ Implement normxcorr2 @done(20-03-30 18:37)
 		✔ Use basic scanline matching to determine rotation from images @1h @started(20-03-31 08:22) @done(20-03-31 09:18) @lasted(56m42s)
-		☐ Implement a bio-inspired SLAM approach
-			☐ Get range / bearing measurements from AR tags
-			☐ Record data for offline processing (MATLAB)
-			☐ Port to python to run in real-time
+		✘ Implement a bio-inspired SLAM approach @cancelled(20-08-05 11:02)
+			✘ Get range / bearing measurements from AR tags @cancelled(20-08-05 11:02)
+			✘ Record data for offline processing (MATLAB) @cancelled(20-08-05 11:02)
+			✘ Port to python to run in real-time @cancelled(20-08-05 11:02)
 		✔ Larger along-route localisation window @done(20-05-13 10:20)
 		✔ Filter out obvious bad offset localisations (threshold) @done(20-05-13 09:40)
 			* Better approach to compare the ratio of correlations between top and second peak
@@ -85,13 +86,14 @@ Development:
 		✔ Publish the offset between odom and "map" frame @done(20-05-11 14:09)
 		✔ Specify "intermediate" or "stop" goals - allow faster movement @15m @started(20-04-28 16:39) @done(20-04-28 16:59) @lasted(20m10s)
 		✔ Refactor localiser and odom_follower into one node @30m @started(20-04-28 15:59) @done(20-04-28 16:30) @lasted(31m51s)
-		☐ Allow the search range to be one-sided to allow localisation at the start and end
+		✔ Allow the search range to be one-sided to allow localisation at the start and end (actually just smaller, not one-sided) @done(20-08-05 17:08)
 		☐ Write params to file on startup - each run
 		☐ Sync image numbers between debug and full/norm?
-		☐ Use the FOV map from image rectification during localisation
+		☐ Use the FOV map from image rectification during localisation - do we need this?
 		✔ Make code independent of Miro, so it can be run on another robot @started(20-07-16 10:38) @done(20-07-16 15:15) @lasted(4h37m46s)
 		☐ Fix loading images (needs to happen before /ready is published)
 		☐ Parameterise the search range of horizontal sweep
+		✔ Parameterise the controller parameters @done(20-08-05 16:28)
 
 	Visualisation:
 		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)
