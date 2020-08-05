@@ -13,7 +13,7 @@
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">0</rosparam>
 			<rosparam param="pitch">8</rosparam>
-			<rosparam param="reset_odom">true</rosparam>
+			<rosparam param="reset_odom">false</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
 		</node>
 
@@ -29,7 +29,7 @@
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
-			<arg name="wait_for_ready" value="$(arg wait_for_ready)" />
+			<arg name="wait_for_ready" value="true" />
 		</include>
 
 		<!-- Stitch image files for matching -->

@@ -120,6 +120,7 @@ class teach_repeat_localiser:
 		self.last_goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.goal_plus_lookahead = tf_conversions.toMsg(tf_conversions.Frame())
 		self.last_odom = None
+		self.zero_odom_offset = None
 		global GOAL_DISTANCE_SPACING, LOOKAHEAD_DISTANCE_RATIO, TURNING_TARGET_RANGE_DISTANCE_RATIO
 		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_seperation', 0.2)
 		LOOKAHEAD_DISTANCE_RATIO = rospy.get_param('/lookahead_distance_ratio', 0.65)
@@ -222,9 +223,18 @@ class teach_repeat_localiser:
 		with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:
 			correction_file.write(message_as_text)
 
+	def subtract_odom(self, odom, odom_frame_to_subtract):
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
+		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
+		return odom
+
 	def process_odom_data(self, msg):
 		if self.ready and self.last_image is not None:
 			self.mutex.acquire()
+			if self.last_odom is None:
+				self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
+			msg = self.subtract_odom(msg, self.zero_odom_offset)
 			self.last_odom = msg.pose.pose
 
 			current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
