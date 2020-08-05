@@ -13,7 +13,7 @@ from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
 import tf_conversions
-import tf
+# import tf
 import tf2_ros
 
 import image_processing
@@ -168,7 +168,7 @@ class teach_repeat_localiser:
 
 		rospy.wait_for_service('match_image')
 		self.match_image = rospy.ServiceProxy('match_image', ImageMatch, persistent=True)
-		self.tf_pub = tf.TransformBroadcaster()
+		# self.tf_pub = tf.TransformBroadcaster()
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -209,6 +209,15 @@ class teach_repeat_localiser:
 		return GOAL_STATE.normal_goal
 
 	def save_data_at_goal(self, pose, goal_odom, goal_world, theta_offset, path_offset):
+		try:
+			trans = self.tfBuffer.lookup_transform('/base_link', '/map', rospy.Time())
+			trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
+			with open(self.save_dir+('pose/%06d_map_to_base_link.txt' % self.goal_number), 'w') as tf_trans_file:
+				tf_trans_file.write(trans_as_text)
+		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+			print('Could not lookup transform from /map to /base_link')
+			pass
+		
 		# save current pose info
 		message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 		with open(self.save_dir+('pose/%06d_pose.txt' % self.goal_number), 'w') as pose_file:
@@ -219,7 +228,7 @@ class teach_repeat_localiser:
 		with open(self.save_dir+('offset/%06d_offset.txt' % self.goal_number), 'w') as offset_file:
 			offset_file.write(message_as_text)
 		# publish offset to tf
-		self.tf_pub.sendTransform((offset.position.x, offset.position.y, offset.position.z), (offset.orientation.x, offset.orientation.y, offset.orientation.z, offset.orientation.w), rospy.Time.now(), 'map', 'odom')
+		# self.tf_pub.sendTransform((offset.position.x, offset.position.y, offset.position.z), (offset.orientation.x, offset.orientation.y, offset.orientation.z, offset.orientation.w), rospy.Time.now(), 'map', 'odom')
 		# publish current corrections
 		message_as_text = json.dumps({'theta_offset': theta_offset, 'path_offset': path_offset})
 		with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:

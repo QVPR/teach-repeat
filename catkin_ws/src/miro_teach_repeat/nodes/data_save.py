@@ -77,8 +77,8 @@ class data_save:
 			try:
 				trans = self.tfBuffer.lookup_transform('/base_link', '/map', rospy.Time())
 				trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
-				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as pose_file:
-					pose_file.write(trans_as_text)
+				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as tf_trans_file:
+					tf_trans_file.write(trans_as_text)
 			except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
 				print('Could not lookup transform from /map to /base_link')
 				pass
