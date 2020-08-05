@@ -10,11 +10,11 @@ import enum
 import threading
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
 import tf_conversions
 import tf
+import tf2_ros
 
 import image_processing
 from miro_teach_repeat.msg import Goal
@@ -145,7 +145,7 @@ class teach_repeat_localiser:
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
 		# data saving
-		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir','~/miro/data/follow-straight_tests/5'))
+		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir', '~/miro/data/follow-straight_tests/5'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 		if not os.path.isdir(self.save_dir):
@@ -174,6 +174,8 @@ class teach_repeat_localiser:
 			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
+		self.tfBuffer = tf2_ros.Buffer()
+		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 
 	def on_ready(self, msg):
 		if msg.data:
@@ -207,9 +209,9 @@ class teach_repeat_localiser:
 		with open(self.save_dir+('offset/%06d_offset.txt' % self.goal_number), 'w') as offset_file:
 			offset_file.write(message_as_text)
 		# publish offset to tf
-		self.tf_pub.sendTransform((offset.position.x,offset.position.y,offset.position.z),(offset.orientation.x,offset.orientation.y,offset.orientation.z,offset.orientation.w),rospy.Time.now(),'map','odom')
+		self.tf_pub.sendTransform((offset.position.x, offset.position.y, offset.position.z), (offset.orientation.x, offset.orientation.y, offset.orientation.z, offset.orientation.w), rospy.Time.now(), 'map', 'odom')
 		# publish current corrections
-		message_as_text = json.dumps({'theta_offset':theta_offset, 'path_offset':path_offset})
+		message_as_text = json.dumps({'theta_offset': theta_offset, 'path_offset': path_offset})
 		with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:
 			correction_file.write(message_as_text)
 
