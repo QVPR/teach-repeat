@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 import cv2
 import os
-import pickle
+import tf2_ros
 import datetime
 import json
 from std_msgs.msg import Bool
@@ -51,6 +51,8 @@ class data_save:
 		if not self.ready:
 			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
 		self.sub_image_pose = rospy.Subscriber("image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
+		self.tfBuffer = tf2_ros.Buffer()
+		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 	
 	def save_params(self):
 		params = {
@@ -71,6 +73,15 @@ class data_save:
 			id = "%06d" % (self.save_id)
 			normalised_image = image_processing.patch_normalise_image(image, self.patch_size, resize=self.resize)
 			message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
+
+			try:
+				trans = self.tfBuffer.lookup_transform('/base_link', '/map', rospy.Time())
+				trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
+				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as pose_file:
+					pose_file.write(trans_as_text)
+			except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+				print('Could not lookup transform from /map to /base_link')
+				pass
 
 			cv2.imwrite(self.save_dir+'full/'+id+'.png', image)
 			cv2.imwrite(self.save_dir+'norm/'+id+'.png', np.uint8(255.0 * (1 + normalised_image) / 2.0))
