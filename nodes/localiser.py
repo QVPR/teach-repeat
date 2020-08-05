@@ -139,6 +139,7 @@ class teach_repeat_localiser:
 		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
 		FIELD_OF_VIEW_DEG = rospy.get_param('/image_field_of_view_width_deg', 2*60.6 + 2*27.0)
 		FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
+		self.search_range = rospy.get_param('~search-range', 1)
 
 		# camera calibration
 		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
@@ -348,14 +349,13 @@ class teach_repeat_localiser:
 				# u = last_goal_parallel_distance / (last_goal_parallel_distance - next_goal_parallel_distance)
 				# print('straight correction u = ',u), 'woulda been', last_goal_offset_odom.p.Norm() / (last_goal_offset_odom.p.Norm() + next_goal_offset_odom.p.Norm())
 
-			search_range = 1
-			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+search_range)
-			if self.goal_index > search_range:
-				rotation_offsets = offsets[search_range:search_range+2]
-				rotation_correlations = correlations[search_range:search_range+2]
+			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+self.search_range)
+			if self.goal_index > self.search_range:
+				rotation_offsets = offsets[self.search_range:self.search_range+2]
+				rotation_correlations = correlations[self.search_range:self.search_range+2]
 			else:
-				rotation_offsets = offsets[-search_range-3:-search_range-1]
-				rotation_correlations = correlations[-search_range-3:-search_range-1]
+				rotation_offsets = offsets[-self.search_range-3:-self.search_range-1]
+				rotation_correlations = correlations[-self.search_range-3:-self.search_range-1]
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
@@ -364,15 +364,24 @@ class teach_repeat_localiser:
 			if turning_goal or max(rotation_correlations) < self.image_recognition_threshold or u < 0 or u > 1:
 				correction_rad = 0.0
 
-			if not turning_goal and self.goal_index > search_range and self.goal_index < len(self.poses)-search_range:
-				corr = np.array(correlations[:2*(1+search_range)])
+			if not turning_goal:
+				if self.goal_index > self.search_range and self.goal_index < len(self.poses)-self.search_range:
+					corr = np.array(correlations[:2*(1+self.search_range)])
+					w = np.arange(-0.5-self.search_range,0.6+self.search_range,1)
+				elif self.goal_index <= self.search_range:
+					reduced_search_range = self.goal_index - 1
+					corr = np.array(correlations[:2*(1+reduced_search_range)])
+					w = np.arange(-0.5-reduced_search_range,0.6+reduced_search_range,1)
+				else:
+					reduced_search_range = len(self.poses) - self.search_range - self.goal_index
+					corr = np.array(correlations[-2*(1+reduced_search_range):])     
+					w = np.arange(-0.5-reduced_search_range,0.6+reduced_search_range,1)
 				corr -= self.image_recognition_threshold
 				corr[corr < 0] = 0.0
 				s = corr.sum()
 				if s > 0:
 					corr /= s
-				w = corr * np.arange(-0.5-search_range,0.6+search_range,1)
-				pos = w.sum()
+				pos = (corr * w).sum()
 				path_error = pos
 
 				# pos > 0: images are telling me I'm ahead of where I think I am
@@ -410,14 +419,13 @@ class teach_repeat_localiser:
 		inter_goal_offset_world = old_goal_frame_world.Inverse() * new_goal_frame_world
 		inter_goal_distance_world = inter_goal_offset_world.p.Norm()
 		
-		search_range = 1
-		offsets, correlations = self.calculate_image_pose_offset(self.goal_index, search_range)
-		if self.goal_index >= search_range:
-			rotation_offset = offsets[search_range]
-			rotation_correlation = correlations[search_range]
+		offsets, correlations = self.calculate_image_pose_offset(self.goal_index, self.search_range)
+		if self.goal_index >= self.search_range:
+			rotation_offset = offsets[self.search_range]
+			rotation_correlation = correlations[self.search_range]
 		else:
-			rotation_offset = offsets[-search_range-1]
-			rotation_correlation = correlations[-search_range-1]
+			rotation_offset = offsets[-self.search_range-1]
+			rotation_correlation = correlations[-self.search_range-1]
 
 		offset = rotation_offset
 
@@ -426,14 +434,14 @@ class teach_repeat_localiser:
 		if rotation_correlation < self.image_recognition_threshold:
 			correction_rad = 0.0
 
-		if not turning_goal and self.goal_index >= search_range and self.goal_index < len(self.poses)-search_range:
+		if not turning_goal and self.goal_index >= self.search_range and self.goal_index < len(self.poses)-self.search_range:
 			corr = np.array(correlations)
 			corr -= self.image_recognition_threshold
 			corr[corr < 0] = 0.0
 			s = corr.sum()
 			if s > 0:
 				corr /= s
-			w = corr * np.arange(-search_range,search_range+1,1)
+			w = corr * np.arange(-self.search_range,self.search_range+1,1)
 			pos = w.sum()
 			path_error = pos
 
