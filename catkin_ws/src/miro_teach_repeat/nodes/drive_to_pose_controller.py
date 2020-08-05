@@ -63,6 +63,7 @@ class drive_to_pose_controller:
 		self.gain_alpha = rospy.get_param('~gain_turn_to_point', 5.0)
 		self.gain_beta = rospy.get_param('~gain_turn_to_heading', -3.0)
 		self.gain_theta = rospy.get_param('~gain_turn_on_spot', 7.0)
+		self.zero_odom_offset = None
 		self.goal_pos = None
 		self.goal_theta = None
 		self.stop_at_goal = None
@@ -81,10 +82,20 @@ class drive_to_pose_controller:
 		if msg.data:
 			self.ready = True
 
+	def subtract_odom(self, odom, odom_frame_to_subtract):
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
+		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
+		return odom
+
 	def process_odom_data(self, msg):
 		if self.ready:
 			if self.goal_pos is None:
 				return
+
+			if self.zero_odom_offset is None:
+				self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
+			msg = self.subtract_odom(msg, self.zero_odom_offset)
 
 			current_frame = tf_conversions.fromMsg(msg.pose.pose)
 			theta = current_frame.M.GetRPY()[2]
