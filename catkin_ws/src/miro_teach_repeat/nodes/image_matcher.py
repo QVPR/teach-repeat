@@ -4,7 +4,6 @@ import rospy
 import numpy as np
 import cv2
 import os
-import pickle
 import yaml
 import json
 from sensor_msgs.msg import Image, CameraInfo

@@ -10,7 +10,6 @@ import enum
 import threading
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, UInt32
 import tf_conversions
@@ -146,7 +145,7 @@ class teach_repeat_localiser:
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
 		# data saving
-		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir','~/miro/data/follow-straight_tests/5'))
+		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir', '~/miro/data/follow-straight_tests/5'))
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 		if not os.path.isdir(self.save_dir):
@@ -168,7 +167,7 @@ class teach_repeat_localiser:
 
 		rospy.wait_for_service('match_image')
 		self.match_image = rospy.ServiceProxy('match_image', ImageMatch, persistent=True)
-		self.tf_pub = tf.TransformBroadcaster()
+		# self.tf_pub = tf.TransformBroadcaster()
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -217,9 +216,9 @@ class teach_repeat_localiser:
 		with open(self.save_dir+('offset/%06d_offset.txt' % self.goal_number), 'w') as offset_file:
 			offset_file.write(message_as_text)
 		# publish offset to tf
-		self.tf_pub.sendTransform((offset.position.x,offset.position.y,offset.position.z),(offset.orientation.x,offset.orientation.y,offset.orientation.z,offset.orientation.w),rospy.Time.now(),'map','odom')
+		# self.tf_pub.sendTransform((offset.position.x, offset.position.y, offset.position.z), (offset.orientation.x, offset.orientation.y, offset.orientation.z, offset.orientation.w), rospy.Time.now(), 'map', 'odom')
 		# publish current corrections
-		message_as_text = json.dumps({'theta_offset':theta_offset, 'path_offset':path_offset})
+		message_as_text = json.dumps({'theta_offset': theta_offset, 'path_offset': path_offset})
 		with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:
 			correction_file.write(message_as_text)
 

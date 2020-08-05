@@ -15,7 +15,6 @@
 	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
 
-
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
 		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 5; $0 $@' " output="screen">
@@ -48,6 +47,9 @@
 		<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
 			<remap from="cmd_vel" to="control/cmd_vel" />
 			<remap from="odom" to="sensors/odom/integrated" />
+			<rosparam param="min_omega">2.5</rosparam>
+			<rosparam param="max_omega">4.8</rosparam>
+			<rosparam param="max_v">0.2</rosparam>
 		</node>
 
 		<!-- Show image matching -->
