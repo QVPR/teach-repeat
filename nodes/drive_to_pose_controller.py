@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import rospy
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped, Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
 import tf_conversions
@@ -10,13 +10,6 @@ import math
 
 from miro_teach_repeat.msg import Goal
 
-WHEELBASE = 0.164
-MAX_V = 0.4
-MAX_OMEGA = 4.878 # (0.4 / (WHEELBASE/2))
-
-# Limit speed
-MAX_V = 0.3
-MIN_OMEGA = 2.5
 
 def wrapToPi(x):
 	return ((x + math.pi) % (2*math.pi)) - math.pi
@@ -27,28 +20,6 @@ def rho_alpha_beta(dx, dy, theta, goal_theta):
 	beta = wrapToPi(-theta - alpha + goal_theta)
 	return rho, alpha, beta
 
-def scale_velocities(v, omega, stop_at_goal):
-	if not stop_at_goal or abs(v) > MAX_V or abs(omega) > MAX_OMEGA:
-		# Scale to preserve rate of turn
-		if omega == 0:
-			v = MAX_V
-			omega = 0
-		elif v == 0:
-			v = 0
-			omega = math.copysign(MIN_OMEGA, omega)
-		else:
-			turn_rate = abs(omega / v)
-			turn_rate_at_max = MAX_OMEGA / MAX_V
-
-			if turn_rate > turn_rate_at_max:
-				omega = math.copysign(MAX_OMEGA, omega)
-				v = MAX_OMEGA / turn_rate
-			else:
-				omega = math.copysign(MAX_V * turn_rate, omega)
-				v = MAX_V
-	elif abs(omega) < MIN_OMEGA and v == 0:
-		omega = math.copysign(MIN_OMEGA, omega)
-	return v, omega
 
 class drive_to_pose_controller:
 
@@ -64,19 +35,46 @@ class drive_to_pose_controller:
 		self.gain_beta = rospy.get_param('~gain_turn_to_heading', -3.0)
 		self.gain_theta = rospy.get_param('~gain_turn_on_spot', 7.0)
 		self.zero_odom_offset = None
+		self.max_v = rospy.get_param('~max_v', 0.2)
+		self.min_omega = rospy.get_param('~min_omega', 0.15)
+		self.max_omega = rospy.get_param('~max_omega', 0.93)
 		self.goal_pos = None
 		self.goal_theta = None
 		self.stop_at_goal = None
 		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		# self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
 			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_goal = rospy.Subscriber("goal", Goal, self.set_goal, queue_size=1)
+
+	def scale_velocities(self, v, omega, stop_at_goal):
+		if not stop_at_goal or abs(v) > self.max_v or abs(omega) > self.max_omega:
+			# Scale to preserve rate of turn
+			if omega == 0:
+				v = self.max_v
+				omega = 0
+			elif v == 0:
+				v = 0
+				omega = math.copysign(self.min_omega, omega)
+			else:
+				turn_rate = abs(omega / v)
+				turn_rate_at_max = self.max_omega / self.max_v
+
+				if turn_rate > turn_rate_at_max:
+					omega = math.copysign(self.max_omega, omega)
+					v = self.max_omega / turn_rate
+				else:
+					omega = math.copysign(self.max_v * turn_rate, omega)
+					v = self.max_v
+		elif abs(omega) < self.min_omega and v == 0:
+			omega = math.copysign(self.min_omega, omega)
+		return v, omega
 
 	def on_ready(self, msg):
 		if msg.data:
@@ -110,15 +108,18 @@ class drive_to_pose_controller:
 				v = 0
 				omega = self.gain_theta * wrapToPi(self.goal_theta-theta)
 
-			v, omega = scale_velocities(v, omega, self.stop_at_goal)
+			v, omega = self.scale_velocities(v, omega, self.stop_at_goal)
 
 			# if rho < 0.1:
 			# 	print('only turning - omega = %f' % omega)
 
-			motor_command = TwistStamped()
-			motor_command.header.stamp = rospy.Time.now()
-			motor_command.twist.linear.x = v
-			motor_command.twist.angular.z = omega
+			# motor_command = TwistStamped()
+			# motor_command.header.stamp = rospy.Time.now()
+			# motor_command.twist.linear.x = v
+			# motor_command.twist.angular.z = omega
+			motor_command = Twist()
+			motor_command.linear.x = v
+			motor_command.angular.z = omega
 
 			self.pub_cmd_vel.publish(motor_command)
 
