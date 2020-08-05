@@ -120,6 +120,7 @@ class teach_repeat_localiser:
 		self.last_goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.goal_plus_lookahead = tf_conversions.toMsg(tf_conversions.Frame())
 		self.last_odom = None
+		self.zero_odom_offset = None
 		global GOAL_DISTANCE_SPACING, LOOKAHEAD_DISTANCE_RATIO, TURNING_TARGET_RANGE_DISTANCE_RATIO
 		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_seperation', 0.2)
 		LOOKAHEAD_DISTANCE_RATIO = rospy.get_param('/lookahead_distance_ratio', 0.65)
@@ -180,8 +181,17 @@ class teach_repeat_localiser:
 	def on_ready(self, msg):
 		if msg.data:
 			if not self.ready:
-				self.update_goal(tf_conversions.fromMsg(self.poses[0]))
+				self.start()
 			self.ready = True
+
+	def start(self):
+		if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
+			# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
+			print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
+			self.goal_index = 1
+			self.update_goal(tf_conversions.fromMsg(self.poses[1]))
+		else:
+			self.update_goal(tf_conversions.fromMsg(self.poses[0]))
 
 	def update_goal_index(self):
 		self.goal_index += 1
@@ -215,9 +225,18 @@ class teach_repeat_localiser:
 		with open(self.save_dir+('correction/%06d_correction.txt' % self.goal_number), 'w') as correction_file:
 			correction_file.write(message_as_text)
 
+	def subtract_odom(self, odom, odom_frame_to_subtract):
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
+		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
+		return odom
+
 	def process_odom_data(self, msg):
 		if self.ready and self.last_image is not None:
 			self.mutex.acquire()
+			if self.last_odom is None:
+				self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
+			msg = self.subtract_odom(msg, self.zero_odom_offset)
 			self.last_odom = msg.pose.pose
 
 			current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
@@ -464,5 +483,5 @@ if __name__ == "__main__":
 	rospy.init_node("teach_repeat_localiser")
 	localiser = teach_repeat_localiser()
 	if localiser.ready:
-		localiser.update_goal(tf_conversions.fromMsg(localiser.poses[0]))
+		localiser.start()
 	rospy.spin()

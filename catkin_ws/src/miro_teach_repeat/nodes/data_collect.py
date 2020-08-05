@@ -25,6 +25,7 @@ class data_collect:
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.last_odom = None
 		self.current_odom = None
+		self.zero_odom_offset = None
 		self.distance_threshold = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.angle_threshold = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
 
@@ -43,7 +44,15 @@ class data_collect:
 
 	def process_odom_data(self, msg):
 		if self.ready:
-			self.current_odom = msg
+			if self.current_odom is None:
+				self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
+			self.current_odom = self.subtract_odom(msg, self.zero_odom_offset)
+
+	def subtract_odom(self, odom, odom_frame_to_subtract):
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
+		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
+		return odom
 
 	def process_image_data(self, msg):
 		if self.ready:
