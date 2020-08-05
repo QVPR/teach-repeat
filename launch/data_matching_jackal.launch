@@ -12,6 +12,9 @@
 	<rosparam param="goal_pose_seperation">0.3</rosparam>
 	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
+	<rosparam param="min_omega">0.15</rosparam>
+	<rosparam param="max_omega">0.93</rosparam> <!-- (MAX_V / (WHEELBASE/2)) -->
+	<rosparam param="max_v">0.2</rosparam>
 
 	<!-- Load image files for matching -->
 	<node pkg="miro_teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
