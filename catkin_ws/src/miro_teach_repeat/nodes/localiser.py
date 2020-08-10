@@ -71,7 +71,7 @@ def delta_frame_in_bounds(delta_frame):
 			return True
 		else:
 			pass
-			# print('angle difference from goal = %.2f [rho = %.3f]' % (math.degrees(angle), distance))
+			print('angle difference from goal = %.2f [rho = %.3f]' % (math.degrees(angle), distance))
 	return False
 
 def get_expected_px_offset(offset_frame):
@@ -106,7 +106,8 @@ class teach_repeat_localiser:
 		if self.load_dir[-1] != '/':
 			self.load_dir += '/'
 		self.sum_theta_correction = 0.0
-		self.sum_path_correction = 1.0
+		self.sum_path_correction = 0.0
+		self.correction_list = [[],[]]
 		self.stop_at_end = rospy.get_param('~stop_at_end', True)
 		self.discrete_correction = rospy.get_param('~discrete-correction', False)
 
@@ -237,12 +238,12 @@ class teach_repeat_localiser:
 			msg = self.subtract_odom(msg, self.zero_odom_offset)
 			self.last_odom = msg.pose.pose
 
-			current_frame_odom = tf_conversions.fromMsg(msg.pose.pose)
+			current_pose_odom = tf_conversions.fromMsg(msg.pose.pose)
 			current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
 			current_goal_plus_lookahead_frame_odom = tf_conversions.fromMsg(self.goal_plus_lookahead)
 			old_goal_frame_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 
-			delta_frame = current_frame_odom.Inverse() * current_goal_plus_lookahead_frame_odom
+			delta_frame = current_pose_odom.Inverse() * current_goal_plus_lookahead_frame_odom
 
 			if delta_frame_in_bounds(delta_frame):
 				old_goal_index = self.goal_index
@@ -264,14 +265,18 @@ class teach_repeat_localiser:
 					goal_offset = get_corrected_goal_offset(old_goal_frame_world, new_goal_frame_world, 0.0, 1.0)
 					new_goal = current_goal_frame_odom * goal_offset
 
+					sum_path_correction_ratio = (GOAL_DISTANCE_SPACING + self.sum_path_correction) / GOAL_DISTANCE_SPACING
 					self.update_goal(new_goal, True, turning_goal)
-					self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, self.sum_theta_correction, self.sum_path_correction)
+					self.save_data_at_goal(msg.pose.pose, new_goal, new_goal_frame_world, self.sum_theta_correction, sum_path_correction_ratio)
 					self.goal_number += 1
-					print('theta [%f]\tpath [%f]' % (math.degrees(self.sum_theta_correction), self.sum_path_correction))
+					print('[%d] theta [%f]\tpath [%f]' % (old_goal_index, math.degrees(self.sum_theta_correction), sum_path_correction_ratio))
 					if turning_goal:
 						print('turning goal:')
+					# if abs(math.degrees(self.sum_theta_correction)) > 10 or sum_path_correction_ratio > 2 or sum_path_correction_ratio < 0.5:
+					# 	print('big correction:\n\ttheta: %s\n\tpath: %s' % (str(self.correction_list[0]),str(self.correction_list[1])))
 					self.sum_theta_correction = 0
-					self.sum_path_correction = 1.0
+					self.sum_path_correction = 0.0
+					self.correction_list = [[],[]]
 			self.mutex.release()
 
 	def process_image_data(self, msg):
@@ -322,32 +327,28 @@ class teach_repeat_localiser:
 			last_goal_world = tf_conversions.fromMsg(self.poses[self.goal_index-1])
 			last_goal_odom = tf_conversions.fromMsg(self.last_goal)
 			next_goal_odom = tf_conversions.fromMsg(self.goal)
-			current_frame_odom = tf_conversions.fromMsg(self.last_odom)
+			current_pose_odom = tf_conversions.fromMsg(self.last_odom)
 
-			next_goal_offset_odom = next_goal_odom.Inverse() * current_frame_odom
-			last_goal_offset_odom = last_goal_odom.Inverse() * current_frame_odom
+			next_goal_offset_odom = next_goal_odom.Inverse() * current_pose_odom
+			last_goal_offset_odom = last_goal_odom.Inverse() * current_pose_odom
 			inter_goal_offset_odom = last_goal_odom.Inverse() * next_goal_odom
-			inter_goal_distance_odom = inter_goal_offset_odom.p.Norm()
-			inter_goal_offset_rotated = tf_conversions.Rotation.RotZ(-last_goal_odom.M.GetRPY()[2]) * inter_goal_offset_odom.p
-			inter_goal_offset_angle = math.atan2(inter_goal_offset_rotated.y(), inter_goal_offset_rotated.x())
 
 			last_goal_distance = last_goal_offset_odom.p.Norm()
 			next_goal_distance = next_goal_offset_odom.p.Norm()
-			next_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-next_goal_odom.M.GetRPY()[2]) * next_goal_offset_odom.p).x()
-			last_goal_parallel_distance = (tf_conversions.Rotation.RotZ(inter_goal_offset_angle-last_goal_odom.M.GetRPY()[2]) * last_goal_offset_odom.p).x()
-			next_goal_angle = next_goal_offset_odom.M.GetRPY()[2]
+			last_goal_to_next_goal_vector = np.array(list(inter_goal_offset_odom.p))
+			last_goal_to_current_pose_vector = np.array(list(last_goal_offset_odom.p))
 			last_goal_angle = last_goal_offset_odom.M.GetRPY()[2]
+			next_goal_angle = next_goal_offset_odom.M.GetRPY()[2]
 
 			# if it's a distance goal, use distance; if it's a rotation goal, use angle
 			if is_turning_goal(last_goal_world, next_goal_world):
+				# this isn't used - if it's a turning goal we don't make a correction
 				turning_goal = True
 				u = last_goal_angle / (last_goal_angle - next_goal_angle) # should have opposite signs
-				# print('turning correction u = ',u)
 			else:
 				turning_goal = False
-				u = last_goal_distance / (last_goal_distance + next_goal_distance)
-				# u = last_goal_parallel_distance / (last_goal_parallel_distance - next_goal_parallel_distance)
-				# print('straight correction u = ',u), 'woulda been', last_goal_offset_odom.p.Norm() / (last_goal_offset_odom.p.Norm() + next_goal_offset_odom.p.Norm())
+				# u = last_goal_distance / (last_goal_distance + next_goal_distance)
+				u = np.sum(last_goal_to_next_goal_vector * last_goal_to_current_pose_vector) / np.sum(last_goal_to_next_goal_vector**2)
 
 			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+self.search_range)
 			if self.goal_index > self.search_range:
@@ -381,7 +382,7 @@ class teach_repeat_localiser:
 				s = corr.sum()
 				if s > 0:
 					corr /= s
-				pos = (corr * w).sum()
+				pos = (corr * w).sum() #- (u - 0.5)
 				path_error = pos
 
 				# pos > 0: images are telling me I'm ahead of where I think I am
@@ -393,24 +394,31 @@ class teach_repeat_localiser:
 				#   want d -> d + pos
 				#   d *= (d + pos) / d
 
-				K2 = 0.05
-				path_correction = (inter_goal_distance_odom - K2 * path_error * GOAL_DISTANCE_SPACING) / inter_goal_distance_odom
+				K2 = 0.01
+				path_correction_distance = -K2 * path_error * GOAL_DISTANCE_SPACING
+				path_correction = (next_goal_distance + path_correction_distance) / next_goal_distance
 				if np.isnan(path_correction):
-					print(corr, s, w, pos, inter_goal_distance_odom)
-				# Note: need a check for if abs(path_error) > inter_goal_distance_odom
-				# RuntimeWarning: invalid value encountered in double_scalars
+					print(corr, s, w, pos, next_goal_distance)
+				if -path_correction_distance > next_goal_distance:
+					print('PATH CORRECTION ERROR: correction is greater than distance to goal!')
+					print('corr = %s; pos = %f, path_correction = %f, goal_distance = %f' % (str(corr),pos,path_correction_distance,next_goal_distance))
+					print('path_correction = %f' % path_correction)
+					path_correction_distance = -next_goal_distance
+					path_correction = 0.0
 			else:
 				path_correction = 1.0
-				pos = 0.0
+				path_correction_distance = 0.0
 
-			goal_offset = get_corrected_goal_offset(current_frame_odom, next_goal_odom, correction_rad, path_correction)
-			new_goal = current_frame_odom * goal_offset
+			goal_offset = get_corrected_goal_offset(current_pose_odom, next_goal_odom, correction_rad, path_correction)
+			new_goal = current_pose_odom * goal_offset
 
 			self.update_goal(new_goal, False, turning_goal)
 			self.sum_theta_correction += correction_rad
-			self.sum_path_correction *= path_correction
+			self.sum_path_correction += path_correction_distance
+			self.correction_list[0].append(correction_rad)
+			self.correction_list[1].append(path_correction_distance)
 			# new_lookahead_goal = tf_conversions.fromMsg(self.goal_plus_lookahead)
-			# d = current_frame_odom.Inverse() * new_lookahead_goal
+			# d = current_pose_odom.Inverse() * new_lookahead_goal
 			# print('pos = %f, d = %f' % (pos, d.p.Norm()))
 
 	def do_discrete_correction(self, pose, old_goal_frame_odom, old_goal_frame_world):
