@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import rospy
-from geometry_msgs.msg import TwistStamped, Twist
+from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
 import tf_conversions
@@ -52,8 +52,7 @@ class drive_to_pose_controller:
 		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 
 	def setup_publishers(self):
-		# self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
-		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
