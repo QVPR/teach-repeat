@@ -77,6 +77,7 @@ Development:
 		✔ Use projection of position onto path segment to calculate u @done(20-08-10 10:33)
 			* Mostly is very similar, but after turning goals we tend to transition to the next goal a distance behind the previous
 				Distance u goes from 0.2 to 0 back up to 1, whereas projected u goes from -0.2 to 1, so we can correctly filter out bad corrections
+		✔ Global localisation to initialise @done(20-08-11 13:18)
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
