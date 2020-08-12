@@ -195,7 +195,6 @@ class teach_repeat_localiser:
 			offsets, correlations = self.calculate_image_pose_offset(0, len(self.poses))
 			best_match = np.argmax(correlations)
 			if best_match == 0 or (best_match == 1 and correlations[0] > correlations[2]):
-				print('@0')
 				if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
 					# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
 					print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
@@ -220,15 +219,6 @@ class teach_repeat_localiser:
 				self.zero_odom_offset = (goal_pose * odom_pose.Inverse()).Inverse()
 			self.last_odom_pose = tf_conversions.toMsg(self.zero_odom_offset.Inverse() * tf_conversions.fromMsg(self.last_odom_pose))
 			print('Global localisation - best match at pose %d [correlation = %f]' % (self.goal_index, correlations[best_match]))
-			print('Current odom pose = [%.3f, %.3f, %.1f deg]' % (odom_pose.p.x(), odom_pose.p.y(), math.degrees(odom_pose.M.GetRPY()[2])))
-			print('Starting goal pose = [%.3f, %.3f, %.1f deg]' % (goal_pose.p.x(), goal_pose.p.y(), math.degrees(goal_pose.M.GetRPY()[2])))
-			print('Odom to subtract = [%.3f, %.3f, %.1f deg]' % (self.zero_odom_offset.p.x(), self.zero_odom_offset.p.y(), math.degrees(self.zero_odom_offset.M.GetRPY()[2])))
-			where_am_i = tf_conversions.fromMsg(self.last_odom_pose)
-			print('Where do I think I am? - [%.3f, %.3f, %.1f deg]' % (where_am_i.p.x(), where_am_i.p.y(), math.degrees(where_am_i.M.GetRPY()[2])))
-			# print(odom_pose)
-			# print(goal_pose)
-			# print(self.zero_odom_offset)
-			# print(where_am_i)
 		else:
 			if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
 				# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
@@ -375,17 +365,9 @@ class teach_repeat_localiser:
 		original_pose_frame_lookahead = original_pose_frame * lookahead
 		pose_frame_looahead = pose_frame * lookahead
 
-		theta = pose_frame.M.GetRPY()[2]
 		goal.pose.pose.position.x = pose_frame_looahead.p.x()
 		goal.pose.pose.position.y = pose_frame_looahead.p.y()
 		goal.pose.pose.orientation = tf_conversions.toMsg(pose_frame_looahead).orientation
-
-		odom_offset_to_pose = tf_conversions.fromMsg(self.last_odom_pose).Inverse() * original_pose_frame_lookahead
-		odom_to_goal = (self.zero_odom_offset * tf_conversions.fromMsg(self.last_odom_pose)).Inverse() * pose_frame_looahead
-		print('---')
-		print('odom_offset_to_pose pose = [%.3f, %.3f, %.1f deg]' % (odom_offset_to_pose.p.x(), odom_offset_to_pose.p.y(), math.degrees(odom_offset_to_pose.M.GetRPY()[2])))
-		print('odom_to_goal pose = [%.3f, %.3f, %.1f deg]' % (odom_to_goal.p.x(), odom_to_goal.p.y(), math.degrees(odom_to_goal.M.GetRPY()[2])))
-		print('-----')
 
 		goal.stop_at_goal.data = stop_at_goal
 		self.goal_pub.publish(goal)
