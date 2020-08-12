@@ -156,9 +156,12 @@ class image_matcher:
 		offsets_data = [int(match[0]) for match in match_data]
 		correlations_data = [match[1] for match in match_data]
 
-		correlation_debug_image = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[0]) * len(correlations_data) / debug_image.shape[0]].reshape(-1,1,1), (5,3)))
+		correlation_bar_height = 5
+		correlation_bar = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[1]) * len(correlations_data) / debug_image.shape[1]].reshape(1,-1,1), (correlation_bar_height,1,3)))
+		print(debug_image.shape)
+		print(correlation_bar.shape)
 
-		debug_image = np.hstack((correlation_debug_image, debug_image))
+		debug_image = np.vstack((debug_image, correlation_bar))
 
 		if debug_image is not None:
 			self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
