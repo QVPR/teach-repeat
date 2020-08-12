@@ -20,17 +20,17 @@
 		<!-- Teleop to control Miro -->
 		<arg name="speed_lin" value="0.4" />
 		<arg name="speed_ang" value="2.0" />
-		<!-- <include file="$(find miro_demos)/launch/teleop.launch">
+		<include file="$(find miro_demos)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
-		</include> -->
-		<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
+		</include>
+		<!-- <include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
 			<arg name="wait_for_ready" value="true" />
-		</include>
+		</include> -->
 
 		<!-- Stitch image files for matching -->
 		<node pkg="miro_teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />

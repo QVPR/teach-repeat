@@ -134,6 +134,7 @@ STATES_UPDATED_AT_ONCE = 71
 STATE_UPDATE_HALF_SEARCH_RANGE = (STATES_UPDATED_AT_ONCE-1) / STATES_PER_GOAL / 2
 STATE_OBSERVATION_ADDITIVE_NOISE = 5. / STATES_UPDATED_AT_ONCE
 d = np.zeros(STATES_PER_GOAL * (len(goals) - 1) + 1)
+d_x = np.arange(0, len(goals)-1+1./STATES_PER_GOAL, 1./STATES_PER_GOAL)
 d[0]  = 1 # initialise at the start
 dist_moved = 0
 
@@ -149,13 +150,14 @@ R_ALPHA = 0.01
 theta_deltas = [theta_delta]
 theta_delta_variances = [theta_delta_variance]
 
-N = 5000
+N = 10000
 xs = []
 ys = []
 thetas = []
 gt_xs = []
 gt_ys = []
 gt_thetas = []
+turning_goals = []
 
 def along_path_prediction(delta_d):
 	global d, dist_moved
@@ -241,8 +243,14 @@ def orientation_observation():
 			theta_delta += W_B*V_B
 			theta_delta_variance -= W_B*theta_delta_variance
 
+def get_d_position():
+	return np.sum(d * d_x)
+
 def update_step():
 	global turning_goal, theta_delta
+	pos = get_d_position()
+	goal_to_navigate_to = goals[int(math.ceil(pos))]
+
 	theta = current_frame_odom.M.GetRPY()[2]
 	gt_theta = current_frame_world.M.GetRPY()[2]
 	target_pos = (goal_to_navigate_to[0], goal_to_navigate_to[1], 0)
@@ -256,23 +264,26 @@ def update_step():
 	v = 0.10
 	omega = -1.5 * theta_delta
 
-	turning_goal = False
-	if goal_index > 0:
-		turning_goal = math.sqrt(np.sum((goals[goal_index][:2] - goals[goal_index-1][:2])**2)) < 0.1
+	turn_rotation = math.degrees(wrapToPi(goals[int(math.ceil(pos))][2] - goals[int(math.ceil(pos))-1][2]))
+	turn_distance = math.sqrt(np.sum((goals[int(math.ceil(pos))][:2] - goals[int(math.ceil(pos))-1][:2])**2))
+	turning_goal = abs(turn_rotation / turn_distance) > 150 # deg / m
+	turning_goals.append(turning_goal)
 
 	if turning_goal:
 		# todo: do I need to disable the correction on sharp turns?
-		v = 0
-		omega = gain_alpha * wrapToPi(target_theta-theta)
+		v = 0.05
+		# omega *= 10
+		omega = 1 * wrapToPi(target_theta-theta)
+		pass
 
 	# Note: rho builds up over time if we turn for one goal, but using turning goal it never moves...
 	# if rho < TURNING_TARGET_RANGE:
 	# 	v = 0
 	# 	omega = gain_alpha * wrapToPi(target_theta-theta)
 
-	# v, omega = drive_to_pose_controller.scale_velocities(v, omega, turning_goal)
+	# v, omega = drive_to_pose_controller.scale_velocities(v, omega, False)
 
-	v_encoder = v + np.random.randn() * MAX_V / 10
+	v_encoder = v #+ np.random.randn() * MAX_V / 10
 	omega_encoder = omega + np.random.randn() * MAX_OMEGA / 10
 
 	current_frame_odom.p += tf_conversions.Vector(dt * 1*v_encoder * math.cos(theta), dt * v_encoder * math.sin(theta), 0.0)
@@ -450,8 +461,13 @@ for i in range(N):
 
 	delta_frame = current_frame_odom.Inverse() * np_to_frame(goal_to_navigate_to)
 
-	along_path_observation()
-	orientation_observation()
+	pos = get_d_position()
+	turn_rotation = math.degrees(wrapToPi(goals[int(pos)][2] - goals[int(pos)-1][2]))
+	turn_distance = math.sqrt(np.sum((goals[int(pos)][:2] - goals[int(pos)-1][:2])**2))
+	turning_goal = abs(turn_rotation / turn_distance) > 150 # deg / m
+	if not turning_goal:
+		along_path_observation()
+		orientation_observation()
 		
 	if localiser.delta_frame_in_bounds(delta_frame):
 		old_goal_index = goal_index
@@ -505,22 +521,33 @@ plt.plot(np.vstack((goals_right_length[:len(update_locations),0],np.array([t[0] 
 plt.quiver(goals[:,0], goals[:,1], np.cos(goals[:,2]), np.sin(goals[:,2]))
 # plt.quiver([t[0] for t in actual_targets], [t[1] for t in actual_targets], [math.cos(t[2]) for t in actual_targets], [math.sin(t[2]) for t in actual_targets], color="#ff0000", alpha=0.5)
 # plt.plot([t[0] for t in update_locations], [t[1] for t in update_locations], 'x', color="#ff0000", alpha=0.5)
-q1 = plt.quiver(gt_xs[::display_spacing], gt_ys[::display_spacing], np.cos(gt_thetas[::display_spacing]), np.sin(gt_thetas[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
+xs_turning = [x for x, turn in zip(gt_xs,turning_goals) if turn]
+ys_turning = [y for y, turn in zip(gt_ys,turning_goals) if turn]
+thetas_turning = [theta for theta, turn in zip(gt_thetas,turning_goals) if turn]
+xs_notturning = [x for x, turn in zip(gt_xs,turning_goals) if not turn]
+ys_notturning = [y for y, turn in zip(gt_ys,turning_goals) if not turn]
+thetas_notturning = [theta for theta, turn in zip(gt_thetas,turning_goals) if not turn]
+plt.quiver(xs_turning[::display_spacing], ys_turning[::display_spacing], np.cos(thetas_turning[::display_spacing]), np.sin(thetas_turning[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
+plt.quiver(xs_notturning[::display_spacing], ys_notturning[::display_spacing], np.cos(thetas_notturning[::display_spacing]), np.sin(thetas_notturning[::display_spacing]), scale=50, color='#0000ff', alpha = 0.5)
+# q1 = plt.quiver(gt_xs[not turning_goal][::display_spacing], gt_ys[not turning_goal][::display_spacing], np.cos(gt_thetas[not turning_goal][::display_spacing]), np.sin(gt_thetas[not turning_goal][::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
+
+
 # plt.quiver(target_errors_world[:,0], target_errors_world[:,1], np.cos(target_errors_world[:,2]), np.sin(target_errors_world[:,2]), color='#ff0000', alpha = 0.5)
 # q2 = plt.quiver(xs[::display_spacing], ys[::display_spacing], np.cos(thetas[::display_spacing]), np.sin(thetas[::display_spacing]), scale=50, color='#0000ff', alpha = 0.2)
 plt.axis('equal')
 # plt.legend([q1,q2],['ground truth','odometry'])
-plt.legend([q1],['ground truth'])
+# plt.legend([q1],['ground truth'])
 plt.title('Navigation test - Correction - 5% Gaussian Noise [6 min]')
 
 ds_2d = np.array(ds)
 x = np.arange(0,len(goals)-1+1./STATES_PER_GOAL, 1./STATES_PER_GOAL)
 
 plt.figure()
-# plt.plot(np.sum(ds_2d * x, axis=1))
 plt.imshow(ds_2d)
 plt.figure()
 plt.plot(theta_deltas)
+plt.figure()
+plt.plot(np.sum(ds_2d * d_x, axis=1))
 
 # fig = plt.figure()
 # ax = fig.gca(projection='3d')
