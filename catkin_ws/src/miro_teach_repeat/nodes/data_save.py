@@ -75,7 +75,7 @@ class data_save:
 			message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 
 			try:
-				trans = self.tfBuffer.lookup_transform('/base_link', '/map', rospy.Time())
+				trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
 				trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
 				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as tf_trans_file:
 					tf_trans_file.write(trans_as_text)
