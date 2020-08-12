@@ -51,6 +51,29 @@ def np_to_frame(pose_tuple):
 def frame_to_np(pose_frame):
 	return np.array((pose_frame.p.x(), pose_frame.p.y(), pose_frame.M.GetRPY()[2]))
 
+def scale_velocities(v, omega, max_v, min_omega, max_omega, stop_at_goal):
+	if not stop_at_goal or abs(v) > max_v or abs(omega) > max_omega:
+		# Scale to preserve rate of turn
+		if omega == 0:
+			v = max_v
+			omega = 0
+		elif v == 0:
+			v = 0
+			omega = math.copysign(min_omega, omega)
+		else:
+			turn_rate = abs(omega / v)
+			turn_rate_at_max = max_omega / max_v
+
+			if turn_rate > turn_rate_at_max:
+				omega = math.copysign(max_omega, omega)
+				v = max_omega / turn_rate
+			else:
+				omega = math.copysign(max_v * turn_rate, omega)
+				v = max_v
+	elif abs(omega) < min_omega and v == 0:
+		omega = math.copysign(min_omega, omega)
+	return v, omega
+
 MAX_V = 0.2
 MAX_OMEGA = 2.439
 dt = 0.02
@@ -58,9 +81,10 @@ dt = 0.02
 LOOKAHEAD_DISTANCE = localiser.LOOKAHEAD_DISTANCE_RATIO*localiser.GOAL_DISTANCE_SPACING
 TURNING_TARGET_RANGE = localiser.TURNING_TARGET_RANGE_DISTANCE_RATIO*localiser.GOAL_DISTANCE_SPACING
 
-gain_rho = 0.3
+gain_rho = 0.5
 gain_alpha = 5.0
 gain_beta = -3.0
+gain_theta = 7.0
 
 np.random.seed(7)
 
@@ -122,18 +146,28 @@ def update_step():
 	d_pos = tf_conversions.Vector(*target_pos) - current_frame_odom.p
 	rho, alpha, beta = drive_to_pose_controller.rho_alpha_beta(d_pos.x(), d_pos.y(), theta, target_theta)
 
-	v = gain_rho * rho
-	omega = gain_alpha * alpha + gain_beta * beta
+	# v = gain_rho * rho
+	# omega = gain_alpha * alpha + gain_beta * beta
 
 	# Note: rho builds up over time if we turn for one goal, but using turning goal it never moves...
-	if rho < TURNING_TARGET_RANGE:
+	# if rho < TURNING_TARGET_RANGE:
+	# 	v = 0
+	# 	omega = gain_alpha * wrapToPi(target_theta-theta)
+
+	if rho < TURNING_TARGET_RANGE or alpha > math.pi/2 or alpha < -math.pi/2:
+		# we're not in the stable region of the controller - rotate to face the goal
+		# Better would be to reverse the direction of motion, but this would break along-path localisation
 		v = 0
-		omega = gain_alpha * wrapToPi(target_theta-theta)
+		omega = gain_theta * wrapToPi(target_theta-theta)
+	else:
+		# we're in the stable region of the controller
+		v = gain_rho * rho
+		omega = gain_alpha * alpha + gain_beta * beta
 
-	v, omega = drive_to_pose_controller.scale_velocities(v, omega, turning_goal)
+	v, omega = scale_velocities(v, omega, 0.2, 2.2, 4.8, turning_goal)
 
-	vN = 0#np.random.randn() * MAX_V / 10
-	omegaN = 0#np.random.randn() * MAX_OMEGA / 10
+	vN = np.random.randn() * MAX_V / 10
+	omegaN = np.random.randn() * MAX_OMEGA / 10
 
 	current_frame_odom.p += tf_conversions.Vector(dt * 1*(v+vN) * math.cos(theta), dt * (v+vN) * math.sin(theta), 0.0)
 	current_frame_odom.M.DoRotZ(dt * (omega+omegaN))
@@ -209,7 +243,7 @@ def update_goal(goal_frame, new_goal=False):
 	goal = frame_to_np(goal_frame)
 
 	# if goal is a turning goal, don't set a virtual waypoint ahead
-	print(diff.p.Norm())
+	# print(diff.p.Norm())
 	if diff.p.Norm() < TURNING_TARGET_RANGE:
 		turning_goal = True
 		goal_to_navigate_to = goal
@@ -240,6 +274,8 @@ def do_continuous_correction():
 
 	next_goal_distance = next_goal_offset_odom.p.Norm()
 	last_goal_distance = last_goal_offset_odom.p.Norm()
+	last_goal_to_next_goal_vector = np.array(list(inter_goal_offset_odom.p))
+	last_goal_to_current_pose_vector = np.array(list(last_goal_offset_odom.p))
 	next_goal_angle = next_goal_offset_odom.M.GetRPY()[2]
 	last_goal_angle = last_goal_offset_odom.M.GetRPY()[2]
 
@@ -247,7 +283,7 @@ def do_continuous_correction():
 	if inter_goal_distance < 0.1:
 		u = last_goal_angle / (last_goal_angle + next_goal_angle)
 	else:
-		u = last_goal_distance / (last_goal_distance + next_goal_distance)
+		u = np.sum(last_goal_to_next_goal_vector * last_goal_to_current_pose_vector) / np.sum(last_goal_to_next_goal_vector**2)
 
 	SR = 1
 	offsets, correlations = calculate_image_pose_offset(goal_index, 1+SR, return_all=True)
@@ -263,7 +299,7 @@ def do_continuous_correction():
 	offset = (1-u) * (last_offset) + u * (next_offset)
 	expected_offset = (1-u) * expected_last_offset + u * expected_next_offset
 
-	K = 0#.2
+	K = 0.01
 	correction_rad = K * (offset)#- expected_offset)
 
 	# if math.copysign(1, correction_rad) != math.copysign(1, offset):
@@ -280,7 +316,7 @@ def do_continuous_correction():
 		pos = w.sum()
 		path_error = pos - (u - 0.5)
 
-		K2 = 0#.5
+		K2 = 0.01
 		path_correction = (next_goal_distance - K2 * path_error * localiser.GOAL_DISTANCE_SPACING) / next_goal_distance
 	else:
 		path_correction = 1.0
@@ -349,8 +385,8 @@ display_spacing = 10
 # plt.figure()
 # plt.quiver(actual_goals_odom[:,0], actual_goals_odom[:,1], np.cos(actual_goals_odom[:,2]), np.sin(actual_goals_odom[:,2]))
 # plt.quiver(xs[::display_spacing], ys[::display_spacing], np.cos(thetas[::display_spacing]), np.sin(thetas[::display_spacing]), scale=50, color='#00ff00', alpha = 0.5)
-plt.plot(continuous_offsets)
-plt.plot(continuous_path_offsets)
+# plt.plot(continuous_offsets)
+# plt.plot(continuous_path_offsets)
 plt.figure()
 plt.plot(np.vstack((goals_right_length[:len(update_locations),0],np.array([t[0] for t in update_locations]))), 
 	np.vstack((goals_right_length[:len(update_locations),1],np.array([t[1] for t in update_locations]))), 
