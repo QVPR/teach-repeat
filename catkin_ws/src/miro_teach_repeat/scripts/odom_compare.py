@@ -56,7 +56,7 @@ ground_truths = [set_first_pose_to_zero(read_transform_stamped_files(p)) for p i
 
 pose_data = [get_pose_x_y_theta(pose) for pose in poses] + [get_pose_x_y_theta(pose) for pose in ground_truths]
 
-colours = ['#00ff00', '#0000ff', '#ff0000']
+colours = ['#44dd44', '#4444dd', '#dd4444']
 
 for pose_data_list,colour in zip(pose_data,colours):
 	plt.quiver(pose_data_list[0],pose_data_list[1],np.cos(pose_data_list[2]),np.sin(pose_data_list[2]), scale=50, color=colour)
@@ -68,4 +68,5 @@ for pose_data_list,colour in zip(pose_data,colours):
 # plt.title('Outdoors')
 plt.legend(['odom','slam'])
 plt.axis('equal')
+plt.title('Jackal teach run: odometry vs SLAM trajectory')
 plt.show()

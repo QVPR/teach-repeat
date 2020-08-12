@@ -92,6 +92,14 @@ def load_corrections(directory):
 	theta_offsets = np.array([0.0] + [correction['theta_offset'] for correction in corrections])
 	return Corrections(path_offets, theta_offsets)
 
+def load_corr_data(directory):
+	correlation_data_files = get_sorted_files_by_ending(directory, '.txt')
+	correlation_data = [read_file(f) for f in correlation_data_files]
+	pos = [float(corr_data.split('\n')[0]) for corr_data in correlation_data]
+	u = [float(corr_data.split('\n')[1]) for corr_data in correlation_data]
+	corr = [[float(num) for num in corr_data.split('\n')[2][1:-1].split(' ') if num != ''] for corr_data in correlation_data]
+	return pos, u, corr
+
 def get_confusion_matrix(directory, reference_images, test_images):
 	if not os.path.exists(directory + 'confusion.npy'):
 		correlations, offsets = confusion_matrix.confusion_matrix(reference_images, test_images)
@@ -134,13 +142,14 @@ def plot_along_route_localisation(correlations, path_offsets, correspondances):
 	ax2.set_yscale('log')
 	plt.tight_layout()
 
-def plot_odom_theta_offset(poses, theta_offsets):
+def plot_odom_theta_offset(poses, theta_offsets, reference_poses):
 	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)})
 
 	theta_lim = math.ceil(math.degrees(np.abs(theta_offsets).max()))
 	corrected_theta_offsets = 0.5 + 0.5*(theta_offsets / math.radians(theta_lim)).clip(min=-1, max=1)
 	colours = plt.cm.coolwarm(corrected_theta_offsets)
 
+	ax1.quiver(reference_poses.x, reference_poses.y, np.cos(reference_poses.theta), np.sin(reference_poses.theta), color='black', scale=50)
 	ax1.quiver(poses.x, poses.y, np.cos(poses.theta), np.sin(poses.theta), color=colours, scale=50)
 	sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.coolwarm)
 	sm.set_array([-theta_lim, theta_lim])
@@ -151,6 +160,33 @@ def plot_odom_theta_offset(poses, theta_offsets):
 	ax2.axhline(0.0, linestyle='--', color='grey')
 	ax2.plot(np.degrees(theta_offsets))
 	ax2.set_ylabel(r'$\Delta\theta$ ($^\circ$)')
+	ax2.set_xticklabels([])
+	plt.tight_layout()
+
+def plot_odom_path_offsets(poses, path_offsets, reference_poses):
+	fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw={'height_ratios': (5,1)})
+
+	max_extension = path_offsets.max()
+	max_contraction = (1./path_offsets).max()
+	path_lim = max(max_extension, max_contraction)
+	corrected_path_offsets = path_offsets.copy()
+	corrected_path_offsets[corrected_path_offsets < 1] = -1./corrected_path_offsets[corrected_path_offsets < 1]
+	corrected_path_offsets = 0.5 + corrected_path_offsets/(2*path_lim)
+	colours = plt.cm.coolwarm(corrected_path_offsets)
+
+	ax1.quiver(reference_poses.x, reference_poses.y, np.cos(reference_poses.theta), np.sin(reference_poses.theta), color='black', scale=50)
+	ax1.quiver(poses.x, poses.y, np.cos(poses.theta), np.sin(poses.theta), color=colours, scale=50)
+	sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.coolwarm)
+	sm.set_array([])
+	cb = fig.colorbar(sm, ax=ax1)
+	cb.set_label(r'path correction')
+	cb.set_ticks([0,0.5,1])
+	cb.ax.set_yticklabels(['$\\div$%.2f (reduce)' % (path_lim),'$\\times$1.0','$\\times$%.2f (extend)' % (path_lim)])
+	ax1.axis('equal')
+
+	ax2.axhline(1.0, linestyle='--', color='grey')
+	ax2.plot(path_offsets)
+	ax2.set_ylabel('Path correction')
 	ax2.set_xticklabels([])
 	plt.tight_layout()
 
@@ -280,7 +316,7 @@ def get_full_correspondances(correspdance_indices, length):
 
 if __name__ == "__main__":
 	dir_reference = os.path.expanduser('~/miro/data/office5/')
-	dir_test = os.path.expanduser('~/miro/data/office5_tests/3/')
+	dir_test = os.path.expanduser('~/miro/data/office5_tests/20/')
 
 	reference_images = load_images(dir_reference)
 	reference_images_full = load_images_cv(dir_reference+'full/', normalise=False)
@@ -297,8 +333,36 @@ if __name__ == "__main__":
 	test_poses = load_poses(dir_test + 'pose/')
 	test_offsets = load_poses(dir_test + 'offset/')
 	test_corrections = load_corrections(dir_test + 'correction/')
+	pos, u, corr = load_corr_data(dir_test)
 	# test_keyframe_correspondances = np.array([np.argmin([np.sum(np.abs(keyframe-test_image)) for test_image in test_images]) for keyframe in test_keyframes])
 
+	# fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+	# ax1.plot(u)
+	# ax2.plot(pos)
+	# from scipy.stats import linregress
+	# plt.scatter(u, pos)
+
+	# print(linregress(u, pos))
+
+	max_row_length = max([len(r) for r in corr])
+	for i, row in enumerate(corr):
+		if len(row) < max_row_length:
+			row = [np.nan] * ((max_row_length - len(row))/2) + row + [np.nan] * ((max_row_length - len(row))/2)
+			corr[i] = row
+	corr = np.array(corr)
+
+	corr_edit = corr.copy()
+	corr_edit -= 0.1
+	corr_edit[corr_edit < 0] = 0
+	corr_edit /= corr_edit.sum(axis=1).reshape(-1,1)
+	corr_pos = np.sum(corr_edit * np.arange(-2.5,2.6,1).reshape(1,-1), axis=1)
+	# corr_pos -= np.array(u)
+	print(plt.ylim())
+
+	plt.imshow(np.rot90(corr), aspect='auto', origin='lower')
+	plt.plot(np.array(pos) + 2.5, 'r')
+	plt.plot(corr_pos + 2.5, 'm')
+	plt.plot(np.array(u) + 2.)
 
 	# correlations, offsets = get_confusion_matrix(dir_test, reference_images, test_images)
 
@@ -310,7 +374,8 @@ if __name__ == "__main__":
 
 	# plot_image_along_path_localisation_full(correlations, test_keyframe_correspondances, 4)
 
-	plot_odom_theta_offset(test_poses, test_corrections.theta_offset)
+	# plot_odom_theta_offset(test_poses, test_corrections.theta_offset, reference_poses)
+	# plot_odom_path_offsets(test_poses, test_corrections.path_offset, reference_poses)
 
 	# plt.imshow(offsets)
 
