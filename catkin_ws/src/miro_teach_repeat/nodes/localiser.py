@@ -247,7 +247,7 @@ class teach_repeat_localiser:
 
 	def save_data_at_goal(self, pose, goal_odom, goal_world, theta_offset, path_offset):
 		try:
-			trans = self.tfBuffer.lookup_transform('/base_link', '/map', rospy.Time())
+			trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
 			trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
 			with open(self.save_dir+('pose/%06d_map_to_base_link.txt' % self.goal_number), 'w') as tf_trans_file:
 				tf_trans_file.write(trans_as_text)
