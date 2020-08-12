@@ -6,6 +6,7 @@ import cv2
 import os
 import yaml
 import json
+import datetime
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
@@ -152,9 +153,17 @@ class image_matcher:
 		offset = match_data[best_index][0]
 		correlation = match_data[best_index][1]
 
+		offsets_data = [int(match[0]) for match in match_data]
+		correlations_data = [match[1] for match in match_data]
+
+		correlation_debug_image = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[0]) * len(correlations_data) / debug_image.shape[0]].reshape(-1,1,1), (5,3)))
+
+		debug_image = np.hstack((correlation_debug_image, debug_image))
+
 		if debug_image is not None:
 			self.pub_image_match_debug.publish(image_processing.image_to_msg(debug_image,'bgr8'))
-			cv2.imwrite(self.save_dir+'%06d.png' % self.match_number, debug_image)
+			timestamp = datetime.datetime.now().strftime(r'%H-%M-%S-%f')
+			cv2.imwrite(self.save_dir+'%06d_%s.png' % (self.match_number, timestamp), debug_image)
 		else:
 			raise RuntimeError('image matcher - debug_image is None but it should always be assigned.')
 
@@ -163,10 +172,10 @@ class image_matcher:
 		# self.current_position = best_index + start_search_range
 		offsets = Int32MultiArray()
 		offsets.layout.dim = [MultiArrayDimension(size=len(match_data))]
-		offsets.data = [int(match[0]) for match in match_data]
+		offsets.data = offsets_data
 		correlations = Float32MultiArray()
 		correlations.layout.dim = [MultiArrayDimension(size=len(match_data))]
-		correlations.data = [match[1] for match in match_data]
+		correlations.data = correlations_data
 
 		return ImageMatchResponse(offsets, correlations)
 
