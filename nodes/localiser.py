@@ -6,6 +6,7 @@ import cv2
 import os
 import math
 import json
+import datetime
 import enum
 import threading
 from rospy_message_converter import message_converter
@@ -99,6 +100,7 @@ class teach_repeat_localiser:
 	def setup_parameters(self):
 		# Wait for ready
 		self.ready = not rospy.get_param('/wait_for_ready', False)
+		self.global_localisation_init = rospy.get_param('~global_localisation_init', False)
 		self.mutex = threading.Lock()
 
 		# Odom
@@ -119,7 +121,7 @@ class teach_repeat_localiser:
 		self.goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.last_goal = tf_conversions.toMsg(tf_conversions.Frame())
 		self.goal_plus_lookahead = tf_conversions.toMsg(tf_conversions.Frame())
-		self.last_odom = None
+		self.last_odom_pose = None
 		self.zero_odom_offset = None
 		global GOAL_DISTANCE_SPACING, LOOKAHEAD_DISTANCE_RATIO, TURNING_TARGET_RANGE_DISTANCE_RATIO
 		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_seperation', 0.2)
@@ -184,13 +186,57 @@ class teach_repeat_localiser:
 			self.ready = True
 
 	def start(self):
-		if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
-			# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
-			print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
-			self.goal_index = 1
-			self.update_goal(tf_conversions.fromMsg(self.poses[1]))
+		if self.global_localisation_init:
+			if self.last_odom_pose is None or self.last_image is None:
+				print('Global localisation - waiting for first odom and image messages')
+				while self.last_odom_pose is None or self.last_image is None:
+					pass
+			
+			offsets, correlations = self.calculate_image_pose_offset(0, len(self.poses))
+			best_match = np.argmax(correlations)
+			if best_match == 0 or (best_match == 1 and correlations[0] > correlations[2]):
+				print('@0')
+				if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
+					# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
+					print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
+					self.goal_index = 1
+				else:
+					self.goal_index = 0
+				goal_pose = tf_conversions.Frame()
+				odom_pose = tf_conversions.fromMsg(self.last_odom_pose)
+				self.zero_odom_offset = tf_conversions.fromMsg(self.last_odom_pose)
+			else:
+				if best_match == len(self.poses)-1:
+					self.goal_index = len(self.poses)-2
+				elif correlations[best_match+1] >= correlations[best_match-1]:
+					self.goal_index = best_match
+				else:
+					self.goal_index = best_match-1
+				# goal = offset.Inverse() * odom
+				# offset.Inverse() = goal * odom.Inverse()
+				# offset = (goal * odom.Inverse()).Inverse()
+				goal_pose = tf_conversions.fromMsg(self.poses[self.goal_index-1])
+				odom_pose = tf_conversions.fromMsg(self.last_odom_pose)
+				self.zero_odom_offset = (goal_pose * odom_pose.Inverse()).Inverse()
+			self.last_odom_pose = tf_conversions.toMsg(self.zero_odom_offset.Inverse() * tf_conversions.fromMsg(self.last_odom_pose))
+			print('Global localisation - best match at pose %d [correlation = %f]' % (self.goal_index, correlations[best_match]))
+			print('Current odom pose = [%.3f, %.3f, %.1f deg]' % (odom_pose.p.x(), odom_pose.p.y(), math.degrees(odom_pose.M.GetRPY()[2])))
+			print('Starting goal pose = [%.3f, %.3f, %.1f deg]' % (goal_pose.p.x(), goal_pose.p.y(), math.degrees(goal_pose.M.GetRPY()[2])))
+			print('Odom to subtract = [%.3f, %.3f, %.1f deg]' % (self.zero_odom_offset.p.x(), self.zero_odom_offset.p.y(), math.degrees(self.zero_odom_offset.M.GetRPY()[2])))
+			where_am_i = tf_conversions.fromMsg(self.last_odom_pose)
+			print('Where do I think I am? - [%.3f, %.3f, %.1f deg]' % (where_am_i.p.x(), where_am_i.p.y(), math.degrees(where_am_i.M.GetRPY()[2])))
+			# print(odom_pose)
+			# print(goal_pose)
+			# print(self.zero_odom_offset)
+			# print(where_am_i)
 		else:
-			self.update_goal(tf_conversions.fromMsg(self.poses[0]))
+			if self.poses[0].position.x == 0 and self.poses[0].position.y == 0 and tf_conversions.fromMsg(self.poses[0]).M.GetRPY()[2] == 0:
+				# the first pose is at 0,0,0 so we ignore it and set the first goal to the next pose
+				print('Localiser: starting at goal 1, goal 0 = [0,0,0]')
+				self.goal_index = 1
+			else:
+				self.goal_index = 0
+		self.update_goal(tf_conversions.fromMsg(self.poses[self.goal_index]))
 
 	def update_goal_index(self):
 		self.goal_index += 1
@@ -233,10 +279,10 @@ class teach_repeat_localiser:
 	def process_odom_data(self, msg):
 		if self.ready and self.last_image is not None:
 			self.mutex.acquire()
-			if self.last_odom is None:
+			if self.last_odom_pose is None:
 				self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
 			msg = self.subtract_odom(msg, self.zero_odom_offset)
-			self.last_odom = msg.pose.pose
+			self.last_odom_pose = msg.pose.pose
 
 			current_pose_odom = tf_conversions.fromMsg(msg.pose.pose)
 			current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
@@ -278,6 +324,8 @@ class teach_repeat_localiser:
 					self.sum_path_correction = 0.0
 					self.correction_list = [[],[]]
 			self.mutex.release()
+		elif self.global_localisation_init:
+			self.last_odom_pose = msg.pose.pose
 
 	def process_image_data(self, msg):
 		if self.ready:
@@ -295,6 +343,8 @@ class teach_repeat_localiser:
 			if not self.discrete_correction:
 				self.do_continuous_correction()
 			self.mutex.release()
+		elif self.global_localisation_init:
+			self.last_image = image_processing.patch_normalise_image(image_processing.msg_to_image(msg), (9,9), resize=self.resize)
 
 	def update_goal(self, goal_frame, new_goal=True, turning_goal=False):
 		if new_goal:
@@ -313,21 +363,41 @@ class teach_repeat_localiser:
 		goal = Goal()
 		goal.pose.header.stamp = rospy.Time.now()
 		goal.pose.header.frame_id = "odom"
-		theta = tf_conversions.fromMsg(pose).M.GetRPY()[2]
-		goal.pose.pose.position.x = pose.position.x + lookahead_distance * math.cos(theta)
-		goal.pose.pose.position.y = pose.position.y + lookahead_distance * math.sin(theta)
-		goal.pose.pose.orientation = pose.orientation
+
+		lookahead = tf_conversions.Frame(tf_conversions.Vector(lookahead_distance, 0, 0))
+
+		# add the offset for navigating to the goal:
+		# (offset * odom).Inverse() * goal = odom.Invserse() * pose
+		# goal = (offset * odom) * odom.Inverse() * pose
+		# goal = offset * pose
+		original_pose_frame = tf_conversions.fromMsg(pose)
+		pose_frame = self.zero_odom_offset * original_pose_frame
+		original_pose_frame_lookahead = original_pose_frame * lookahead
+		pose_frame_looahead = pose_frame * lookahead
+
+		theta = pose_frame.M.GetRPY()[2]
+		goal.pose.pose.position.x = pose_frame_looahead.p.x()
+		goal.pose.pose.position.y = pose_frame_looahead.p.y()
+		goal.pose.pose.orientation = tf_conversions.toMsg(pose_frame_looahead).orientation
+
+		odom_offset_to_pose = tf_conversions.fromMsg(self.last_odom_pose).Inverse() * original_pose_frame_lookahead
+		odom_to_goal = (self.zero_odom_offset * tf_conversions.fromMsg(self.last_odom_pose)).Inverse() * pose_frame_looahead
+		print('---')
+		print('odom_offset_to_pose pose = [%.3f, %.3f, %.1f deg]' % (odom_offset_to_pose.p.x(), odom_offset_to_pose.p.y(), math.degrees(odom_offset_to_pose.M.GetRPY()[2])))
+		print('odom_to_goal pose = [%.3f, %.3f, %.1f deg]' % (odom_to_goal.p.x(), odom_to_goal.p.y(), math.degrees(odom_to_goal.M.GetRPY()[2])))
+		print('-----')
+
 		goal.stop_at_goal.data = stop_at_goal
 		self.goal_pub.publish(goal)
-		self.goal_plus_lookahead = goal.pose.pose
+		self.goal_plus_lookahead = tf_conversions.toMsg(original_pose_frame_lookahead)
 
 	def do_continuous_correction(self):
-		if self.last_odom is not None and self.goal_index > 0:
+		if self.last_odom_pose is not None and self.goal_index > 0:
 			next_goal_world = tf_conversions.fromMsg(self.poses[self.goal_index])
 			last_goal_world = tf_conversions.fromMsg(self.poses[self.goal_index-1])
 			last_goal_odom = tf_conversions.fromMsg(self.last_goal)
 			next_goal_odom = tf_conversions.fromMsg(self.goal)
-			current_pose_odom = tf_conversions.fromMsg(self.last_odom)
+			current_pose_odom = tf_conversions.fromMsg(self.last_odom_pose)
 
 			next_goal_offset_odom = next_goal_odom.Inverse() * current_pose_odom
 			last_goal_offset_odom = last_goal_odom.Inverse() * current_pose_odom
@@ -374,16 +444,22 @@ class teach_repeat_localiser:
 					corr = np.array(correlations[:2*(1+reduced_search_range)])
 					w = np.arange(-0.5-reduced_search_range,0.6+reduced_search_range,1)
 				else:
-					reduced_search_range = len(self.poses) - self.search_range - self.goal_index
-					corr = np.array(correlations[-2*(1+reduced_search_range):])     
+					reduced_search_range = len(self.poses) - self.goal_index - 1
+					corr = np.array(correlations[-2*(1+reduced_search_range):])
 					w = np.arange(-0.5-reduced_search_range,0.6+reduced_search_range,1)
+				corr_orig = corr.copy()
 				corr -= self.image_recognition_threshold
 				corr[corr < 0] = 0.0
 				s = corr.sum()
 				if s > 0:
 					corr /= s
-				pos = (corr * w).sum() #- (u - 0.5)
+				pos = (corr * w).sum() - (u - 0.5)
 				path_error = pos
+
+				with open(self.save_dir + datetime.datetime.now().strftime(r'%H-%M-%S-%f') + '.txt', 'w') as f:
+					f.write('%f\n%f\n%s' % (pos, u, str(corr_orig)))
+
+				# print('pos: %.3f [u: %.2f] corr=%s' % (pos, u, str(corr_orig)))
 
 				# pos > 0: images are telling me I'm ahead of where I think I am
 				#   need to reduce the length of the current goal by pos
