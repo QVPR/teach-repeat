@@ -9,7 +9,7 @@ from geometry_msgs.msg import Pose
 from std_msgs.msg import Bool
 import tf_conversions
 
-from miro_teach_repeat.msg import ImageAndPose
+from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseRequest
 
 DEFAULT_DISTANCE_THRESHOLD = 0.1
 DEFAULT_ANGLE_THRESHOLD = 5.0
@@ -29,8 +29,11 @@ class data_collect:
 		self.distance_threshold = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.angle_threshold = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
 
-	def setup_publishers(self):	
-		self.pub_image_pose = rospy.Publisher("image_pose", ImageAndPose, queue_size=1)
+	def setup_publishers(self):
+		print('waiting for service')
+		rospy.wait_for_service('save_image_pose')
+		print('got service')
+		self.save_image_and_pose = rospy.ServiceProxy('save_image_pose', SaveImageAndPose, persistent=True)
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -41,6 +44,7 @@ class data_collect:
 	def on_ready(self, msg):
 		if msg.data:
 			self.ready = True
+			print('data collect ready')
 
 	def process_odom_data(self, msg):
 		if self.ready:
@@ -58,7 +62,8 @@ class data_collect:
 		if self.ready:
 			if self.last_odom is None:
 				if self.current_odom is not None:
-					self.publish_image_and_pose(msg, self.current_odom.pose.pose)
+					print('saving first img')
+					self.save_image_and_pose(SaveImageAndPoseRequest(msg, self.current_odom.pose.pose))
 					self.last_odom = self.current_odom
 				return
 
@@ -70,14 +75,9 @@ class data_collect:
 			delta_theta = abs(difference.M.GetRPY()[2])
 
 			if delta_distance > self.distance_threshold or delta_theta > self.angle_threshold:
-				self.publish_image_and_pose(msg, self.current_odom.pose.pose)
+				print('should have data')
+				self.save_image_and_pose(SaveImageAndPoseRequest(msg, self.current_odom.pose.pose))
 				self.last_odom = self.current_odom
-		
-	def publish_image_and_pose(self, image, pose):
-		img_pose = ImageAndPose()
-		img_pose.image = image
-		img_pose.pose = pose
-		self.pub_image_pose.publish(img_pose)
 
 
 if __name__ == "__main__":
