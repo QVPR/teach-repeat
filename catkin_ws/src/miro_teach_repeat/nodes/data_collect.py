@@ -30,9 +30,7 @@ class data_collect:
 		self.angle_threshold = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
 
 	def setup_publishers(self):
-		print('waiting for service')
 		rospy.wait_for_service('save_image_pose')
-		print('got service')
 		self.save_image_and_pose = rospy.ServiceProxy('save_image_pose', SaveImageAndPose, persistent=True)
 
 	def setup_subscribers(self):
@@ -44,7 +42,6 @@ class data_collect:
 	def on_ready(self, msg):
 		if msg.data:
 			self.ready = True
-			print('data collect ready')
 
 	def process_odom_data(self, msg):
 		if self.ready:
@@ -62,9 +59,7 @@ class data_collect:
 		if self.ready:
 			if self.last_odom is None:
 				if self.current_odom is not None:
-					print('saving first img')
-					self.save_image_and_pose(SaveImageAndPoseRequest(msg, self.current_odom.pose.pose))
-					self.last_odom = self.current_odom
+					self.save_data(msg)
 				return
 
 			current_frame = tf_conversions.fromMsg(self.current_odom.pose.pose)
@@ -75,9 +70,13 @@ class data_collect:
 			delta_theta = abs(difference.M.GetRPY()[2])
 
 			if delta_distance > self.distance_threshold or delta_theta > self.angle_threshold:
-				print('should have data')
-				self.save_image_and_pose(SaveImageAndPoseRequest(msg, self.current_odom.pose.pose))
-				self.last_odom = self.current_odom
+				self.save_data(msg)
+
+	def save_data(self, img):
+		response = self.save_image_and_pose(SaveImageAndPoseRequest(img, self.current_odom.pose.pose))
+		self.last_odom = self.current_odom
+		if not response.success:
+			rospy.logerr('Data Collection - couldn\'t save data. Err: %s' % response.message)
 
 
 if __name__ == "__main__":
