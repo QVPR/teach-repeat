@@ -9,7 +9,7 @@
 
 	<group ns="miro">
 		<!-- Hold head in place and reset odometry -->
-		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen" launch-prefix="bash -c 'sleep 2; $0 $@' ">
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">0</rosparam>
 			<rosparam param="pitch">8</rosparam>
@@ -20,17 +20,17 @@
 		<!-- Teleop to control Miro -->
 		<arg name="speed_lin" value="0.4" />
 		<arg name="speed_ang" value="2.0" />
-		<include file="$(find miro_demos)/launch/teleop.launch">
+		<!-- <include file="$(find miro_demos)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
-		</include>
-		<!-- <include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
+		</include> -->
+		<include file="$(find miro_teach_repeat)/launch/teleop_joy.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
 			<arg name="wait_for_ready" value="true" />
-		</include> -->
+		</include>
 
 		<!-- Stitch image files for matching -->
 		<node pkg="miro_teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />
@@ -40,7 +40,7 @@
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
 			<rosparam param="distance_threshold">0.2</rosparam>
-			<rosparam param="angle_threshold_deg">15.0</rosparam>                           
+			<rosparam param="angle_threshold_deg">15.0</rosparam>
 		</node>
 
 		<!-- Save Images and pose in a directory -->

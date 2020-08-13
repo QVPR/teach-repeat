@@ -11,7 +11,7 @@ from std_msgs.msg import Bool
 from rospy_message_converter import message_converter
 
 import image_processing
-from miro_teach_repeat.msg import ImageAndPose
+from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseResponse
 
 class data_save:
 
@@ -53,7 +53,8 @@ class data_save:
 	def setup_subscribers(self):
 		if not self.ready:
 			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
-		self.sub_image_pose = rospy.Subscriber("image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
+		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
+		print('service available')
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 	
@@ -69,10 +70,10 @@ class data_save:
 		if msg.data:
 			self.ready = True
 
-	def process_image_and_pose(self, msg):
+	def process_image_and_pose(self, request):
 		if self.ready:
-			image = image_processing.msg_to_image(msg.image)
-			pose = msg.pose
+			image = image_processing.msg_to_image(request.image)
+			pose = request.pose
 			id = "%06d" % (self.save_id)
 			normalised_image = image_processing.patch_normalise_image(image, self.patch_size, resize=self.resize)
 			message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
@@ -94,6 +95,7 @@ class data_save:
 				pose_file.write(message_as_text)
 			self.save_id += 1
 			print('saved frame %d' % self.save_id)
+			return SaveImageAndPoseResponse(success=True)
 
 
 if __name__ == "__main__":

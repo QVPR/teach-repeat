@@ -253,7 +253,6 @@ class teach_repeat_localiser:
 		
 		self.update_goal(tf_conversions.fromMsg(self.poses[self.goal_index]))
 
-		print('running')
 		self.running = True
 
 	def update_goal_index(self):
