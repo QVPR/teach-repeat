@@ -7,6 +7,7 @@ from std_msgs.msg import Bool
 import tf_conversions
 
 import math
+import threading
 
 from miro_teach_repeat.msg import Goal
 
@@ -37,6 +38,7 @@ class drive_to_pose_controller:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
+		self.mutex = threading.Lock()
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.gain_rho = rospy.get_param('~gain_distance', 0.5)
 		self.gain_alpha = rospy.get_param('~gain_turn_to_point', 5.0)
@@ -89,7 +91,10 @@ class drive_to_pose_controller:
 
 	def process_odom_data(self, msg):
 		if self.ready:
+			self.mutex.acquire()
+
 			if self.goal_pos is None:
+				self.mutex.release()
 				return
 
 			current_frame = tf_conversions.fromMsg(msg.pose.pose)
@@ -110,6 +115,7 @@ class drive_to_pose_controller:
 				omega = self.gain_alpha * alpha + self.gain_beta * beta
 
 			v, omega = self.scale_velocities(v, omega, self.stop_at_goal)
+			self.mutex.release()
 
 			motor_command = TwistStamped()
 			motor_command.header.stamp = rospy.Time.now()
@@ -119,9 +125,11 @@ class drive_to_pose_controller:
 			self.pub_cmd_vel.publish(motor_command)
 
 	def set_goal(self, msg):
+		self.mutex.acquire()
 		self.goal_pos = [msg.pose.pose.position.x, msg.pose.pose.position.y, 0]
 		self.goal_theta = tf_conversions.fromMsg(msg.pose.pose).M.GetRPY()[2]
 		self.stop_at_goal = msg.stop_at_goal.data
+		self.mutex.release()
 
 
 if __name__ == "__main__":

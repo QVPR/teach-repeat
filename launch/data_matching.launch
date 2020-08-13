@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
 	<rosparam param="data_load_dir">~/miro/data/office5</rosparam>
-	<rosparam param="data_save_dir">~/miro/data/office5_tests/24</rosparam>
+	<rosparam param="data_save_dir">~/miro/data/office5_tests/28</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -14,9 +14,9 @@
 	<rosparam param="goal_pose_seperation">0.2</rosparam>
 	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
-	<rosparam param="min_omega">2.5</rosparam>
-	<rosparam param="max_omega">4.878</rosparam> <!-- (MAX_V / (WHEELBASE/2)) -->
-	<rosparam param="max_v">0.3</rosparam>
+	<rosparam param="goal_theta_tolerance">5</rosparam>
+	<rosparam param="save_full_res_images">true</rosparam>
+	<rosparam param="save_gt_data">false</rosparam>
 
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->

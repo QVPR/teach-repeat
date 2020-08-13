@@ -135,31 +135,32 @@ class image_matcher:
 			data = f.read()
 		return data
 
+	def clamp_search_range_to_bounds(self, index, half_search_range):
+		start_range = max(0, index - half_search_range)
+		end_range = min(len(self.images), index + half_search_range + 1)
+		return start_range, end_range
+
 	def match_image(self, request):
 		image = image_processing.msg_to_image(request.normalisedImage)
 		image_index = request.imageIndex.data
-		start_range = max(0, image_index - request.searchRange.data)
-		end_range = min(len(self.images), image_index + request.searchRange.data + 1)
-		best_index = image_index - start_range
+		start_range, end_range = self.clamp_search_range_to_bounds(image_index, request.searchRange.data)
+		centre_image_index = image_index - start_range
 		match_data = [[] for i in range(end_range - start_range)]
 		debug_image = None
 		for i in range(end_range - start_range):
 			img_index = start_range + i
-			if i == best_index:
+			if i == centre_image_index:
 				offset, corr, debug_image = image_processing.xcorr_match_images_debug(self.images[img_index], image, self.subsampling)
 				match_data[i] = (offset, corr)
 			else:
 				match_data[i] = image_processing.xcorr_match_images(self.images[img_index], image, self.subsampling)
-		offset = match_data[best_index][0]
-		correlation = match_data[best_index][1]
-
 		offsets_data = [int(match[0]) for match in match_data]
 		correlations_data = [match[1] for match in match_data]
+		offset = offsets_data[centre_image_index]
+		correlation = correlations_data[centre_image_index]
 
 		correlation_bar_height = 5
 		correlation_bar = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[1]) * len(correlations_data) / debug_image.shape[1]].reshape(1,-1,1), (correlation_bar_height,1,3)))
-		print(debug_image.shape)
-		print(correlation_bar.shape)
 
 		debug_image = np.vstack((debug_image, correlation_bar))
 
