@@ -101,6 +101,8 @@ Development:
 		☐ Fix loading images (needs to happen before /ready is published)
 		☐ Parameterise the search range of horizontal sweep
 		✔ Parameterise the controller parameters @done(20-08-05 16:28)
+		☐ Make a twist_stamper node so we can just publish twist messages
+		☐ Stop drive_to_pose controller at the end
 
 	Visualisation:
 		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)
