@@ -54,7 +54,6 @@ class data_save:
 		if not self.ready:
 			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
 		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
-		print('service available')
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 	
