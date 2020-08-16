@@ -3,10 +3,11 @@
 import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 
 import math
+import threading
 
 from miro_teach_repeat.msg import Goal
 
@@ -37,6 +38,7 @@ class drive_to_pose_controller:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
+		self.mutex = threading.Lock()
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.gain_rho = rospy.get_param('~gain_distance', 0.5)
 		self.gain_alpha = rospy.get_param('~gain_turn_to_point', 5.0)
@@ -50,13 +52,14 @@ class drive_to_pose_controller:
 		self.goal_theta = None
 		self.stop_at_goal = None
 		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
+		self.goal_theta_tolerance = math.radians(rospy.get_param('/goal_theta_tolerance', 5))
 
 	def setup_publishers(self):
 		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_controller', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_goal = rospy.Subscriber("goal", Goal, self.set_goal, queue_size=1)
 
@@ -83,13 +86,19 @@ class drive_to_pose_controller:
 			omega = math.copysign(self.min_omega, omega)
 		return v, omega
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Drive to pose controller already started.")
 
 	def process_odom_data(self, msg):
 		if self.ready:
+			self.mutex.acquire()
+
 			if self.goal_pos is None:
+				self.mutex.release()
 				return
 
 			current_frame = tf_conversions.fromMsg(msg.pose.pose)
@@ -111,16 +120,28 @@ class drive_to_pose_controller:
 
 			v, omega = self.scale_velocities(v, omega, self.stop_at_goal)
 
+			if self.at_stopping_goal(rho, self.goal_theta-theta):
+				self.goal_pos = None
+				v = 0
+				omega = 0
+
+			self.mutex.release()
+
 			motor_command = Twist()
 			motor_command.linear.x = v
 			motor_command.angular.z = omega
 
 			self.pub_cmd_vel.publish(motor_command)
 
+	def at_stopping_goal(self, rho, theta_diff):
+		return self.stop_at_goal and rho < self.turning_goal_distance and abs(theta_diff) < self.goal_theta_tolerance
+
 	def set_goal(self, msg):
+		self.mutex.acquire()
 		self.goal_pos = [msg.pose.pose.position.x, msg.pose.pose.position.y, 0]
 		self.goal_theta = tf_conversions.fromMsg(msg.pose.pose).M.GetRPY()[2]
 		self.stop_at_goal = msg.stop_at_goal.data
+		self.mutex.release()
 
 
 if __name__ == "__main__":

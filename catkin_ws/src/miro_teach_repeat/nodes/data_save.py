@@ -7,11 +7,11 @@ import os
 import tf2_ros
 import datetime
 import json
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 from rospy_message_converter import message_converter
 
 import image_processing
-from miro_teach_repeat.msg import ImageAndPose
+from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseResponse
 
 class data_save:
 
@@ -24,6 +24,8 @@ class data_save:
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.save_id = 0
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
+		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
+		self.save_gt_data = rospy.get_param('/save_gt_data', True)
 		self.timestamp_dir = rospy.get_param('~timestamp_folder', False)
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
@@ -31,8 +33,9 @@ class data_save:
 			self.save_dir += datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S/')
 		if not os.path.isdir(self.save_dir):
 			os.makedirs(self.save_dir)
-		if not os.path.isdir(self.save_dir+'full/'):
-			os.makedirs(self.save_dir+'full/')
+		if self.save_full_res_images:
+			if not os.path.isdir(self.save_dir+'full/'):
+				os.makedirs(self.save_dir+'full/')
 		if not os.path.isdir(self.save_dir+'norm/'):
 			os.makedirs(self.save_dir+'norm/')
 
@@ -49,8 +52,8 @@ class data_save:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
-		self.sub_image_pose = rospy.Subscriber("image_pose", ImageAndPose, self.process_image_and_pose, queue_size=1)
+			self.srv_ready = rospy.Service('ready_data_save', Trigger, self.on_ready)
+		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 	
@@ -62,33 +65,39 @@ class data_save:
 		with open(self.save_dir + 'params.txt', 'w') as params_file:
 			params_file.write(json.dumps(params))
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Data save already started.")
 
-	def process_image_and_pose(self, msg):
+	def process_image_and_pose(self, request):
 		if self.ready:
-			image = image_processing.msg_to_image(msg.image)
-			pose = msg.pose
+			image = image_processing.msg_to_image(request.image)
+			pose = request.pose
 			id = "%06d" % (self.save_id)
 			normalised_image = image_processing.patch_normalise_image(image, self.patch_size, resize=self.resize)
 			message_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(pose))
 
-			try:
-				trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
-				trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
-				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as tf_trans_file:
-					tf_trans_file.write(trans_as_text)
-			except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-				print('Could not lookup transform from /map to /base_link')
-				pass
-
-			cv2.imwrite(self.save_dir+'full/'+id+'.png', image)
+			if self.save_gt_data:
+				try:
+					trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
+					trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
+					with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as pose_file:
+						pose_file.write(trans_as_text)
+				except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+					print('Could not lookup transform from /map to /base_link')
+					pass
+			
+			if self.save_full_res_images:
+				cv2.imwrite(self.save_dir+'full/'+id+'.png', image)
 			cv2.imwrite(self.save_dir+'norm/'+id+'.png', np.uint8(255.0 * (1 + normalised_image) / 2.0))
 			with open(self.save_dir+id+'_pose.txt', 'w') as pose_file:
 				pose_file.write(message_as_text)
 			self.save_id += 1
 			print('saved frame %d' % self.save_id)
+			return SaveImageAndPoseResponse(success=True)
 
 
 if __name__ == "__main__":

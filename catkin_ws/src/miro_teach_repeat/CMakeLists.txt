@@ -55,13 +55,13 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
 	FILES
 	Goal.msg
-	ImageAndPose.msg
-)
-
-## Generate services in the 'srv' folder
-add_service_files(
-	FILES
-	ImageMatch.srv
+	)
+	
+	## Generate services in the 'srv' folder
+	add_service_files(
+		FILES
+		ImageMatch.srv
+		SaveImageAndPose.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -177,6 +177,7 @@ catkin_install_python(PROGRAMS
 	nodes/localiser.py
 	nodes/miro_setup.py
 	nodes/teleop_joy.py
+	nodes/twist_stamper.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

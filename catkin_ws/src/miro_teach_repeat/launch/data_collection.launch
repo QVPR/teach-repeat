@@ -15,6 +15,7 @@
 			<rosparam param="pitch">8</rosparam>
 			<rosparam param="reset_odom">false</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
+			<rosparam param="trigger_services">ready_data_save,ready_data_collect,ready_teleop</rosparam>
 		</node>
 
 		<!-- Teleop to control Miro -->
@@ -40,7 +41,7 @@
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
 			<rosparam param="distance_threshold">0.2</rosparam>
-			<rosparam param="angle_threshold_deg">15.0</rosparam>                           
+			<rosparam param="angle_threshold_deg">15.0</rosparam>
 		</node>
 
 		<!-- Save Images and pose in a directory -->

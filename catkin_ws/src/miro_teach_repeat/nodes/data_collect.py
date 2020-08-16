@@ -6,10 +6,10 @@ import time
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 
-from miro_teach_repeat.msg import ImageAndPose
+from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseRequest
 
 DEFAULT_DISTANCE_THRESHOLD = 0.1
 DEFAULT_ANGLE_THRESHOLD = 5.0
@@ -29,18 +29,22 @@ class data_collect:
 		self.distance_threshold = rospy.get_param('~distance_threshold', DEFAULT_DISTANCE_THRESHOLD)
 		self.angle_threshold = math.radians(rospy.get_param('~angle_threshold_deg', DEFAULT_ANGLE_THRESHOLD))
 
-	def setup_publishers(self):	
-		self.pub_image_pose = rospy.Publisher("image_pose", ImageAndPose, queue_size=1)
+	def setup_publishers(self):
+		rospy.wait_for_service('save_image_pose')
+		self.save_image_and_pose = rospy.ServiceProxy('save_image_pose', SaveImageAndPose, persistent=True)
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_data_collect', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Data collect already started.")
 
 	def process_odom_data(self, msg):
 		if self.ready:
@@ -58,8 +62,7 @@ class data_collect:
 		if self.ready:
 			if self.last_odom is None:
 				if self.current_odom is not None:
-					self.publish_image_and_pose(msg, self.current_odom.pose.pose)
-					self.last_odom = self.current_odom
+					self.save_data(msg)
 				return
 
 			current_frame = tf_conversions.fromMsg(self.current_odom.pose.pose)
@@ -70,14 +73,13 @@ class data_collect:
 			delta_theta = abs(difference.M.GetRPY()[2])
 
 			if delta_distance > self.distance_threshold or delta_theta > self.angle_threshold:
-				self.publish_image_and_pose(msg, self.current_odom.pose.pose)
-				self.last_odom = self.current_odom
-		
-	def publish_image_and_pose(self, image, pose):
-		img_pose = ImageAndPose()
-		img_pose.image = image
-		img_pose.pose = pose
-		self.pub_image_pose.publish(img_pose)
+				self.save_data(msg)
+
+	def save_data(self, img):
+		response = self.save_image_and_pose(SaveImageAndPoseRequest(img, self.current_odom.pose.pose))
+		self.last_odom = self.current_odom
+		if not response.success:
+			rospy.logerr('Data Collection - couldn\'t save data. Err: %s' % response.message)
 
 
 if __name__ == "__main__":

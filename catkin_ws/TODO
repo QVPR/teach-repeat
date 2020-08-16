@@ -73,7 +73,7 @@ Development:
 		✔ Disable along-path localisation during a turn @done(20-06-29 13:29)
 		✔ Threshold along-path localisation @done(20-05-20 16:26)
 		✔ Apply small corrections continually @done(20-06-08 10:49)
-		☐ Trigger a goal update in the continuous correction
+		✔ Trigger a goal update in the continuous correction @done(20-08-17 09:12)
 		✔ Use projection of position onto path segment to calculate u @done(20-08-10 10:33)
 			* Mostly is very similar, but after turning goals we tend to transition to the next goal a distance behind the previous
 				Distance u goes from 0.2 to 0 back up to 1, whereas projected u goes from -0.2 to 1, so we can correctly filter out bad corrections
@@ -98,9 +98,12 @@ Development:
 				Missed images won't increment the count
 		☐ Use the FOV map from image rectification during localisation - do we need this?
 		✔ Make code independent of Miro, so it can be run on another robot @started(20-07-16 10:38) @done(20-07-16 15:15) @lasted(4h37m46s)
-		☐ Fix loading images (needs to happen before /ready is published)
+		✔ Fix loading images (needs to happen before /ready is published) @done(20-08-17 09:12)
 		☐ Parameterise the search range of horizontal sweep
 		✔ Parameterise the controller parameters @done(20-08-05 16:28)
+		✔ Make a twist_stamper node so we can just publish twist messages @done(20-08-17 09:41)
+		✔ Stop drive_to_pose controller at the end @done(20-08-17 09:31)
+		✔ Make /ready a service - can then just wait for it, don't need ugly roslaunch hacks @done(20-08-17 09:13)
 
 	Visualisation:
 		✔ Nice visualisation for image matching (include correlation vs offset plot) @20m @started(20-05-11 11:16) @done(20-05-11 12:22) @lasted(1h6m23s)
