@@ -6,7 +6,7 @@ import time
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 
 from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseRequest
@@ -35,13 +35,16 @@ class data_collect:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_data_collect', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Data collect already started.")
 
 	def process_odom_data(self, msg):
 		if self.ready:

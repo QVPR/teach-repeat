@@ -7,7 +7,7 @@ import os
 import tf2_ros
 import datetime
 import json
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 from rospy_message_converter import message_converter
 
 import image_processing
@@ -52,7 +52,7 @@ class data_save:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_data_save', Trigger, self.on_ready)
 		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
@@ -65,9 +65,12 @@ class data_save:
 		with open(self.save_dir + 'params.txt', 'w') as params_file:
 			params_file.write(json.dumps(params))
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Data save already started.")
 
 	def process_image_and_pose(self, request):
 		if self.ready:

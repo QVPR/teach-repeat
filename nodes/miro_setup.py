@@ -31,19 +31,24 @@ class miro_setup:
 		self.ready = None
 		self.frames_to_wait_for_ready = 50 # 50 frames = 1 s
 		self.ready_frames = self.frames_to_wait_for_ready
+		self.trigger_services = rospy.get_param('~trigger_services', "").split(',')
+		self.trigger_proxies = []
 
 	def setup_publishers(self):
 		rospy.wait_for_service('/miro/sensors/odom/reset')
 		rospy.wait_for_service('/miro/control/kinematic_joints/set_fixed_state')
 		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/enable')
 		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/disable')
+		for trigger_service in self.trigger_services:
+			rospy.wait_for_service(trigger_service)
+			self.trigger_proxies.append(rospy.ServiceProxy(trigger_service, Trigger, persistent=False))
+		
 		self.set_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
 		self.enable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
 		self.disable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)
 		self.reset_odom = rospy.ServiceProxy('/miro/sensors/odom/reset', Trigger, persistent=False)
 
 		self.pub_flags = rospy.Publisher('/miro/control/flags', UInt32, queue_size=0)
-		self.pub_ready = rospy.Publisher("ready", Bool, queue_size=1)
 
 	def setup_subscribers(self):
 		self.sub_at_set_point = rospy.Subscriber("/miro/control/kinematic_joints/at_set_point", Bool, self.process_joint_at_set_point, queue_size=1)
@@ -52,11 +57,17 @@ class miro_setup:
 		if msg.data and self.ready == False:
 			self.ready_frames -= 1
 			if self.ready_frames == 0:
-				self.ready = True
-				self.pub_ready.publish(Bool(data=True))
-				print('Miro setup: ready')
+				self.send_ready()
 		else:
 			self.ready_frames = self.frames_to_wait_for_ready
+
+	def send_ready(self):
+		self.ready = True
+		for trigger_service,trigger_proxy in zip(self.trigger_services,self.trigger_proxies):
+			response = trigger_proxy()
+			if not response.success:
+				rospy.logerr('Miro setup error from %s service: %s' % (trigger_service,response.message))
+		print('Miro setup: ready')
 
 	def start(self):
 		print('Miro setup: starting setup')

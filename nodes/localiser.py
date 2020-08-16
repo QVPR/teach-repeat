@@ -13,7 +13,8 @@ import time
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool, UInt32
+from std_msgs.msg import UInt32
+from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 import tf
 import tf2_ros
@@ -187,17 +188,19 @@ class teach_repeat_localiser:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_localiser', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 
-	def on_ready(self, msg):
-		if msg.data:
-			if not self.ready:
-				self.start()
+	def on_ready(self, srv):
+		if not self.ready:
+			self.start()
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Localiser already started.")
 
 	def start(self):
 		if self.global_localisation_init:

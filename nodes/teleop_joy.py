@@ -5,7 +5,7 @@ from enum import Enum
 import rospy
 from geometry_msgs.msg import TwistStamped
 from sensor_msgs.msg import Joy
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 
 class teleop_joy:
 
@@ -26,12 +26,15 @@ class teleop_joy:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_teleop', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("joy", Joy, self.process_joy_data, queue_size=1)
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Teleop already started.")
 	
 	def process_joy_data(self, msg):
 		if self.ready:
