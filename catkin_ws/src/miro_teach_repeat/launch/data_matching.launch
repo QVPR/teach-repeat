@@ -20,12 +20,13 @@
 
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
-		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" launch-prefix="bash -c 'sleep 7; $0 $@' " output="screen">
+		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">0</rosparam>
 			<rosparam param="pitch">8</rosparam>
 			<rosparam param="reset_odom">false</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
+			<rosparam param="trigger_services">ready_localiser,ready_controller</rosparam>
 		</node>
 
 		<!-- Load image files for matching -->

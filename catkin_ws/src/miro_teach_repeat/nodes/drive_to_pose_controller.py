@@ -3,7 +3,7 @@
 import rospy
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 
 import math
@@ -58,7 +58,7 @@ class drive_to_pose_controller:
 
 	def setup_subscribers(self):
 		if not self.ready:
-			self.sub_ready = rospy.Subscriber("ready", Bool, self.on_ready, queue_size=1)
+			self.srv_ready = rospy.Service('ready_controller', Trigger, self.on_ready)
 		self.sub_odom = rospy.Subscriber("odom", Odometry, self.process_odom_data, queue_size=1)
 		self.sub_goal = rospy.Subscriber("goal", Goal, self.set_goal, queue_size=1)
 
@@ -85,9 +85,12 @@ class drive_to_pose_controller:
 			omega = math.copysign(self.min_omega, omega)
 		return v, omega
 
-	def on_ready(self, msg):
-		if msg.data:
+	def on_ready(self, srv):
+		if not self.ready:
 			self.ready = True
+			return TriggerResponse(success=True)
+		else:
+			return TriggerResponse(success=False, message="Drive to pose controller already started.")
 
 	def process_odom_data(self, msg):
 		if self.ready:
