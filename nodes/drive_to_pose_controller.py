@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import rospy
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
@@ -55,7 +55,7 @@ class drive_to_pose_controller:
 		self.goal_theta_tolerance = math.radians(rospy.get_param('/goal_theta_tolerance', 5))
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -127,10 +127,9 @@ class drive_to_pose_controller:
 
 			self.mutex.release()
 
-			motor_command = TwistStamped()
-			motor_command.header.stamp = rospy.Time.now()
-			motor_command.twist.linear.x = v
-			motor_command.twist.angular.z = omega
+			motor_command = Twist()
+			motor_command.linear.x = v
+			motor_command.angular.z = omega
 
 			self.pub_cmd_vel.publish(motor_command)
 
