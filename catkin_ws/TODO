@@ -102,7 +102,7 @@ Development:
 		☐ Parameterise the search range of horizontal sweep
 		✔ Parameterise the controller parameters @done(20-08-05 16:28)
 		☐ Make a twist_stamper node so we can just publish twist messages
-		☐ Stop drive_to_pose controller at the end
+		✔ Stop drive_to_pose controller at the end @done(20-08-17 09:31)
 		✔ Make /ready a service - can then just wait for it, don't need ugly roslaunch hacks @done(20-08-17 09:13)
 
 	Visualisation:

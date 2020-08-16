@@ -364,6 +364,8 @@ class teach_repeat_localiser:
 		state = self.update_goal_index()
 		
 		if state == GOAL_STATE.finished:
+			print('Localiser stopping. Reached final goal.')
+			self.running = False
 			return
 		
 		if state == GOAL_STATE.restart:
@@ -508,9 +510,6 @@ class teach_repeat_localiser:
 				if np.isnan(path_correction):
 					print(corr, s, w, pos, next_goal_distance)
 				if -path_correction_distance > next_goal_distance:
-					print('PATH CORRECTION ERROR: correction is greater than distance to goal!')
-					print('corr = %s; pos = %f, path_correction = %f, goal_distance = %f' % (str(corr),pos,path_correction_distance,next_goal_distance))
-					print('path_correction = %f' % path_correction)
 					self.make_new_goal()
 					return
 			else:

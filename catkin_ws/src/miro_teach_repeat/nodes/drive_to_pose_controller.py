@@ -52,6 +52,7 @@ class drive_to_pose_controller:
 		self.goal_theta = None
 		self.stop_at_goal = None
 		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
+		self.goal_theta_tolerance = math.radians(rospy.get_param('/goal_theta_tolerance', 5))
 
 	def setup_publishers(self):
 		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
@@ -118,6 +119,12 @@ class drive_to_pose_controller:
 				omega = self.gain_alpha * alpha + self.gain_beta * beta
 
 			v, omega = self.scale_velocities(v, omega, self.stop_at_goal)
+
+			if self.at_stopping_goal(rho, self.goal_theta-theta):
+				self.goal_pos = None
+				v = 0
+				omega = 0
+
 			self.mutex.release()
 
 			motor_command = TwistStamped()
@@ -126,6 +133,9 @@ class drive_to_pose_controller:
 			motor_command.twist.angular.z = omega
 
 			self.pub_cmd_vel.publish(motor_command)
+
+	def at_stopping_goal(self, rho, theta_diff):
+		return self.stop_at_goal and rho < self.turning_goal_distance and abs(theta_diff) < self.goal_theta_tolerance
 
 	def set_goal(self, msg):
 		self.mutex.acquire()
