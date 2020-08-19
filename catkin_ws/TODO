@@ -32,6 +32,9 @@ Testing:
 		* Turning on the spot doesn't work perfectly, but seems ok enough
 	☐ What happens when running path correction but no orientation correction?
 	☐ What happens if we run it without any odom?
+	✔ Are we publishing an oscillating goal pose? Or is the controller on the jackal causing this? @done(20-08-19 11:14)
+		* Testing on Miro and Jackal - the goal pose looks OK, not oscillating wildly. 
+			This was an issue with the Jackal dynamics when turning quickly. Reduced max_omega and things appear better.
 
 	Issues and Ideas:
 		✔ Background tends to dominate correlation offset -> driving from open to enclosed space unreliable @done(20-07-23 16:06)
@@ -78,6 +81,7 @@ Development:
 			* Mostly is very similar, but after turning goals we tend to transition to the next goal a distance behind the previous
 				Distance u goes from 0.2 to 0 back up to 1, whereas projected u goes from -0.2 to 1, so we can correctly filter out bad corrections
 		✔ Global localisation to initialise @done(20-08-11 13:18)
+		☐ Use image transport subscriber so we can wire in compressed images
 
 	Control:
 		✔ Make a basic controller to drive Miro straight @30m @started(20-03-26 10:01) @done(20-03-26 10:40) @lasted(39m28s)
