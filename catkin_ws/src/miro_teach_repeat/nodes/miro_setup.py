@@ -31,7 +31,7 @@ class miro_setup:
 		self.ready = None
 		self.frames_to_wait_for_ready = 50 # 50 frames = 1 s
 		self.ready_frames = self.frames_to_wait_for_ready
-		self.trigger_services = rospy.get_param('~trigger_services', "").split(',')
+		self.trigger_services = [service for service in rospy.get_param('~trigger_services', "").split(',') if service != '']
 		self.trigger_proxies = []
 
 	def setup_publishers(self):
