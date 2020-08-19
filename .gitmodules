@@ -10,3 +10,6 @@
 [submodule "catkin_ws/src/miro_onboard_packages/joystick_drivers"]
 	path = catkin_ws/src/miro_onboard_packages/joystick_drivers
 	url = https://github.com/ros-drivers/joystick_drivers.git
+[submodule "catkin_ws/src/stroll_bearnav"]
+	path = catkin_ws/src/stroll_bearnav
+	url = https://github.com/QVPR/stroll_bearnav.git
