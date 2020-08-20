@@ -7,7 +7,6 @@ import yaml
 import numpy as np
 import numpy.lib
 import scipy.signal
-import scipy.spatial.transform
 import image_geometry
 from sensor_msgs.msg import CameraInfo
 
