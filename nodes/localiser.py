@@ -278,7 +278,7 @@ class teach_repeat_localiser:
 			try:
 				trans = self.tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
 				trans_as_text = json.dumps(message_converter.convert_ros_message_to_dictionary(trans))
-				with open(self.save_dir + id + '_map_to_base_link.txt', 'w') as pose_file:
+				with open(self.save_dir + ('%06d_map_to_base_link.txt' % self.goal_number), 'w') as pose_file:
 					pose_file.write(trans_as_text)
 			except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
 				print('Could not lookup transform from /map to /base_link')
