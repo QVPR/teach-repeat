@@ -13,3 +13,6 @@
 [submodule "catkin_ws/src/stroll_bearnav"]
 	path = catkin_ws/src/stroll_bearnav
 	url = https://github.com/QVPR/stroll_bearnav.git
+[submodule "catkin_ws/src/miro_onboard_packages/rospy_message_converter"]
+	path = catkin_ws/src/miro_onboard_packages/rospy_message_converter
+	url = https://github.com/uos/rospy_message_converter.git
