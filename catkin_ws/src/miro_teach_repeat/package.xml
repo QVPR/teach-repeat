@@ -66,6 +66,9 @@
   <exec_depend>miro_demos</exec_depend>
   <exec_depend>tf_conversions</exec_depend>
   <exec_depend>python-yaml</exec_depend>
+  <exec_depend>python-scipy</exec_depend>
+  <exec_depend>image_geometry</exec_depend>
+  <exec_depend>rospy_message_converter</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
