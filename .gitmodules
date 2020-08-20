@@ -16,3 +16,9 @@
 [submodule "catkin_ws/src/miro_onboard_packages/rospy_message_converter"]
 	path = catkin_ws/src/miro_onboard_packages/rospy_message_converter
 	url = https://github.com/uos/rospy_message_converter.git
+[submodule "catkin_ws/src/miro_onboard_packages/geometry"]
+	path = catkin_ws/src/miro_onboard_packages/geometry
+	url = https://github.com/ros/geometry.git
+[submodule "catkin_ws/src/miro_onboard_packages/orocos_kinematics_dynamics"]
+	path = catkin_ws/src/miro_onboard_packages/orocos_kinematics_dynamics
+	url = https://github.com/orocos/orocos_kinematics_dynamics.git
