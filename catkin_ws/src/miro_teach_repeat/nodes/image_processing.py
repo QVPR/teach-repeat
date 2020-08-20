@@ -230,7 +230,7 @@ def stitch_stereo_image(image_left, image_right):
 	stitched_image = np.zeros((image_left.shape[0],full_width))
 	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:]))
 	stitched_image[:,:image_left.shape[1]] += image_left * blend_map_linear
-	stitched_image[:,-image_right.shape[1]:] += image_right * np.flip(blend_map_linear)
+	stitched_image[:,-image_right.shape[1]:] += image_right * np.flip(blend_map_linear, 0)
 
 	stitched_image = np.asarray(stitched_image, image_left.dtype) # get the same type out as we put in
 
@@ -441,7 +441,7 @@ def create_correlation_debug_image(img1, img2, corr):
 	offset = np.argmax(corr) - int(img2.shape[1]/2)
 	debug_size = 50
 
-	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr,0,1))) - 1
+	corr_positions = np.flip(np.int32(-(debug_size-1)*np.clip(corr,0,1)), 0) - 1
 
 	debug_image = np.concatenate((img2, img1, -1*np.ones((debug_size,img1.shape[1]))), axis=0)
 	debug_image = np.uint8(255.0 * (1 + debug_image) / 2.0)
@@ -517,7 +517,7 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 	overlap_pixels = warped_left.shape[1] - non_overlap_pixels - blank_pixels
 	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(blank_pixels)))
 	stitched[:,:warped_left.shape[1]] = warped_left * blend_map_linear
-	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear)
+	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear, 0)
 	
 	stitched = np.asarray(stitched, image_left.dtype) # get the same type out as we put in
 
@@ -529,7 +529,7 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 	fov_l = cv2.remap(fl, left_mapx, np.zeros_like(left_mapx), cv2.INTER_CUBIC).flatten()
 	fov_r = cv2.remap(fr, right_mapx, np.zeros_like(right_mapx), cv2.INTER_CUBIC).flatten()
 	fov[:fov_l.size] = fov_l * blend_map_linear
-	fov[-fov_r.size:] += fov_r * np.flip(blend_map_linear)
+	fov[-fov_r.size:] += fov_r * np.flip(blend_map_linear, 0)
 
 	return stitched, fov
 
