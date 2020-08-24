@@ -1,0 +1,38 @@
+<launch>
+	<!-- Global params -->
+	<rosparam param="image_resize_width">115</rosparam>
+	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
+	<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
+	<rosparam param="wait_for_ready">true</rosparam>
+
+	<group ns="miro">
+		<!-- Hold head in place and reset odometry -->
+		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+			<rosparam param="lift">30</rosparam>
+			<rosparam param="yaw">0</rosparam>
+			<rosparam param="pitch">8</rosparam>
+			<rosparam param="reset_odom">false</rosparam>
+			<rosparam param="disable_cliff_sensors">true</rosparam>
+			<rosparam param="trigger_services">ready_data_save,ready_data_collect</rosparam>
+		</node>
+
+		<!-- Stitch image files for matching -->
+		<node pkg="miro_teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />
+
+		<!-- Collect image data -->
+		<node pkg="miro_teach_repeat" type="data_collect.py" name="data_collect" output="screen">
+			<remap from="odom" to="sensors/odom/integrated" />
+			<remap from="image" to="sensors/cam/both" />
+			<rosparam param="distance_threshold">0.2</rosparam>
+			<rosparam param="angle_threshold_deg">15.0</rosparam>
+		</node>
+
+		<!-- Save Images and pose in a directory -->
+		<node pkg="miro_teach_repeat" type="data_save.py" name="data_save" output="screen">
+			<rosparam param="save_dir">~/teach-repeat-data</rosparam>
+			<rosparam param="timestamp_folder">true</rosparam>
+		</node>
+	</group>
+</launch>

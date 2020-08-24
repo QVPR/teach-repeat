@@ -71,13 +71,16 @@ class image_matcher:
 			if os.path.exists(self.load_dir+'params.txt'):
 				params = json.loads(self.read_file(self.load_dir+'params.txt'))
 				# if dataset collection params match what we want, use pre-processed images
-				if self.resize == params['resize'] and self.patch_size == params['patch_size']:
+				if self.resize == tuple(params['resize']) and self.patch_size == tuple(params['patch_size']):
+					rospy.loginfo('[Image matcher] Using cached preprocessed images.')
 					image_files = get_image_files_from_dir(self.load_dir+'norm/', '.png')
-					self.images = self.load_images(image_files)
+					self.images = self.load_images_raw(image_files)
 				else:
+					rospy.loginfo('[Image matcher] Parameters change. Preprocessing loaded images.')
 					image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
 					self.images = self.load_images_resize_norm(image_files)
 			else:
+				rospy.loginfo('[Image matcher] Parameters change. Preprocessing loaded images.')
 				image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
 				self.images = self.load_images_resize_norm(image_files)
 
@@ -112,11 +115,12 @@ class image_matcher:
 		return [self.load_image_left_right(*image_pair) for image_pair in image_files]
 
 	def load_images_resize_norm(self, image_files):
-		images = self.load_images(image_files)
+		images = [cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
 		return [image_processing.patch_normalise_pad(cv2.resize(image,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size) for image in images]
 
-	def load_images(self, image_files):
-		return [cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
+	def load_images_raw(self, image_files):
+		# these images are already patch normalised (should be -1 -> 1), so convert them from uint8 (0 -> 255)
+		return [-1 + 2./255.*cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
 
 	def weight_images_depth(self, images, image_files):
 		depth_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
