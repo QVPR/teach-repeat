@@ -21,7 +21,7 @@
 		<!-- Teleop to control Miro -->
 		<arg name="speed_lin" value="0.4" />
 		<arg name="speed_ang" value="2.0" />
-		<!-- <include file="$(find miro_demos)/launch/teleop.launch">
+		<!-- <include file="$(find miro_teach_repeat)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />

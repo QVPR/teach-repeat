@@ -63,7 +63,6 @@
   <build_depend>message_generation</build_depend>
   
   <exec_depend>message_runtime</exec_depend>
-  <exec_depend>miro_demos</exec_depend>
   <exec_depend>tf_conversions</exec_depend>
   <exec_depend>python-yaml</exec_depend>
   <exec_depend>python-scipy</exec_depend>

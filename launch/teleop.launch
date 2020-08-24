@@ -1,0 +1,15 @@
+<launch>
+	<arg name="speed_linear" default="0.2" />
+	<arg name="speed_angular" default="1.0" />
+	<arg name="cmd_vel_topic" default="/miro/control/cmd_vel" />
+
+	<node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" name="teleop" output="screen">
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)_unstamped" />
+		<rosparam param="speed" subst_value="true">$(arg speed_linear)</rosparam>
+		<rosparam param="turn" subst_value="true">$(arg speed_angular)</rosparam>
+	</node>
+	<node pkg="miro_teach_repeat" type="twist_stamper.py" name="teleop_stamper">
+		<remap from="cmd_vel_unstamped" to="$(arg cmd_vel_topic)_unstamped" />
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
+	</node>
+</launch>

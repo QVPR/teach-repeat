@@ -1,7 +1,6 @@
 <launch>
 	<arg name="speed_linear" default="0.2" />
 	<arg name="speed_angular" default="1.0" />
-	<arg name="launch_delay" default="0.0" />
 	<arg name="wait_for_ready" default="false" />
 	<arg name="cmd_vel_topic" default="/miro/control/cmd_vel" />
 
@@ -18,7 +17,7 @@
 	</node>
 
 	<!-- Convert to cmd_vel -->
-	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="teleop_joy" launch-prefix="bash -c 'sleep $(arg launch_delay); $0 $@'" >
+	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="teleop_joy" >
 		<rosparam command="load" file="$(find miro_teach_repeat)/config/xbox_one.yaml" />
 		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
 		<rosparam param="scale_linear" subst_value="true">$(arg speed_linear)</rosparam>
