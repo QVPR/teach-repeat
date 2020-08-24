@@ -3,8 +3,8 @@
 	<rosparam param="data_load_dir">~/teach-repeat-data/office5</rosparam>
 	<rosparam param="data_save_dir">~/teach-repeat-data/office5_tests/1</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
-	<rosparam param="image_resize_width">115</rosparam>
-	<rosparam param="image_resize_height">44</rosparam>
+	<rosparam param="image_resize_width">29</rosparam>
+	<rosparam param="image_resize_height">11</rosparam>
 	<rosparam param="image_subsampling">1</rosparam>
 	<rosparam param="image_field_of_view_width_deg">175.2</rosparam>
 	<rosparam param="patch_size">(9,9)</rosparam>
@@ -43,9 +43,11 @@
 		<node pkg="miro_teach_repeat" type="localiser.py" name="localiser" output="screen" >
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
+			<rosparam param="rotation_correction_gain">0.01</rosparam>
+			<rosparam param="path_correction_gain">0.01</rosparam>
 			<rosparam param="stop_at_end">true</rosparam>
 			<rosparam param="discrete-correction">false</rosparam>
-			<rosparam param="search-range">3</rosparam>
+			<rosparam param="search-range">1</rosparam>
 			<rosparam param="global_localisation_init">true</rosparam>
 		</node>
 

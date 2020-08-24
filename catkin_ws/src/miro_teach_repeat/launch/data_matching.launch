@@ -43,6 +43,8 @@
 		<node pkg="miro_teach_repeat" type="localiser.py" name="localiser" output="screen" >
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
+			<rosparam param="rotation_correction_gain">0.01</rosparam>
+			<rosparam param="path_correction_gain">0.01</rosparam>
 			<rosparam param="stop_at_end">true</rosparam>
 			<rosparam param="discrete-correction">false</rosparam>
 			<rosparam param="search-range">3</rosparam>

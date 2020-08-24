@@ -110,6 +110,10 @@ class teach_repeat_localiser:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
+		# Teach Repeat Params
+		self.rotation_correction_gain = rospy.get_param('~rotation_correction_gain', 0.01)
+		self.path_correction_gain = rospy.get_param('~path_correction_gain', 0.01)
+
 		# Wait for ready
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.global_localisation_init = rospy.get_param('~global_localisation_init', False)
@@ -464,8 +468,7 @@ class teach_repeat_localiser:
 
 			offset = (1-u) * rotation_offsets[0] + u * rotation_offsets[1]
 
-			K = 0.01
-			rotation_correction = K * offset
+			rotation_correction = self.rotation_correction_gain * offset
 			if turning_goal or max(rotation_correlations) < self.image_recognition_threshold or u < 0 or u > 1:
 				rotation_correction = 0.0
 
@@ -504,8 +507,7 @@ class teach_repeat_localiser:
 				#   want d -> d + pos
 				#   d *= (d + pos) / d
 
-				K2 = 0.01
-				path_correction_distance = -K2 * path_error * GOAL_DISTANCE_SPACING
+				path_correction_distance = -self.path_correction_gain * path_error * GOAL_DISTANCE_SPACING
 				path_correction = (next_goal_distance + path_correction_distance) / next_goal_distance
 				if np.isnan(path_correction):
 					print(corr, s, w, pos, next_goal_distance)
@@ -539,8 +541,7 @@ class teach_repeat_localiser:
 
 		offset = rotation_offset
 
-		K = 0.1
-		rotation_correction = K * offset
+		rotation_correction = self.rotation_correction_gain * offset
 		if rotation_correlation < self.image_recognition_threshold:
 			rotation_correction = 0.0
 
@@ -555,8 +556,7 @@ class teach_repeat_localiser:
 			pos = w.sum()
 			path_error = pos
 
-			K2 = 0.5
-			path_correction_distance = -K2 * path_error * GOAL_DISTANCE_SPACING
+			path_correction_distance = -self.path_correction_gain * path_error * GOAL_DISTANCE_SPACING
 			path_correction = (next_goal_distance + path_correction_distance) / next_goal_distance
 			if np.isnan(path_correction):
 				print(corr, s, w, pos, next_goal_distance)
