@@ -153,6 +153,7 @@ class teach_repeat_localiser:
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
 		self.last_image = None
+		self.patch_size = image_processing.parse_patch_size_parameter(rospy.get_param('/patch_size', (9,9)))
 		global CORR_SUB_SAMPLING, FIELD_OF_VIEW_DEG
 		self.image_recognition_threshold = rospy.get_param('/image_recognition_threshold', 0.1)
 		CORR_SUB_SAMPLING = rospy.get_param('/image_subsampling', 1)
@@ -185,6 +186,9 @@ class teach_repeat_localiser:
 				os.makedirs(self.save_dir+'full/')
 		self.goal_number = 0
 		
+		self.save_params()
+
+		
 	def setup_publishers(self):	
 		self.goal_pub = rospy.Publisher('goal', Goal, queue_size=1)
 		rospy.wait_for_service('match_image')
@@ -197,6 +201,31 @@ class teach_repeat_localiser:
 		self.sub_images = rospy.Subscriber('image', Image, self.process_image_data, queue_size=1, buff_size=2**22)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
+
+	def save_params(self):
+		params = {
+			'load_dir' : self.load_dir,
+			'rotation_correction_gain' : self.rotation_correction_gain,
+			'path_correction_gain' : self.path_correction_gain,
+			'wait_for_ready' : not self.ready,
+			'global_localisation_init' : self.global_localisation_init,
+			'resize': self.resize,
+			'patch_size': self.patch_size,
+			'stop_at_end': self.stop_at_end,
+			'discrete_correction': self.discrete_correction,
+			'goal_distance_spacing': GOAL_DISTANCE_SPACING,
+			'lookahead_distance_ratio': LOOKAHEAD_DISTANCE_RATIO,
+			'turning_target_theta_range_distance_ratio': TURNING_TARGET_RANGE_DISTANCE_RATIO,
+			'goal_theta_tolerance': GOAL_THETA_TOLERANCE,
+			'image_recognition_threshold': self.image_recognition_threshold,
+			'image_subsampling': CORR_SUB_SAMPLING,
+			'image_field_of_view_width_deg': FIELD_OF_VIEW_DEG,
+			'search_range': self.search_range,
+			'save_full_res_images': self.save_full_res_images,
+			'save_gt_data': self.save_gt_data
+		}
+		with open(self.save_dir + 'params.txt', 'w') as params_file:
+			params_file.write(json.dumps(params))
 
 	def on_ready(self, srv):
 		if not self.ready:
@@ -343,7 +372,7 @@ class teach_repeat_localiser:
 			n = msg.header.seq
 
 			full_image = image_processing.msg_to_image(msg)
-			normalised_image = image_processing.patch_normalise_image(full_image, (9,9), resize=self.resize)
+			normalised_image = image_processing.patch_normalise_image(full_image, self.patch_size, resize=self.resize)
 			
 			if self.save_full_res_images:
 				cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
@@ -557,14 +586,14 @@ class teach_repeat_localiser:
 			path_error = pos
 
 			path_correction_distance = -self.path_correction_gain * path_error * GOAL_DISTANCE_SPACING
-			path_correction = (next_goal_distance + path_correction_distance) / next_goal_distance
+			path_correction = (GOAL_DISTANCE_SPACING + path_correction_distance) / GOAL_DISTANCE_SPACING
 			if np.isnan(path_correction):
-				print(corr, s, w, pos, next_goal_distance)
-			if -path_correction_distance > next_goal_distance:
+				print(corr, s, w, pos, GOAL_DISTANCE_SPACING)
+			if -path_correction_distance > GOAL_DISTANCE_SPACING:
 				print('PATH CORRECTION ERROR: correction is greater than distance to goal!')
-				print('corr = %s; pos = %f, path_correction = %f, goal_distance = %f' % (str(corr),pos,path_correction_distance,next_goal_distance))
+				print('corr = %s; pos = %f, path_correction = %f, goal_distance = %f' % (str(corr),pos,path_correction_distance,GOAL_DISTANCE_SPACING))
 				print('path_correction = %f' % path_correction)
-				path_correction_distance = -next_goal_distance
+				path_correction_distance = -GOAL_DISTANCE_SPACING
 				path_correction = 0.0
 		else:
 			path_correction = 1.0
