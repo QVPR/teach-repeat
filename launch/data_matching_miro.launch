@@ -17,6 +17,7 @@
 	<rosparam param="goal_theta_tolerance">5</rosparam>
 	<rosparam param="save_full_res_images">true</rosparam>
 	<rosparam param="save_gt_data">false</rosparam>
+	<rosparam param="publish_gt_goals">false</rosparam>
 
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->

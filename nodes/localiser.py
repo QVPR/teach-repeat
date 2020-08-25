@@ -15,6 +15,7 @@ from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from std_msgs.msg import UInt32
 from std_srvs.srv import Trigger, TriggerResponse
+from geometry_msgs.msg import PoseStamped
 import tf_conversions
 import tf
 import tf2_ros
@@ -169,6 +170,7 @@ class teach_repeat_localiser:
 		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir', '~/miro/data/follow-straight_tests/5'))
 		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
 		self.save_gt_data = rospy.get_param('/save_gt_data', True)
+		self.publish_gt_goals = rospy.get_param('/publish_gt_goals', True)
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
 		if not os.path.isdir(self.save_dir):
@@ -191,6 +193,8 @@ class teach_repeat_localiser:
 		
 	def setup_publishers(self):	
 		self.goal_pub = rospy.Publisher('goal', Goal, queue_size=1)
+		if self.publish_gt_goals:
+			self.goal_pose_pub = rospy.Publisher('goal_pose', PoseStamped, queue_size=1)
 		rospy.wait_for_service('match_image')
 		self.match_image = rospy.ServiceProxy('match_image', ImageMatch, persistent=True)
 
@@ -448,15 +452,30 @@ class teach_repeat_localiser:
 		original_pose_frame = tf_conversions.fromMsg(pose)
 		pose_frame = self.zero_odom_offset * original_pose_frame
 		original_pose_frame_lookahead = original_pose_frame * lookahead
-		pose_frame_looahead = pose_frame * lookahead
+		pose_frame_lookahead = pose_frame * lookahead
 
-		goal.pose.pose.position.x = pose_frame_looahead.p.x()
-		goal.pose.pose.position.y = pose_frame_looahead.p.y()
-		goal.pose.pose.orientation = tf_conversions.toMsg(pose_frame_looahead).orientation
+		goal.pose.pose.position.x = pose_frame_lookahead.p.x()
+		goal.pose.pose.position.y = pose_frame_lookahead.p.y()
+		goal.pose.pose.orientation = tf_conversions.toMsg(pose_frame_lookahead).orientation
 
 		goal.stop_at_goal.data = stop_at_goal
 		self.goal_pub.publish(goal)
 		self.goal_plus_lookahead = tf_conversions.toMsg(original_pose_frame_lookahead)
+
+		if self.publish_gt_goals:
+			try:
+				trans = self.tfBuffer.lookup_transform('map', 'odom', rospy.Time())
+				trans_frame = tf_conversions.Frame(tf_conversions.Rotation(trans.rotation.x,trans.rotation.y,trans.rotation.z,trans.rotation.w),
+				tf_conversions.Vector(trans.translation.x,trans.translation.y,trans.translation.z))
+
+				goal_pose = PoseStamped()
+				goal_pose.header.stamp = rospy.Time.now()
+				goal_pose.header.frame_id = "map"
+				goal_pose.pose = tf_conversions.toMsg(trans_frame * pose_frame_lookahead)
+				self.goal_pose_pub.publish(goal_pose)
+			except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+				print('Could not lookup transform from /map to /odom')
+				pass
 
 	def do_continuous_correction(self):
 		if self.last_odom_pose is not None and self.goal_index > 0:
