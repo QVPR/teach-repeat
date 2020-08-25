@@ -522,11 +522,6 @@ class teach_repeat_localiser:
 				pos = (corr * w).sum() - (u - 0.5)
 				path_error = pos
 
-				with open(self.save_dir + datetime.datetime.now().strftime(r'%H-%M-%S-%f') + '.txt', 'w') as f:
-					f.write('%f\n%f\n%s' % (pos, u, str(corr_orig)))
-
-				# print('pos: %.3f [u: %.2f] corr=%s' % (pos, u, str(corr_orig)))
-
 				# pos > 0: images are telling me I'm ahead of where I think I am
 				#   need to reduce the length of the current goal by pos
 				#   want d -> d - pos
