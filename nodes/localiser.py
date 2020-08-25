@@ -162,10 +162,6 @@ class teach_repeat_localiser:
 		FIELD_OF_VIEW_RAD = math.radians(FIELD_OF_VIEW_DEG)
 		self.search_range = rospy.get_param('~search-range', 1)
 
-		# camera calibration
-		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
-		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
-
 		# data saving
 		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir', '~/miro/data/follow-straight_tests/5'))
 		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
@@ -347,7 +343,7 @@ class teach_repeat_localiser:
 		if self.running:
 			if self.last_image is not None:
 				self.mutex.acquire()
-				if self.last_odom_pose is None:
+				if self.zero_odom_offset is None:
 					self.zero_odom_offset = tf_conversions.fromMsg(msg.pose.pose)
 				msg = self.subtract_odom(msg, self.zero_odom_offset)
 				self.last_odom_pose = msg.pose.pose
@@ -506,6 +502,7 @@ class teach_repeat_localiser:
 				# proj(goal1 -> robot, goal1 -> goal2) / |goal1 -> goal2|
 				u = np.sum(last_goal_to_next_goal_vector * last_goal_to_current_pose_vector) / np.sum(last_goal_to_next_goal_vector**2)
 
+			# Rotation correction
 			offsets, correlations = self.calculate_image_pose_offset(self.goal_index, 1+self.search_range)
 			if self.goal_index > self.search_range:
 				rotation_offsets = offsets[self.search_range:self.search_range+2]
@@ -520,6 +517,7 @@ class teach_repeat_localiser:
 			if turning_goal or max(rotation_correlations) < self.image_recognition_threshold or u < 0 or u > 1:
 				rotation_correction = 0.0
 
+			# Along path correction
 			if not turning_goal:
 				if self.goal_index > self.search_range and self.goal_index < len(self.poses)-self.search_range:
 					corr = np.array(correlations[:2*(1+self.search_range)])
