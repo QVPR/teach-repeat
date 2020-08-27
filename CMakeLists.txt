@@ -175,6 +175,7 @@ catkin_install_python(PROGRAMS
 	nodes/image_stitcher.py
 	nodes/localiser.py
 	nodes/miro_setup.py
+	nodes/save_ground_truth.py
 	nodes/teleop_joy.py
 	nodes/twist_stamper.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
