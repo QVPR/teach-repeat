@@ -42,9 +42,14 @@ def wrapToPi(x):
 	'''wrap angle to between +pi and -pi'''
 	return ((x + math.pi) % (2*math.pi)) - math.pi
 
+def quiver_plot(x_y_thetas, colour):
+	plt.quiver(x_y_thetas[0], x_y_thetas[1], np.cos(x_y_thetas[2]), np.sin(x_y_thetas[2]), color=colour, scale=50)
 
-teach_run = '/home/dominic/Desktop/2020-08-18_13:12:42/'
-repeat_runs = ['/home/dominic/Desktop/2020-08-18_13:12:42-repeat1/','/home/dominic/Desktop/2020-08-18_13:12:42-repeat2/']
+def line_plot(x_y_thetas, colour):
+	plt.plot(x_y_thetas[0], x_y_thetas[1], color=colour)
+
+teach_run = '/home/dominic/Desktop/bearnav-test/'
+repeat_runs = ['/home/dominic/Desktop/bearnav-test-repeat1/','/home/dominic/Desktop/pose/','/home/dominic/Desktop/pose-filtered/']
 
 teach_poses = get_ground_truth_poses(teach_run)
 repeat_poses = [get_ground_truth_poses(repeat_dir) for repeat_dir in repeat_runs]
@@ -52,19 +57,27 @@ repeat_poses = [get_ground_truth_poses(repeat_dir) for repeat_dir in repeat_runs
 teach_x_y_thetas = get_pose_x_y_theta(teach_poses)
 repeat_x_y_thetas = [get_pose_x_y_theta(repeat_pose) for repeat_pose in repeat_poses]
 
-offsets = [[teach_pose.Inverse() * repeat_pose if repeat_pose is not None else None for teach_pose, repeat_pose in zip(teach_poses, repeat_pose_list)] for repeat_pose_list in repeat_poses]
 
-for i in range(len(repeat_poses)):
-	repeat_poses[i] = pad_frame_to_length(repeat_poses[i], len(teach_poses)-1)
-	repeat_x_y_thetas[i] = pad_pose_x_y_to_length(repeat_x_y_thetas[i], len(teach_poses)-1)
+colours = ['#44dd44', '#4444dd', '#dd4444', '#dddd44']
 
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+line_plot(teach_x_y_thetas, colours[0])
 
-colours = ['#44dd44', '#4444dd', '#dd4444']
-for pose_data_list,colour in zip(repeat_poses,colours):
-	ax1.plot(pose_data_list[0]-teach_poses[0], color=colour)
-	ax2.plot(pose_data_list[1]-teach_poses[1], color=colour)
-	ax3.plot(180/math.pi*(wrapToPi(pose_data_list[2]-teach_poses[2])), color=colour)
+for pose_data_list,colour in zip(repeat_x_y_thetas,colours[1:]):
+	line_plot(pose_data_list, colour)
+
+plt.legend(['teach','ours filtered odom','bearnav filtered odom','bearnav unfiltered odom'])
+
+# offsets = [[teach_pose.Inverse() * repeat_pose if repeat_pose is not None else None for teach_pose, repeat_pose in zip(teach_poses, repeat_pose_list)] for repeat_pose_list in repeat_poses]
+
+# for i in range(len(repeat_poses)):
+# 	repeat_poses[i] = pad_frame_to_length(repeat_poses[i], len(teach_poses)-1)
+# 	repeat_x_y_thetas[i] = pad_pose_x_y_to_length(repeat_x_y_thetas[i], len(teach_poses)-1)
+
+# fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+# for pose_data_list,colour in zip(repeat_poses,colours):
+# 	ax1.plot(pose_data_list[0]-teach_poses[0], color=colour)
+# 	ax2.plot(pose_data_list[1]-teach_poses[1], color=colour)
+# 	ax3.plot(180/math.pi*(wrapToPi(pose_data_list[2]-teach_poses[2])), color=colour)
 
 
 plt.show()
