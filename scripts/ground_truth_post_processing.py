@@ -56,17 +56,20 @@ def get_repeat_errors(teach, repeats):
 	'''With matching length teach and repeat runs, get the position error parallel and perpendicular to the teach path'''
 	path_errors = [np.zeros((teach.shape[1])) for r in repeats]
 	lateral_errors = [np.zeros((teach.shape[1])) for r in repeats]
+	orientation_errors = [np.zeros((teach.shape[1])) for r in repeats]
 
 	for i in range(teach.shape[1]):
 		teach_pos = teach[:2,i]
 		teach_angle = teach[2,i]
 		for j, r in enumerate(repeats):
 			repeat_pos = r[:2,i]
+			repeat_angle = r[2,i]
 			pos_error = teach_pos - repeat_pos
 			rotated_error = rotation_matrix(-teach_angle).dot(pos_error)
 			path_errors[j][i] = rotated_error[0]
 			lateral_errors[j][i] = rotated_error[1]
-	return path_errors, lateral_errors
+			orientation_errors[j][i] = wrapToPi(teach_angle - repeat_angle)
+	return path_errors, lateral_errors, orientation_errors
 
 def wrapToPi(x):
 	'''wrap angle to between +pi and -pi'''
@@ -106,8 +109,9 @@ repeat_poses[2] = repeat_poses[2][:,300:1800]
 
 # match the size of repeat runs to the teach run (bearnav is sampled more often)
 repeat_poses = sample_repeats_to_teach(teach_poses, repeat_poses)
-repeat_errors_path, repeat_errors_lateral = get_repeat_errors(teach_poses, repeat_poses)
+repeat_errors_path, repeat_errors_lateral, repeat_errors_orientation = get_repeat_errors(teach_poses, repeat_poses)
 RMS_lateral = [math.sqrt(np.nanmean(errors_lateral**2)) for errors_lateral in repeat_errors_lateral]
+RMS_orientation = [math.sqrt(np.nanmean(errors_orientation**2)) for errors_orientation in repeat_errors_orientation]
 
 # Show overview of the runs
 plt.figure()
@@ -120,13 +124,19 @@ plt.legend(['teach','ours (filtered odom)','bearnav (filtered odom)','bearnav (u
 # Show the lateral path error
 # along path error doesn't make sense because the repeat run is sampled more frequently (for bearnav)
 # so the along path error will always be tiny.
-plt.figure()
-for err_lateral,colour in zip(repeat_errors_lateral,colours[1:]):
-	plt.plot(err_lateral, color=colour)
-plt.title('Repeat run error')
-plt.ylabel('lateral path error (m)')
-plt.legend([
-	'ours (filtered odom) RMS=%fm' % RMS_lateral[0],
-	'bearnav (filtered odom) RMS=%fm' % RMS_lateral[1],
-	'bearnav (unfiltered odom) RMS=%fm' % RMS_lateral[2]])
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+for err_lateral,err_orientation,colour in zip(repeat_errors_lateral,repeat_errors_orientation,colours[1:]):
+	ax1.plot(err_lateral, color=colour)
+	ax2.plot(err_orientation, color=colour)
+ax1.set_title('Repeat run error')
+ax1.set_ylabel('lateral path error (m)')
+ax2.set_ylabel('orientation path error (rad)')
+ax1.legend([
+	'ours (filtered odom) RMS=%f m' % RMS_lateral[0],
+	'bearnav (filtered odom) RMS=%f m' % RMS_lateral[1],
+	'bearnav (unfiltered odom) RMS=%f m' % RMS_lateral[2]])
+ax2.legend([
+	'ours (filtered odom) RMS=%f rad' % RMS_orientation[0],
+	'bearnav (filtered odom) RMS=%f rad' % RMS_orientation[1],
+	'bearnav (unfiltered odom) RMS=%f rad' % RMS_orientation[2]])
 plt.show()
