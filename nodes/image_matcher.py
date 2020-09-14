@@ -10,7 +10,7 @@ import datetime
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
-import image_processing
+import miro_teach_repeat.image_processing as image_processing
 from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
 
 def get_image_files_from_dir(file_dir, file_ending):
@@ -20,7 +20,7 @@ def get_image_files_from_dir(file_dir, file_ending):
 
 class image_matcher:
 
-	def __init__(self):		
+	def __init__(self):
 		self.setup_parameters()
 		self.setup_publishers()
 		self.setup_subscribers()
@@ -37,7 +37,7 @@ class image_matcher:
 		else:
 			rospy.loginfo('[Image Matcher] no calibration file for left camera specified. Assuming not calibrated')
 			self.cam_left_calibration = CameraInfo()
-		
+
 		if self.right_cal_file is not None:
 			with open(self.right_cal_file,'r') as f:
 				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
@@ -164,7 +164,7 @@ class image_matcher:
 		correlation = correlations_data[centre_image_index]
 
 		correlation_bar_height = 5
-		correlation_bar = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[1]) * len(correlations_data) / debug_image.shape[1]].reshape(1,-1,1), (correlation_bar_height,1,3)))
+		correlation_bar = np.uint8(np.tile(255.0*np.array(correlations_data)[np.arange(debug_image.shape[1]) * int(len(correlations_data) / debug_image.shape[1])].reshape(1,-1,1), (correlation_bar_height,1,3)))
 
 		debug_image = np.vstack((debug_image, correlation_bar))
 

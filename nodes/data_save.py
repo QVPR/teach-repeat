@@ -52,9 +52,10 @@ class data_save:
 	def setup_subscribers(self):
 		if not self.ready:
 			self.srv_ready = rospy.Service('ready_data_save', Trigger, self.on_ready)
-		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
+		rospy.sleep(0.2)
+		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
 
 	def save_params(self):
 		params = {

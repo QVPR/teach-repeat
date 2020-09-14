@@ -20,7 +20,7 @@ import tf_conversions
 import tf
 import tf2_ros
 
-import image_processing
+import miro_teach_repeat.image_processing as image_processing
 from miro_teach_repeat.msg import Goal
 from miro_teach_repeat.srv import ImageMatch, ImageMatchRequest
 
