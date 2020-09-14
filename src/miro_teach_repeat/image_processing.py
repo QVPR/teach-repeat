@@ -1,5 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
+import sys
 import cv_bridge
 import cv2
 import math
@@ -59,7 +60,7 @@ def patch_normalise_patch(image, patch_size):
 	return out
 
 def patch_normalise_pad(image, patch_size):
-	patch_half_size = [(p-1)/2 for p in patch_size]
+	patch_half_size = [int((p-1)/2) for p in patch_size]
 	height, width = image.shape
 
 	image_pad = np.pad(np.float64(image), patch_half_size, 'constant', constant_values=np.nan)
