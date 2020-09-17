@@ -118,6 +118,7 @@ class teach_repeat_localiser:
 		# Wait for ready
 		self.ready = not rospy.get_param('/wait_for_ready', False)
 		self.global_localisation_init = rospy.get_param('~global_localisation_init', False)
+		self.min_init_correlation = rospy.get_param('~min_init_correlation', 0.0)
 		self.running = False
 		self.mutex = threading.Lock()
 
@@ -185,11 +186,11 @@ class teach_repeat_localiser:
 			if not os.path.isdir(self.save_dir+'full/'):
 				os.makedirs(self.save_dir+'full/')
 		self.goal_number = 0
-		
+
 		self.save_params()
 
-		
-	def setup_publishers(self):	
+
+	def setup_publishers(self):
 		self.goal_pub = rospy.Publisher('goal', Goal, queue_size=1)
 		if self.publish_gt_goals:
 			self.goal_pose_pub = rospy.Publisher('goal_pose', PoseStamped, queue_size=1)
@@ -243,7 +244,7 @@ class teach_repeat_localiser:
 				print('Global localisation - waiting for first odom and image messages')
 				while self.last_odom_pose is None or self.last_image is None:
 					time.sleep(0.2) # sleep lets subscribers be processed
-			
+
 			offsets, correlations = self.calculate_image_pose_offset(0, len(self.poses))
 			best_match = np.argmax(correlations)
 			if best_match == 0 or (best_match == 1 and correlations[0] > correlations[2]):
@@ -272,6 +273,9 @@ class teach_repeat_localiser:
 				self.zero_odom_offset = (goal_pose * odom_pose.Inverse()).Inverse()
 			self.last_odom_pose = tf_conversions.toMsg(self.zero_odom_offset.Inverse() * tf_conversions.fromMsg(self.last_odom_pose))
 			print('Global localisation - best match at pose %d [correlation = %f]' % (self.goal_index, correlations[best_match]))
+			if correlations[best_match] < self.min_init_correlation:
+				print('Stop, best match [%.2f] did not exceed minimum correlation ([%.2f])' % (correlations[best_match], self.min_init_correlation))
+				return
 		else:
 			if self.last_odom_pose is None:
 				print('Global localisation - waiting for first odom message')
@@ -288,7 +292,7 @@ class teach_repeat_localiser:
 				self.goal_index = 1
 			else:
 				self.goal_index = 0
-		
+
 		self.update_goal(tf_conversions.fromMsg(self.poses[self.goal_index]))
 
 		self.running = True
@@ -340,7 +344,7 @@ class teach_repeat_localiser:
 			correction_file.write(message_as_text)
 
 	def subtract_odom(self, odom, odom_frame_to_subtract):
-		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose)
 		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
 		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
 		return odom
@@ -379,11 +383,11 @@ class teach_repeat_localiser:
 
 			full_image = image_processing.msg_to_image(msg)
 			normalised_image = image_processing.patch_normalise_image(full_image, self.patch_size, resize=self.resize)
-			
+
 			if self.save_full_res_images:
 				cv2.imwrite(self.save_dir+('full/%06d.png' % n), full_image)
 			cv2.imwrite(self.save_dir+('norm/%06d.png' % n), np.uint8(255.0 * (1 + normalised_image) / 2.0))
-			
+
 			self.mutex.acquire()
 			self.last_image = normalised_image
 			if self.save_full_res_image_at_goal:
@@ -403,12 +407,12 @@ class teach_repeat_localiser:
 		current_goal_frame_odom = tf_conversions.fromMsg(self.goal)
 
 		state = self.update_goal_index()
-		
+
 		if state == GOAL_STATE.finished:
 			print('Localiser stopping. Reached final goal.')
 			self.running = False
 			return
-		
+
 		if state == GOAL_STATE.restart:
 			# don't have a big offset from the end of the path, back to the start
 			old_goal_frame_world = tf_conversions.Frame()
@@ -579,7 +583,7 @@ class teach_repeat_localiser:
 		turning_goal = is_turning_goal(old_goal_frame_world, new_goal_frame_world)
 		inter_goal_offset_world = old_goal_frame_world.Inverse() * new_goal_frame_world
 		inter_goal_distance_world = inter_goal_offset_world.p.Norm()
-		
+
 		offsets, correlations = self.calculate_image_pose_offset(self.goal_index, self.search_range)
 		if self.goal_index >= self.search_range:
 			rotation_offset = offsets[self.search_range]

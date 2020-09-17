@@ -45,6 +45,7 @@
 		<rosparam param="discrete-correction">false</rosparam>
 		<rosparam param="search-range">3</rosparam>
 		<rosparam param="global_localisation_init">true</rosparam>
+		<rosparam param="min_init_correlation">0.5</rosparam>
 	</node>
 	<!-- Republish the goal as a PoseStamped if we need (send to move_base) -->
 	<node pkg="topic_tools" type="transform" name="goal_repub" args="/goal goalPose geometry_msgs/PoseStamped m.pose"/>
