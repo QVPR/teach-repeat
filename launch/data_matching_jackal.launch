@@ -1,7 +1,8 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-08-26_10:30:35</rosparam>
-	<rosparam param="data_save_dir">~/robot/teach-repeat-data/2020-08-26_10:30:35-repeat2</rosparam>
+	<arg name="repeat_num"/>
+	<rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-09-15_07:00:47</rosparam>
+	<rosparam param="data_save_dir" subst_value="True">~/robot/teach-repeat-data/2020-09-15_07:00:47-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam>
 	<rosparam param="wait_for_ready">false</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -16,6 +17,16 @@
 	<rosparam param="save_full_res_images">false</rosparam>
 	<rosparam param="save_gt_data">true</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
+	<arg name="use_corrupted_odom" default="true"/>
+	<arg name="odom_corruption_factor" default="1.0"/>
+
+	<!-- Odom corrupter -->
+	<node pkg="miro_teach_repeat" type="odom_corrupter.py" name="odom_corrupter" output="screen" if="$(arg use_corrupted_odom)">
+		<remap from="odom" to="odometry/filtered" />
+		<remap from="cmd_vel" to="jackal_velocity_controller/cmd_vel" />
+		<rosparam param="translation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
+		<rosparam param="rotation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
+	</node>
 
 	<!-- Load image files for matching -->
 	<node pkg="miro_teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
@@ -26,7 +37,8 @@
 
 	<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
 	<node pkg="miro_teach_repeat" type="localiser.py" name="localiser" output="screen" >
-		<remap from="odom" to="odometry/filtered" />
+		<remap from="odom" to="odometry/filtered" unless="$(arg use_corrupted_odom)" />
+		<remap from="odom" to="odom_corrupted" if="$(arg use_corrupted_odom)" />
 		<remap from="image" to="ros_indigosdk_occam/image0" />
 		<rosparam param="stop_at_end">true</rosparam>
 		<rosparam param="discrete-correction">false</rosparam>
@@ -38,8 +50,9 @@
 
 	<!-- Drive to goal pose -->
 	<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
-		<remap from="cmd_vel" to="jackal_velocity_controller/cmd_vel" />
-		<remap from="odom" to="odometry/filtered" />
+		<!--remap from="odom" to="odometry/filtered" /-->
+		<remap from="odom" to="odometry/filtered" unless="$(arg use_corrupted_odom)" />
+		<remap from="odom" to="odom_corrupted" if="$(arg use_corrupted_odom)" />
 		<rosparam param="min_omega">0.15</rosparam>
 		<rosparam param="max_omega">0.93</rosparam>
 		<rosparam param="max_v">0.35</rosparam>
