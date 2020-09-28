@@ -1,5 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
+import sys
 import cv_bridge
 import cv2
 import math
@@ -59,7 +60,7 @@ def patch_normalise_patch(image, patch_size):
 	return out
 
 def patch_normalise_pad(image, patch_size):
-	patch_half_size = [(p-1)/2 for p in patch_size]
+	patch_half_size = [int((p-1)/2) for p in patch_size]
 	height, width = image.shape
 
 	image_pad = np.pad(np.float64(image), patch_half_size, 'constant', constant_values=np.nan)
@@ -453,12 +454,12 @@ def create_correlation_debug_image(img1, img2, corr):
 
 	cv2.line(debug_image, (int(-offset+img1.shape[1]/2),0), (int(-offset+img1.shape[1]/2),img1.shape[0]-1), (0,255,0))
 	cv2.line(debug_image, (int(img1.shape[1]/2),img1.shape[0]), (int(img1.shape[1]/2), 2*img1.shape[0]-1), (255,0,0))
-	
-	cv2.line(debug_image, (0,debug_image.shape[0]-(debug_size/4)), (img1.shape[1],debug_image.shape[0]-(debug_size/4)), (60,0,0))
-	cv2.line(debug_image, (0,debug_image.shape[0]-(debug_size/2)), (img1.shape[1],debug_image.shape[0]-(debug_size/2)), (60,0,0))
-	cv2.line(debug_image, (0,debug_image.shape[0]-(3*debug_size/4)), (img1.shape[1],debug_image.shape[0]-(3*debug_size/4)), (60,0,0))
+
+	cv2.line(debug_image, (0,debug_image.shape[0]-int(debug_size/4)), (img1.shape[1],debug_image.shape[0]-int(debug_size/4)), (60,0,0))
+	cv2.line(debug_image, (0,debug_image.shape[0]-int(debug_size/2)), (img1.shape[1],debug_image.shape[0]-int(debug_size/2)), (60,0,0))
+	cv2.line(debug_image, (0,debug_image.shape[0]-int(3*debug_size/4)), (img1.shape[1],debug_image.shape[0]-int(3*debug_size/4)), (60,0,0))
 	cv2.line(debug_image, (int(img1.shape[1]/2),2*img1.shape[0]), (int(img1.shape[1]/2),debug_image.shape[0]), (60,0,0))
-	
+
 	debug_image[corr_positions,np.arange(corr_positions.size),:] = 255
 	return debug_image
 

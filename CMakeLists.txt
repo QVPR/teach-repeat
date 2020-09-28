@@ -24,7 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -171,10 +171,10 @@ catkin_install_python(PROGRAMS
 	nodes/drive_straight_controller.py
 	nodes/drive_to_pose_controller.py
 	nodes/image_matcher.py
-	nodes/image_processing.py
 	nodes/image_stitcher.py
 	nodes/localiser.py
 	nodes/miro_setup.py
+	nodes/odom_corrupter.py
 	nodes/save_ground_truth.py
 	nodes/teleop_joy.py
 	nodes/twist_stamper.py

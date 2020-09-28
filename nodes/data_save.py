@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import rospy
 import numpy as np
@@ -10,12 +10,12 @@ import json
 from std_srvs.srv import Trigger, TriggerResponse
 from rospy_message_converter import message_converter
 
-import image_processing
+import miro_teach_repeat.image_processing as image_processing
 from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseResponse
 
 class data_save:
 
-	def __init__(self):	
+	def __init__(self):
 		self.setup_parameters()
 		self.setup_publishers()
 		self.setup_subscribers()
@@ -38,7 +38,6 @@ class data_save:
 				os.makedirs(self.save_dir+'full/')
 		if not os.path.isdir(self.save_dir+'norm/'):
 			os.makedirs(self.save_dir+'norm/')
-
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
@@ -53,10 +52,11 @@ class data_save:
 	def setup_subscribers(self):
 		if not self.ready:
 			self.srv_ready = rospy.Service('ready_data_save', Trigger, self.on_ready)
-		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
-	
+		rospy.sleep(0.2)
+		self.service = rospy.Service('save_image_pose', SaveImageAndPose, self.process_image_and_pose)
+
 	def save_params(self):
 		params = {
 			'resize': self.resize,
