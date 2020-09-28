@@ -7,6 +7,8 @@ from geometry_msgs.msg import Pose
 import tf_conversions
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import scipy.optimize
+import cv2
 
 def read_file(filename):
 	with open(filename, 'r') as f:
@@ -29,23 +31,28 @@ def get_pose_x_y_theta(poses):
 
 def sample_repeats_to_teach(teach, repeats):
 	'''Make the repeats the same length as teach, using the closest possible poses'''
-	repeats_sampled = [np.zeros_like(teach) for r in repeats]
+	repeats_sampled = [np.full(teach.shape, np.nan) for r in repeats]
 	window_half_size = 0.2 # search for match in corresponding 2*window_half_size of repeat run
-	angle_threshold = math.radians(10) # make sure the matching poses are facing the same direction
+	angle_threshold = math.radians(30) # make sure the matching poses are facing the same direction
 
-	for i in range(teach.shape[1]):
-		for j, r in enumerate(repeats):
-			range_min = max(0, int(round((float(i) / teach.shape[1] - window_half_size) * r.shape[1])))
-			range_max = min(r.shape[1], int(round((float(i) / teach.shape[1] + window_half_size) * r.shape[1])))
-			r_window = r[:,range_min:range_max]
+	# HUNGARIAN ASSIGNMENT
+	MAX = 10000000
+	teach_length = teach.shape[1]
+	for n_repeat, repeat in enumerate(repeats):
+		repeat_length = repeat.shape[1]
+		cost = np.full((teach_length, repeat_length), MAX)
+
+		for i in range(teach_length):
+			range_min = max(0, int(round((float(i) / teach_length - window_half_size) * repeat_length)))
+			range_max = min(repeat_length, int(round((float(i) / teach_length + window_half_size) * repeat_length)))
+			r_window = repeat[:,range_min:range_max]
 			dist = (r_window[0,:] - teach[0,i])**2 + (r_window[1,:] - teach[1,i])**2
-			dist[abs(wrapToPi(r_window[2,:] - teach[2,i])) > angle_threshold] = np.nan
-			if not np.all(np.isnan(dist)):
-				best = np.nanargmin(dist)
-				repeats_sampled[j][:,i] = r_window[:,best]
-				repeats[j][:,best + range_min] = np.nan
-			else:
-				repeats_sampled[j][:,i] = np.full((3),np.nan)
+			dist[abs(wrapToPi(r_window[2,:] - teach[2,i])) > angle_threshold] = MAX
+
+			cost[i,range_min:range_max] = dist
+
+		teach_ind, repeat_ind = scipy.optimize.linear_sum_assignment(cost)
+		repeats_sampled[n_repeat][:,teach_ind] = repeat[:,repeat_ind]
 	
 	return repeats_sampled
 
@@ -81,14 +88,24 @@ def quiver_plot(poses, colour):
 def line_plot(poses, colour):
 	plt.plot(poses[0], poses[1], color=colour)
 
-teach_run = os.path.expanduser('~/teach-repeat-data/teach/')
-repeat_runs = ['~/teach-repeat-data/ours-filtered/','~/teach-repeat-data/bearnav-filtered/','~/teach-repeat-data/bearnav-unfiltered/']
-repeat_runs = [os.path.expanduser(path) for path in repeat_runs]
+teach_run = os.path.expanduser('/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-17_13:27:47/')
+repeat_runs = ['/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-17_13:27:47-repeat-1.0-1/','/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-17_13:27:47-repeat-1.0-2/']
+# teach_run = os.path.expanduser('/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47/')
+# repeat_runs = [
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-0.7-1/',
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-0.8-1/',
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-0.9-2/',
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-1.0-1/',
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-1.1-1/',
+# 	'/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-1.2-1/',
+# 	# '/media/dominic/NewVolume/teach-repeat/teach-repeat-data/2020-09-15_07_00_47-repeat-1.3-1/',
+# ]
+# repeat_runs = [os.path.expanduser(path) for path in repeat_runs]
 
 teach_poses = get_pose_x_y_theta(get_ground_truth_poses(teach_run))
 repeat_poses = [get_pose_x_y_theta(get_ground_truth_poses(repeat_dir)) for repeat_dir in repeat_runs]
 
-colours = ['#44dd44', '#4444dd', '#dd4444', '#dddd44']
+colours = ['#44dd44', '#4444dd', '#dd4444', '#dddd44','#dd44dd','#44dddd','#888888','#2288dd']
 
 SHOW_DATA_FOR_CROPPING = False
 if SHOW_DATA_FOR_CROPPING:
@@ -104,39 +121,57 @@ if SHOW_DATA_FOR_CROPPING:
 	plt.legend([str(num) for num in list(range(len(repeat_poses)))])
 	plt.show()
 # crop to remove time spent standing still from repeat runs
-repeat_poses[1] = repeat_poses[1][:,:1300]
-repeat_poses[2] = repeat_poses[2][:,300:1800]
+# repeat_poses[1] = repeat_poses[1][:,:1300]
+# repeat_poses[2] = repeat_poses[2][:,300:1800]
+# filter errors due to SLAM relocalisation in teach run
+teach_diff = np.sqrt(np.sum((teach_poses[:2,1:] - teach_poses[:2,:-1]) ** 2, axis=0))
+bad_teach_poses = np.hstack((np.full((1,),False),teach_diff >= 0.5))
 
 # match the size of repeat runs to the teach run (bearnav is sampled more often)
-repeat_poses = sample_repeats_to_teach(teach_poses, repeat_poses)
-repeat_errors_path, repeat_errors_lateral, repeat_errors_orientation = get_repeat_errors(teach_poses, repeat_poses)
-RMS_lateral = [math.sqrt(np.nanmean(errors_lateral**2)) for errors_lateral in repeat_errors_lateral]
-RMS_orientation = [math.sqrt(np.nanmean(errors_orientation**2)) for errors_orientation in repeat_errors_orientation]
+# repeat_poses = [np.hstack((repeat_p,np.full((3,teach_poses.shape[1]-repeat_p.shape[1]),np.nan))) for repeat_p in repeat_poses]
+# repeat_poses = sample_repeats_to_teach(teach_poses, repeat_poses)
+# repeat_errors_path, repeat_errors_lateral, repeat_errors_orientation = get_repeat_errors(teach_poses, repeat_poses)
+
+# filter errors due to SLAM relocalisation in repeat runs
+# for i in range(len(repeat_errors_path)):
+# 	repeat_diff = np.sqrt(np.sum((repeat_poses[i][:2,1:] - repeat_poses[i][:2,:-1]) ** 2, axis=0))
+# 	bad_repeat_poses = np.hstack((np.full((1,),False),repeat_diff >= 0.5)) | bad_teach_poses
+# 	repeat_errors_path[i][bad_repeat_poses] = np.nan
+# 	repeat_errors_lateral[i][bad_repeat_poses] = np.nan
+# 	repeat_errors_orientation[i][bad_repeat_poses] = np.nan
+
+	# bad
+	# repeat_errors_lateral[i][abs(repeat_errors_lateral[i]) > 5] = np.nan
+
+
+# RMS_lateral = [math.sqrt(np.nanmean(errors_lateral**2)) for errors_lateral in repeat_errors_lateral]
+# RMS_orientation = [math.sqrt(np.nanmean(errors_orientation**2)) for errors_orientation in repeat_errors_orientation]
+
 
 # Show overview of the runs
 plt.figure()
+img = cv2.imread('/home/dominic/Desktop/outdoor3longands4.pgm')
+img_extent = (-32.270855, img.shape[0]*0.05-32.270855, -149.629161, img.shape[1]*0.05-149.629161)
+plt.imshow(img, extent=img_extent)
 quiver_plot(teach_poses, colours[0])
 for pose_data_list,colour in zip(repeat_poses,colours[1:]):
 	quiver_plot(pose_data_list, colour)
+	# x_link = np.vstack((teach_poses[0],pose_data_list[0]))
+	# y_link = np.vstack((teach_poses[1],pose_data_list[1]))
+	# plt.plot(x_link,y_link)
 plt.title('overview of runs')
-plt.legend(['teach','ours (filtered odom)','bearnav (filtered odom)','bearnav (unfiltered odom)'])
+# plt.legend(['teach'] + [("odom x %.1f" % x) for x in np.arange(0.7,1.3,0.1)])
 
 # Show the lateral path error
 # along path error doesn't make sense because the repeat run is sampled more frequently (for bearnav)
 # so the along path error will always be tiny.
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-for err_lateral,err_orientation,colour in zip(repeat_errors_lateral,repeat_errors_orientation,colours[1:]):
-	ax1.plot(err_lateral, color=colour)
-	ax2.plot(err_orientation, color=colour)
-ax1.set_title('Repeat run error')
-ax1.set_ylabel('lateral path error (m)')
-ax2.set_ylabel('orientation path error (rad)')
-ax1.legend([
-	'ours (filtered odom) RMS=%f m' % RMS_lateral[0],
-	'bearnav (filtered odom) RMS=%f m' % RMS_lateral[1],
-	'bearnav (unfiltered odom) RMS=%f m' % RMS_lateral[2]])
-ax2.legend([
-	'ours (filtered odom) RMS=%f rad' % RMS_orientation[0],
-	'bearnav (filtered odom) RMS=%f rad' % RMS_orientation[1],
-	'bearnav (unfiltered odom) RMS=%f rad' % RMS_orientation[2]])
+# fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+# for err_lateral,err_orientation,colour in zip(repeat_errors_lateral,repeat_errors_orientation,colours[1:]):
+# 	ax1.plot(err_lateral, color=colour)
+# 	ax2.plot(err_orientation, color=colour)
+# ax1.set_title('Repeat run error')
+# ax1.set_ylabel('lateral path error (m)')
+# ax2.set_ylabel('orientation path error (rad)')
+# ax1.legend(['RMS=%f m' % RMS_lat for RMS_lat in RMS_lateral])
+# ax2.legend(['RMS=%f rad' % RMS_ori for RMS_ori in RMS_orientation])
 plt.show()
