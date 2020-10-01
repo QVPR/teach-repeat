@@ -15,6 +15,7 @@
 	<rosparam param="turning_target_range_distance_ratio">0.2</rosparam>
 	<rosparam param="goal_theta_tolerance">15</rosparam>
 	<rosparam param="save_full_res_images">false</rosparam>
+	<rosparam param="save_full_res_images_at_goal">true</rosparam>
 	<rosparam param="save_gt_data">true</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 	<arg name="use_corrupted_odom" default="true"/>

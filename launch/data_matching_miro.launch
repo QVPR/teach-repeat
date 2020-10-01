@@ -16,6 +16,7 @@
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
 	<rosparam param="goal_theta_tolerance">5</rosparam>
 	<rosparam param="save_full_res_images">true</rosparam>
+	<rosparam param="save_full_res_images_at_goal">true</rosparam>
 	<rosparam param="save_gt_data">false</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 
