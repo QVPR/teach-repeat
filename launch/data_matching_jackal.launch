@@ -1,8 +1,16 @@
 <launch>
 	<!-- Global params -->
 	<arg name="repeat_num"/>
-	<rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-09-15_07:00:47</rosparam>
-	<rosparam param="data_save_dir" subst_value="True">~/robot/teach-repeat-data/2020-09-15_07:00:47-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam>
+
+	<!--rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-09-15_07:00:47</rosparam>
+	<rosparam param="data_save_dir" subst_value="True">~/robot/teach-repeat-data/2020-09-15_07:00:47-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam-->
+
+	<!--rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-09-17_13:27:47</rosparam>
+	<rosparam param="data_save_dir" subst_value="True">~/robot/teach-repeat-data/2020-09-17_13:27:47-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam-->
+
+	<!--rosparam param="data_load_dir">~/robot/teach-repeat-data/2020-10-02_15:24:54</rosparam>
+	<rosparam param="data_save_dir" subst_value="True">~/robot/teach-repeat-data/2020-10-02_15:24:54-repeat-$(arg odom_corruption_factor)-$(arg repeat_num)</rosparam-->
+
 	<rosparam param="wait_for_ready">false</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -24,9 +32,9 @@
 	<!-- Odom corrupter -->
 	<node pkg="miro_teach_repeat" type="odom_corrupter.py" name="odom_corrupter" output="screen" if="$(arg use_corrupted_odom)">
 		<remap from="odom" to="odometry/filtered" />
-		<remap from="cmd_vel" to="jackal_velocity_controller/cmd_vel" />
 		<rosparam param="translation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
-		<rosparam param="rotation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
+		<!--rosparam param="rotation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam-->
+		<rosparam param="rotation_error_factor">0.0</rosparam>
 	</node>
 
 	<!-- Load image files for matching -->
