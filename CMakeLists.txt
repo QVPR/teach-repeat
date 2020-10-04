@@ -61,6 +61,7 @@ add_message_files(
 		FILES
 		ImageMatch.srv
 		SaveImageAndPose.srv
+		SetGoal.srv
 )
 
 ## Generate actions in the 'action' folder
