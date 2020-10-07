@@ -51,5 +51,5 @@ if __name__ == "__main__":
 	saver = teach_repeat_ground_truth_save()
 	r = rospy.Rate(5)
 	while not rospy.is_shutdown():
-		saver.save_tf_data()
 		r.sleep()
+
