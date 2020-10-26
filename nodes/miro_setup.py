@@ -28,6 +28,8 @@ class miro_setup:
 		self.should_reset_odom = rospy.get_param('~reset_odom', False)
 		self.should_disable_cliff_sensors = rospy.get_param('~disable_cliff_sensors', False)
 
+		print('Disabling cliff sensors:', self.should_disable_cliff_sensors)
+
 		self.ready = None
 		self.frames_to_wait_for_ready = 50 # 50 frames = 1 s
 		self.ready_frames = self.frames_to_wait_for_ready
