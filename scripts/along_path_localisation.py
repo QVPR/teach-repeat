@@ -68,7 +68,7 @@ if not os.path.exists(base_file_path+'confusion.npy'):
 	# 	for i in range(max(0,current_index-half_search_range), min(len(images1),current_index+half_search_range+1)):
 	# 		image1 = images1[i]
 	# 		offset, correlation = image_processing.xcorr_match_images(image1, image2)
-	# 		# correlation = image_processing.normxcorr2(image1, image2, mode='valid')
+	# 		# correlation = image_processing.normxcorr2(image1, image2)
 	# 		correlations[i,j] = correlation
 
 	for i,image1 in enumerate(images1):

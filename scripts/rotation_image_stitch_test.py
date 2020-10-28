@@ -26,7 +26,7 @@ FULL_RES = 925.
 
 def corr_images(img1, img2, subsample=1):
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-	return image_processing.normxcorr2_subpixel(img1_pad, img2, subsample, 'valid')
+	return image_processing.normxcorr2_subpixel(img1_pad, img2, subsample)
 
 def plot_corr(img1, img2, subsample=1, style='-', color=None):
 	corr = corr_images(img1, img2, subsample)

@@ -179,18 +179,18 @@ def horizontal_SAD_match_images(image, template_image, template_proportion=0.5, 
 def xcorr_match_images(image, template_image, subsampling=1):
 	image = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	if subsampling == 1:
-		corr = normxcorr2(image, template_image, mode='valid')[0]
+		corr = normxcorr2_horizontal_sweep(image, template_image)[0]
 	else:
-		corr = normxcorr2_subpixel(image, template_image, subsampling, mode='valid')
+		corr = normxcorr2_subpixel(image, template_image, subsampling)
 	offset = np.argmax(corr)
 	return offset - (len(corr)-1)/2, corr[offset]
 
 def xcorr_match_images_debug(image, template_image, subsampling=1):
 	image_pad = np.pad(image, ((0,),(int(template_image.shape[1]/2),)), mode='constant', constant_values=0)
 	if subsampling == 1:
-		corr = normxcorr2(image_pad, template_image, mode='valid')[0]
+		corr = normxcorr2_horizontal_sweep(image_pad, template_image)[0]
 	else:
-		corr = normxcorr2_subpixel(image_pad, template_image, subsampling, mode='valid')
+		corr = normxcorr2_subpixel(image_pad, template_image, subsampling)
 	offset = np.argmax(corr)
 	debug_image = create_correlation_debug_image(image, template_image, corr)
 	return offset - (len(corr)-1)/2, corr[offset], debug_image
@@ -249,80 +249,26 @@ def rectify_stitch_stereo_image_message(msg_left, msg_right, info_left, info_rig
 	else:
 		return rectify_stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right), info_left, info_right)
 
-def normxcorr2(image, template, mode="full"):
-	image = image.copy()
-	template = template.copy()
-	image_min = image.min()
-	if image_min < 0:
-		image -= image_min
-	template_min = template.min()
-	if template_min < 0:
-		template -= template_min
+def normxcorr2_horizontal_sweep(image_ref, image_query):
+	# we only implement 'valid' mode
+	# and only for horizontal sweeping
+	assert(image_ref.shape[0] == image_query.shape[0])
 
-	xcorr = scipy.signal.correlate2d(image, template, mode=mode)
+	# make sure images are all positive
+	image_ref = image_ref - image_ref.min() if image_ref.min() < 0 else image_ref.copy()
+	image_query = image_query - image_query.min() if image_query.min() < 0 else image_query.copy()
 
-	m,n = template.shape
-	mn = m*n
+	image_ref_zero_mean = image_ref - image_ref.mean()
+	image_query_zero_mean = image_query - image_query.mean()
 
-	if mode == "full":
-		local_sum_image = local_sum_full(image,m,n)
-		local_sum_image2 = local_sum_full(image**2,m,n)
-	elif mode == "same":
-		local_sum_image = local_sum_same(image,m,n)
-		local_sum_image2 = local_sum_same(image**2,m,n)
-	elif mode == "valid":
-		local_sum_image = local_sum_valid(image,m,n)
-		local_sum_image2 = local_sum_valid(image**2,m,n)
-	else:
-		raise NotImplementedError('normxcorr2: mode should be one of "full", "valid" or "same".')
+	xcorr = scipy.signal.correlate2d(image_ref_zero_mean, image_query_zero_mean, mode='valid')
 
-	denominator_image = local_sum_image2 - local_sum_image**2/mn
-	denominator_image[denominator_image < 0.0] = 0.0
-	denominator_template = ((template - template.mean())**2).sum()
-	denominator = np.sqrt(denominator_image * denominator_template)
-	numerator = xcorr - local_sum_image * template.sum()/mn
+	numerator = xcorr
+	I_hat_d = running_horizontal_sum_patch(image_ref, image_query.shape[1])
+	I_squared = running_horizontal_sum_patch(image_ref**2, image_query.shape[1])
+	denominator = np.sqrt((I_squared - I_hat_d**2/image_query.size) * (image_query_zero_mean**2).sum())
 
-	correlated = np.zeros_like(numerator)
-	tolerance = math.sqrt(np.spacing(abs(denominator).max()))
-	nonzero_index = np.where(denominator > tolerance)
-	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
-	return correlated
-
-def normxcorr2_sparse(image, template, sampling=(1,1)):
-	image = image.copy()
-	template = template.copy()
-	image_min = image.min()
-	if image_min < 0:
-		image -= image_min
-	template_min = template.min()
-	if template_min < 0:
-		template -= template_min
-
-	nrows = 1 + (template.shape[0] - 1) / sampling[0]
-	ncols = 1 + (template.shape[1] - 1) / sampling[1]
-
-	template_sparse = get_patches2D_sparse(template, (nrows, ncols), sampling, 'one')
-	image_patches_sparse = get_patches2D_sparse(image, (nrows, ncols), sampling, 'cols')
-
-	local_sum = np.sum(image_patches_sparse, axis=0)
-	local_sum2 = np.sum(image_patches_sparse**2, axis=0)
-
-	xcorr = np.sum(image_patches_sparse * template_sparse, axis=0)
-
-	mn = template_sparse.size
-	template_mean = template_sparse.sum()/mn
-	numerator = xcorr - local_sum * template_mean
-
-	denominator_image = local_sum2 - local_sum**2/mn
-	denominator_image[denominator_image < 0.0] = 0.0
-	denominator_template = ((template_sparse - template_mean)**2).sum()
-	denominator = np.sqrt(denominator_image * denominator_template)
-
-	correlated = np.zeros_like(numerator)
-	tolerance = math.sqrt(np.spacing(abs(denominator).max()))
-	nonzero_index = np.where(denominator > tolerance)
-	correlated[nonzero_index] = numerator[nonzero_index] / denominator[nonzero_index]
-	return correlated
+	return numerator / denominator
 
 def subpixel_shift_approx(img, x=0, y=0):
 	if x != 0:
@@ -344,7 +290,7 @@ def subpixel_shift_approx(img, x=0, y=0):
 	
 	return img
 
-def normxcorr2_subpixel(image, template, subsamples, mode="full"):
+def normxcorr2_subpixel(image, template, subsamples):
 	if subsamples < 1:
 		subsamples = 1
 	interp = np.arange(0, 1, 1./subsamples)
@@ -353,7 +299,7 @@ def normxcorr2_subpixel(image, template, subsamples, mode="full"):
 	for i in interp:
 		# image_interp = np.float64(subpixel_shift_approx(image,-i))
 		image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
-		corrs.append(normxcorr2(image_interp, template, mode))
+		corrs.append(normxcorr2_horizontal_sweep(image_interp, template))
 
 	out = np.array(corrs).flatten('F')
 	if subsamples > 1:
@@ -363,7 +309,7 @@ def normxcorr2_subpixel(image, template, subsamples, mode="full"):
 
 def normxcorr2_subpixel_fast(image, template, subsamples):
 	image_pad = np.pad(image, ((0,),(int(template.shape[1]/2),)), mode='constant', constant_values=0)
-	basic_corr = normxcorr2(image_pad, template, 'valid')[0]
+	basic_corr = normxcorr2_horizontal_sweep(image_pad, template)[0]
 	best_index = np.argmax(basic_corr)
 	best_offset = best_index - (len(basic_corr)-1)/2
 	best_corr = basic_corr[best_index]
@@ -375,34 +321,17 @@ def normxcorr2_subpixel_fast(image, template, subsamples):
 		for i in interp:
 			image_interp = np.float64(subpixel_shift_approx(image, -i))
 			# image_interp = np.fft.ifft2(scipy.ndimage.fourier_shift(np.fft.fft2(image), (0, -i))).real
-			corrs.append(normxcorr2(image_interp, template, 'valid'))
+			corrs.append(normxcorr2_horizontal_sweep(image_interp, template))
 
 		best_index = np.argmax(corrs)
 		best_offset = interp[best_index]
 		best_corr = corrs[best_index]
 
 	return best_offset, best_corr
-
-def local_sum_full(A, m, n):
-	B = np.pad(A, ((m,),(n,)), 'constant', constant_values=0)
-	s = np.cumsum(B, axis=0)
-	c = s[m:-1,:] - s[:-m-1,:]
-	s = np.cumsum(c, axis=1)
-	return s[:,n:-1] - s[:,:-n-1]
-
-def local_sum_same(A, m, n):
-	B = np.pad(A, ((m-1,1),(n-1,1)), 'constant', constant_values=0)
-	s = np.cumsum(B, axis=0)
-	c = s[m:,:] - s[:-m,:]
-	s = np.cumsum(c, axis=1)
-	return s[:,n:] - s[:,:-n]
 	
-def local_sum_valid(A, m, n):
-	B = np.pad(A, ((1,0),(1,0)), 'constant', constant_values=0)
-	s = B.cumsum(axis=0)
-	c = s[m:,:] - s[:-m,:]
-	s = c.cumsum(axis=1)
-	return s[:,n:] - s[:,:-n]
+def running_horizontal_sum_patch(image, patch_width):
+	cumsum = image.sum(axis=0).cumsum()
+	return cumsum[patch_width-1:] - cumsum[:-patch_width+1]
 
 def image_scanline_rotation(image1, image2, min_overlap):
 	scanline1 = image1.mean(axis=0)
@@ -541,122 +470,3 @@ def parse_patch_size_parameter(patch_size):
 		return tuple([int(sz) for sz in patch_size[1:-1].split(',')])
 	elif type(patch_size) == int:
 		return (patch_size, patch_size)
-
-if __name__ == "__main__":
-	np.random.seed(0)
-	import matplotlib.pyplot as plt
-	
-	imgL = cv2.imread('/home/dominic/Pictures/L.png', cv2.IMREAD_GRAYSCALE)
-	imgR = cv2.imread('/home/dominic/Pictures/R.png', cv2.IMREAD_GRAYSCALE)
-
-	info_left = yaml_to_camera_info(yaml.load(read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/left_360.yaml')))
-	info_right = yaml_to_camera_info(yaml.load(read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/right_360.yaml')))
-
-	stitched, fov_map = rectify_stitch_stereo_image(imgL, imgR, info_left, info_right)
-	# img1 = pickle.loads(read_file('/home/dominic/miro/data/there-back/000001_image.pkl'))
-	# img2 = pickle.loads(read_file('/home/dominic/miro/data/there-back_tests/28/000004_image.pkl'))
-	img1 = cv2.imread('/home/dominic/miro/data/under-table2/full/000043.png', cv2.IMREAD_GRAYSCALE)
-	img2 = cv2.imread('/home/dominic/miro/data/under-table2_tests/3/full/000733.png', cv2.IMREAD_GRAYSCALE)
-
-	img1 = patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), (9,9))
-	img2 = patch_normalise_pad(cv2.resize(img2, (115,44), interpolation=cv2.INTER_AREA), (9,9))
-
-	# cv2.imshow('a', img1[:,30:-30])
-	# cv2.imshow('b', img2)
-	# cv2.waitKey()
-
-	def get_corr(img1, img2):
-		img1 = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-		return normxcorr2_subpixel(img1, img2, 10, 'valid')
-
-	def plot_corr(corr):
-		print(np.argmax(corr) - (len(corr)-1)/2)
-		plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
-
-	a = np.clip(1.0 - (np.abs(np.arange(img1.shape[1]) - (img1.shape[1]/2.)).reshape((1,-1)) / (img1.shape[1]/2.))**1.5, 0, 1)
-	b = np.clip(0.2 + np.linspace(0,1,img1.shape[0]).reshape(-1,1)**0.5, 0, 1)
-	a = b * a
-	# plot_corr(get_corr(img1, img2))
-	# plot_corr(get_corr(a*img1, img2))
-	# plot_corr(get_corr(img1[:,30:-30], img2))
-	plt.imshow(a)
-	plt.show()
-
-	cv2.imshow('a', img1)
-	cv2.imshow('b', a*img1)
-	cv2.waitKey()
-
-	# SZ = (11,4)
-	# PN = (3,3)
-
-	# img1_RS = cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA)
-	# img1_RSPN = patch_normalise_pad(cv2.resize(img1, SZ, interpolation=cv2.INTER_AREA), PN)
-	# img1_RSPNRS = cv2.resize(patch_normalise_pad(cv2.resize(img1, (115,44), interpolation=cv2.INTER_AREA), PN), SZ, interpolation=cv2.INTER_AREA)
-	# img2_RS = cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA)
-	# img2_RSPN = patch_normalise_pad(cv2.resize(img2, SZ, interpolation=cv2.INTER_AREA), PN)
-	# img1_RS_pad = np.pad(img1_RS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	# img1_RSPN_pad = np.pad(img1_RSPN, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	# img1_RSPNRS_pad = np.pad(img1_RSPNRS, ((0,),(int(img2_RS.shape[1]/2),)), mode='constant', constant_values=0)
-	 
-	# def plot_corr(corr):
-	# 	print((np.argmax(corr) - (len(corr)-1)/2 )/10.)
-	# 	plt.plot(np.linspace(-(len(corr)-1)/2, (len(corr)-1)/2, len(corr)), corr)
-	
-	# plot_corr(normxcorr2_subpixel(img1_RS_pad, img2_RS, 10, 'valid'))
-	# plot_corr(normxcorr2_subpixel(img1_RSPN_pad, img2_RSPN, 10, 'valid'))
-	# plot_corr(normxcorr2_subpixel(img1_RSPNRS_pad, img2_RSPN, 10, 'valid'))
-	# plt.show()
-
-	# offset, corr, debug_img = xcorr_match_images_debug(img1, img2, subsampling=2)
-	# print(offset/2.)
-
-	# cv2.imshow('a', cv2.resize(debug_img,None,fx=5,fy=5,interpolation=cv2.INTER_NEAREST))
-	# cv2.waitKey()
-
-	# for i in [1, 2, 4, 8, 16]:
-	# 	if i > 1:
-	# 		interp = cv2.INTER_AREA
-	# 	else:
-	# 		interp = cv2.INTER_CUBIC
-	# 	i1 = cv2.resize(img1, None, fx=1./i, fy=1./i, interpolation=interp)
-	# 	i2 = cv2.resize(img2, None, fx=1./i, fy=1./i, interpolation=interp)
-	# 	i1_pad = np.pad(i1, ((0,),(int(i2.shape[1]/2),)), mode='constant', constant_values=0)
-	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 1, 'valid')
-	# 	# plt.plot(np.arange(-i*(len(corr)-1)/2, i*(len(corr)-1)/2+i, i), corr)
-	# 	corr = normxcorr2_subpixel(i1_pad, i2, i, 'valid')
-	# 	t = np.linspace(-int(img2.shape[1]/2), int(img2.shape[1]/2), len(corr))
-	# 	plt.plot(t, corr)
-	# 	# corr = normxcorr2_subpixel(i1_pad, i2, 100, 'valid')
-	# 	# plt.plot(np.arange(-i*int(i2.shape[1]/2),i*int(i2.shape[1]/2)+i,.01*i), corr)
-
-	old_stitch = stitch_stereo_image(imgL, imgR)
-
-	
-	# plt.plot(fov_map)
-	# plt.show()
-
-	stitched = -1 + 2.0/255.0 * cv2.resize(stitched, None, fx = 0.25, fy=0.25, interpolation=cv2.INTER_AREA)
-
-	overlay = stitched * 1.0
-	overlay[:,100:200] = stitched[:,20:120]
-	overlay_weighted = overlay * np.hstack((0.5*np.ones((100)),np.ones((100)),0.3*np.ones((60))))
-	# stitched_pad = np.pad(stitched, ((0,),(overlay.shape[1]/2,)), 'constant', constant_values=0)
-	# corr = normxcorr2_subpixel(stitched_pad, overlay, 1, 'valid')
-	# corr = normxcorr2_subpixel(, overlay, 1, 'valid')
-	# t = np.linspace(-(corr.size-1)/2, (corr.size-1)/2, corr.size)
-	_, _, image1 = xcorr_match_images_debug(overlay, stitched)
-	_, _, image2 = xcorr_match_images_debug(overlay_weighted, stitched)
-
-	cv2.imshow('normal',np.uint8(cv2.resize(image1, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST)))
-	cv2.imshow('weighted',np.uint8(cv2.resize(image2, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST)))
-	
-	# cv2.imshow('normal', np.uint8(stitched))
-	# cv2.imshow('overlay', np.uint8(overlay))
-	cv2.waitKey()
-
-	# plt.plot(t, corr)
-	# plt.show()
-
-	# cv2.imshow('new', np.uint8(stitched))
-	# cv2.imshow('old', np.uint8(old_stitch))
-	# cv2.waitKey()

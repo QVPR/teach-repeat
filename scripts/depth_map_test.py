@@ -25,7 +25,7 @@ FULL_RES = 925.
 
 def corr_images(img1, img2, subsample=1):
 	img1_pad = np.pad(img1, ((0,),(int(img2.shape[1]/2),)), mode='constant', constant_values=0)
-	return image_processing.normxcorr2_subpixel(img1_pad, img2, subsample, 'valid')
+	return image_processing.normxcorr2_subpixel(img1_pad, img2, subsample)
 
 def plot_corr(img1, img2, subsample=1, style='-', color=None):
 	corr = corr_images(img1, img2, subsample)
@@ -120,7 +120,7 @@ def test_full_path_offsets(ref_dir, test_dir, sizes_to_test):
 				ref_image, test_image = resize_images([ref_image, test_image], 1./size)
 				# ref_image, test_image = patch_normalise_images(resize_images([ref_image, test_image], 1./size), (9,9))
 			ref_image = np.pad(ref_image, ((0,),(int(test_image.shape[1]/2),)), mode='constant', constant_values=0)
-			corr = image_processing.normxcorr2_subpixel(ref_image, test_image, size, 'valid')
+			corr = image_processing.normxcorr2_subpixel(ref_image, test_image, size)
 			offset = np.argmax(corr) - (len(corr)-1)/2
 			
 			if size == 1:
@@ -196,7 +196,7 @@ def test_execution_time(img1, img2, sizes):
 		t = []
 		for i in range(10):
 			t1 = time.time()
-			corr = image_processing.normxcorr2_subpixel(img1_, img2_, size, 'valid')
+			corr = image_processing.normxcorr2_subpixel(img1_, img2_, size)
 			# corr = image_processing.normxcorr2_subpixel_fast(img1_, img2_, size)
 			t2 = time.time()
 			t.append(t2-t1)
