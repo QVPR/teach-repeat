@@ -1,8 +1,5 @@
 # Fast and Robust Bio-inspired Teach and Repeat Navigation
 
-Please note that we are currently refactoring and cleaning up the code (please see https://github.com/QVPR/teach-repeat/issues for more information).
-
-
 ## Reference
 If you use code contained in this repository, please cite:
 ```
