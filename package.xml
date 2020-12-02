@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>miro_teach_repeat</name>
+  <name>teach_repeat</name>
   <version>0.0.0</version>
-  <description>Teach and repeat implementation for the Miro robot</description>
+  <description>Teach and repeat implementation</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
