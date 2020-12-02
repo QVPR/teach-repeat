@@ -20,11 +20,11 @@ If you use code contained in this repository, please cite:
 - `roslaunch slam_toolbox localization.launch` (optional, only required for quantitative analysis)
 - `roslaunch stroll_bearnav mapping-core-jackal.launch` (optional, only required for comparison with bearnav)
 - `roslaunch stroll_bearnav mapping-gui-jackal.launch`  (optional, only required for comparison with bearnav)
-- `roslaunch miro_teach_repeat data_collection_jackal.launch`
+- `roslaunch teach_repeat data_collection_jackal.launch`
 
 ### Nodes for running repeat on Jackal
 - `roslaunch slam_toolbox localization.launch` (optional, only required for quantitative analysis)
-- `roslaunch miro_teach_repeat data_matching_jackal.launch`
+- `roslaunch teach_repeat data_matching_jackal.launch`
 
 ### Nodes for running Bearnav repeat on Jackal
 - `roslaunch slam_toolbox localization.launch`
@@ -33,7 +33,7 @@ If you use code contained in this repository, please cite:
 
 
 ### Nodes for running teach on Miro
-- `roslaunch miro_teach_repeat data_collection_miro.launch`
+- `roslaunch teach_repeat data_collection_miro.launch`
 
 ### Nodes for running repeat on Miro
-- `roslaunch miro_teach_repeat data_matching_miro.launch`
+- `roslaunch teach_repeat data_matching_miro.launch`
