@@ -1,7 +1,7 @@
 # Fast and Robust Bio-inspired Teach and Repeat Navigation
 
 ## Reference
-If you use code contained in this repository, please cite:
+If you use code contained in this repository, please cite [our paper](https://arxiv.org/abs/2010.11326):
 ```
 @misc{dallosto2020fast,
       title={Fast and Robust Bio-inspired Teach and Repeat Navigation}, 
