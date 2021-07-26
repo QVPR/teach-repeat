@@ -9,7 +9,7 @@ import tf_conversions
 import math
 import threading
 
-from miro_teach_repeat.msg import Goal
+from teach_repeat.msg import Goal
 
 
 def wrapToPi(x):

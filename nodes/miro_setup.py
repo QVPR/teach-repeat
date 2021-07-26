@@ -7,7 +7,7 @@ from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
 from std_msgs.msg import UInt32, Bool
 
-from miro_onboard.srv import SetJointState
+from teach_repeat.srv import SetJointState
 
 class miro_setup:
 

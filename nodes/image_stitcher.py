@@ -10,7 +10,7 @@ from rospy_message_converter import message_converter
 from sensor_msgs.msg import Image, CameraInfo
 
 import image_processing
-from miro_onboard.msg import CompressedImageSynchronised
+from teach_repeat.msg import CompressedImageSynchronised
 
 class image_stitcher:
 	def __init__(self):

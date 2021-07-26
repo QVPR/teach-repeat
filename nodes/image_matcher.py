@@ -10,8 +10,8 @@ import datetime
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
-import miro_teach_repeat.image_processing as image_processing
-from miro_teach_repeat.srv import ImageMatch, ImageMatchResponse
+import teach_repeat.image_processing as image_processing
+from teach_repeat.srv import ImageMatch, ImageMatchResponse
 
 def get_image_files_from_dir(file_dir, file_ending):
 	files = [f for f in os.listdir(file_dir) if f.endswith(file_ending)]

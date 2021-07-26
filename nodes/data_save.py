@@ -10,8 +10,8 @@ import json
 from std_srvs.srv import Trigger, TriggerResponse
 from rospy_message_converter import message_converter
 
-import miro_teach_repeat.image_processing as image_processing
-from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseResponse
+import teach_repeat.image_processing as image_processing
+from teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseResponse
 
 class data_save:
 

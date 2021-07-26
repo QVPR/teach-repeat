@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/miro_teach_repeat</url> -->
+  <!-- <url type="website">http://wiki.ros.org/teach_repeat</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -51,14 +51,13 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <depend>rospy</depend>
-	<depend>geometry_msgs</depend>
-	<depend>nav_msgs</depend>
-	<depend>sensor_msgs</depend>
-	<depend>cv_bridge</depend>
-	<depend>python-numpy</depend>
-	<depend>std_msgs</depend>
-	<depend>std_srvs</depend>
-  <depend>miro_onboard</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>python-numpy</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
 
   <build_depend>message_generation</build_depend>
   

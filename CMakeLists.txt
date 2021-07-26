@@ -54,6 +54,7 @@ catkin_python_setup()
 add_message_files(
 	FILES
 	Goal.msg
+	CompressedImageSynchronised.msg
 	)
 	
 	## Generate services in the 'srv' folder
@@ -62,6 +63,7 @@ add_message_files(
 		ImageMatch.srv
 		SaveImageAndPose.srv
 		SetGoal.srv
+		SetJointState.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -110,7 +112,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 # 	INCLUDE_DIRS include
-# 	LIBRARIES miro_teach_repeat
+# 	LIBRARIES teach_repeat
 	CATKIN_DEPENDS message_runtime
 # 	DEPENDS system_lib
 )
@@ -128,7 +130,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/miro_teach_repeat.cpp
+#   src/${PROJECT_NAME}/teach_repeat.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -139,7 +141,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/miro_teach_repeat_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/teach_repeat_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -215,7 +217,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_miro_teach_repeat.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_teach_repeat.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

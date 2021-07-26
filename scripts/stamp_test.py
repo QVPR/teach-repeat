@@ -8,7 +8,7 @@ import tf_conversions
 import message_filters
 from std_msgs.msg import Float64
 
-from miro_onboard.msg import CompressedImageSynchronised
+from teach_repeat.msg import CompressedImageSynchronised
 
 class miro_stamp_test:
 

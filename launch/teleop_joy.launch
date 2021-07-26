@@ -17,8 +17,8 @@
 	</node>
 
 	<!-- Convert to cmd_vel -->
-	<node pkg="miro_teach_repeat" type="teleop_joy.py" name="teleop_joy" >
-		<rosparam command="load" file="$(find miro_teach_repeat)/config/xbox_one.yaml" />
+	<node pkg="teach_repeat" type="teleop_joy.py" name="teleop_joy" >
+		<rosparam command="load" file="$(find teach_repeat)/config/xbox_one.yaml" />
 		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
 		<rosparam param="scale_linear" subst_value="true">$(arg speed_linear)</rosparam>
 		<rosparam param="scale_angular" subst_value="true">$(arg speed_angular)</rosparam>

@@ -20,9 +20,9 @@ import tf_conversions
 import tf
 import tf2_ros
 
-import miro_teach_repeat.image_processing as image_processing
-from miro_teach_repeat.msg import Goal
-from miro_teach_repeat.srv import ImageMatch, ImageMatchRequest
+import teach_repeat.image_processing as image_processing
+from teach_repeat.msg import Goal
+from teach_repeat.srv import ImageMatch, ImageMatchRequest
 
 FIELD_OF_VIEW_DEG = 2*60.6 + 2*27.0
 IMAGE_WIDTH = 115.0 # px

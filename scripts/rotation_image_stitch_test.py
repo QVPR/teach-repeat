@@ -20,6 +20,8 @@ import importlib
 sys.path.append(os.path.dirname(__file__) + '/../nodes')
 image_processing = importlib.import_module('image_processing')
 
+THIS_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
+
 import post_processing
 
 FULL_RES = 925.
@@ -55,8 +57,8 @@ def patch_normalise_images(imgs, patch_size=(9,9)):
 	return [image_processing.patch_normalise_pad(img, patch_size) for img in imgs]
 
 def load_camera_infos():
-	info_left = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/left_360.yaml')))
-	info_right = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file('/home/dominic/miro/catkin_ws/src/miro_teach_repeat/calibration/right_360.yaml')))
+	info_left = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/left_360.yaml')))
+	info_right = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/right_360.yaml')))
 	return info_left, info_right
 
 def test_downscaling(data_dir, sizes, rectify=False):

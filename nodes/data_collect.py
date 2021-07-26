@@ -9,7 +9,7 @@ from geometry_msgs.msg import Pose
 from std_srvs.srv import Trigger, TriggerResponse
 import tf_conversions
 
-from miro_teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseRequest
+from teach_repeat.srv import SaveImageAndPose, SaveImageAndPoseRequest
 
 DEFAULT_DISTANCE_THRESHOLD = 0.1
 DEFAULT_ANGLE_THRESHOLD = 5.0

@@ -9,8 +9,8 @@
 	<rosparam param="image_field_of_view_width_deg">175.2</rosparam>
 	<rosparam param="patch_size">(9,9)</rosparam>
 	<rosparam param="image_recognition_threshold">0.1</rosparam>
-	<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
-	<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
+	<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_360.yaml</rosparam>
+	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_360.yaml</rosparam>
 	<rosparam param="goal_pose_seperation">0.2</rosparam>
 	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
@@ -22,7 +22,7 @@
 
 	<group ns="miro">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
-		<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">0</rosparam>
 			<rosparam param="pitch">8</rosparam>
@@ -32,17 +32,17 @@
 		</node>
 
 		<!-- Load image files for matching -->
-		<node pkg="miro_teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
+		<node pkg="teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
 			<rosparam param="use_old_dataset_format">false</rosparam>
 			<rosparam param="use_depth">false</rosparam>
 			<rosparam param="use_middle_weighting">false</rosparam>
 		</node>
 
 		<!-- Stitch image files for matching -->
-		<node pkg="miro_teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />
+		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen" />
 
 		<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
-		<node pkg="miro_teach_repeat" type="localiser.py" name="localiser" output="screen" >
+		<node pkg="teach_repeat" type="localiser.py" name="localiser" output="screen" >
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
 			<rosparam param="rotation_correction_gain">0.01</rosparam>
@@ -54,7 +54,7 @@
 		</node>
 
 		<!-- Drive to goal pose -->
-		<node pkg="miro_teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
+		<node pkg="teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
 			<remap from="cmd_vel" to="control/cmd_vel_unstamped" />
 			<remap from="odom" to="sensors/odom/integrated" />
 			<rosparam param="min_omega">2.6</rosparam>
@@ -62,7 +62,7 @@
 			<rosparam param="max_v">0.3</rosparam>
 		</node>
 		<!-- Convert Twist commands to TwistStamped -->
-		<node pkg="miro_teach_repeat" type="twist_stamper.py" name="teleop_stamper">
+		<node pkg="teach_repeat" type="twist_stamper.py" name="teleop_stamper">
 			<remap from="cmd_vel_unstamped" to="control/cmd_vel_unstamped" />
 			<remap from="cmd_vel" to="control/cmd_vel" />
 		</node>

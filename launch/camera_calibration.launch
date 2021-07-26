@@ -1,15 +1,15 @@
 <launch>
 	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="robot_setup.py" name="miro_setup">
+	<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup">
 		<rosparam param="lift">30</rosparam>
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>
 	</node>
 
 	<!-- Uncompress synced messages and publish info -->
-	<node pkg="miro_teach_repeat" type="camera_calibrator.py" name="miro_camera_calibrator" output="screen" >
-		<rosparam param="calibration_file_left" subst_value="True">$(find miro_teach_repeat)/calibration/left_360.yaml</rosparam>
-		<rosparam param="calibration_file_right" subst_value="True">$(find miro_teach_repeat)/calibration/right_360.yaml</rosparam>
+	<node pkg="teach_repeat" type="camera_calibrator.py" name="miro_camera_calibrator" output="screen" >
+		<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_360.yaml</rosparam>
+		<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_360.yaml</rosparam>
 	</node>
 
 </launch>

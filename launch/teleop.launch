@@ -8,7 +8,7 @@
 		<rosparam param="speed" subst_value="true">$(arg speed_linear)</rosparam>
 		<rosparam param="turn" subst_value="true">$(arg speed_angular)</rosparam>
 	</node>
-	<node pkg="miro_teach_repeat" type="twist_stamper.py" name="teleop_stamper">
+	<node pkg="teach_repeat" type="twist_stamper.py" name="teleop_stamper">
 		<remap from="cmd_vel_unstamped" to="$(arg cmd_vel_topic)_unstamped" />
 		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
 	</node>

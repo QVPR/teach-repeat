@@ -8,7 +8,7 @@ from sensor_msgs.srv import SetCameraInfo, SetCameraInfoResponse
 from std_msgs.msg import Bool, String
 import message_filters
 
-from miro_onboard.msg import CompressedImageSynchronised
+from teach_repeat.msg import CompressedImageSynchronised
 import image_processing
 
 class miro_camera_calibrator:

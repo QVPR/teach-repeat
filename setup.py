@@ -4,7 +4,7 @@ import distutils.log
 distutils.log.set_verbosity(distutils.log.DEBUG)  # Set DEBUG level
 
 d = generate_distutils_setup(
-    packages=['miro_teach_repeat'],
+    packages=['teach_repeat'],
     package_dir={'': 'src'}
 )
 

@@ -6,7 +6,7 @@ import json
 from rospy_message_converter import message_converter
 import tf
 import tf2_ros
-from miro_teach_repeat.srv import SetGoal, SetGoalResponse
+from teach_repeat.srv import SetGoal, SetGoalResponse
 
 
 class teach_repeat_ground_truth_save:
