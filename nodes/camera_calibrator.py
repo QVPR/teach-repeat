@@ -9,8 +9,7 @@ from std_msgs.msg import Bool, String
 import message_filters
 
 from teach_repeat.msg import CompressedImageSynchronised
-import image_processing
-
+from teach_repeat import image_processing
 class miro_camera_calibrator:
 
 	def __init__(self):

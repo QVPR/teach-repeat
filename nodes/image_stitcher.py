@@ -9,7 +9,7 @@ import yaml
 from rospy_message_converter import message_converter
 from sensor_msgs.msg import Image, CameraInfo
 
-import image_processing
+from teach_repeat import image_processing
 from teach_repeat.msg import CompressedImageSynchronised
 
 class image_stitcher:
