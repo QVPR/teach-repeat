@@ -33,14 +33,14 @@ class image_matcher:
 
 		if self.left_cal_file is not None:
 			with open(self.left_cal_file,'r') as f:
-				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read(), Loader=yaml.SafeLoader))
 		else:
 			rospy.loginfo('[Image Matcher] no calibration file for left camera specified. Assuming not calibrated')
 			self.cam_left_calibration = CameraInfo()
 
 		if self.right_cal_file is not None:
 			with open(self.right_cal_file,'r') as f:
-				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read()))
+				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read(), Loader=yaml.SafeLoader))
 		else:
 			rospy.loginfo('[Image Matcher] no calibration file for right camera specified. Assuming not calibrated')
 			self.cam_right_calibration = CameraInfo()

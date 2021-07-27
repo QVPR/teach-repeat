@@ -57,8 +57,8 @@ def patch_normalise_images(imgs, patch_size=(9,9)):
 	return [image_processing.patch_normalise_pad(img, patch_size) for img in imgs]
 
 def load_camera_infos():
-	info_left = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/left_360.yaml')))
-	info_right = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/right_360.yaml')))
+	info_left = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/left_360.yaml'), Loader=yaml.SafeLoader))
+	info_right = image_processing.yaml_to_camera_info(yaml.load(image_processing.read_file(THIS_DIR_PATH + '../calibration/right_360.yaml'), Loader=yaml.SafeLoader))
 	return info_left, info_right
 
 def test_downscaling(data_dir, sizes, rectify=False):
