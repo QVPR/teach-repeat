@@ -1,6 +1,6 @@
 <launch>
 	<!-- Hold head in place and reset odometry -->
-	<node pkg="miro_teach_repeat" type="miro_setup.py" name="miro_setup">
+	<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup">
 		<rosparam param="lift">30</rosparam>
 		<rosparam param="yaw">0</rosparam>
 		<rosparam param="pitch">8</rosparam>
