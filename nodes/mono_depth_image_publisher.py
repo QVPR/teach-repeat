@@ -8,7 +8,7 @@ import math
 import subprocess
 from sensor_msgs.msg import Image
 
-import image_processing
+from teach_repeat import image_processing
 
 class mono_depth_image_publisher:
 	def __init__(self):
