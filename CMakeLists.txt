@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(teach_repeat)
+cmake_policy(SET CMP0048 NEW)
+project(teach_repeat VERSION 0.1.0)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,13 +9,14 @@ project(teach_repeat)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-	rospy
+	cv_bridge
 	geometry_msgs
+	message_generation
 	nav_msgs
+	rospy
 	sensor_msgs
 	std_msgs
 	std_srvs
-	cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
@@ -53,17 +55,17 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
 	FILES
-	Goal.msg
 	CompressedImageSynchronised.msg
-	)
+	Goal.msg
+)
 	
 	## Generate services in the 'srv' folder
-	add_service_files(
-		FILES
-		ImageMatch.srv
-		SaveImageAndPose.srv
-		SetGoal.srv
-		SetJointState.srv
+add_service_files(
+	FILES
+	ImageMatch.srv
+	SaveImageAndPose.srv
+	SetGoal.srv
+	SetJointState.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -76,8 +78,8 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
 	DEPENDENCIES
-	sensor_msgs
 	geometry_msgs
+	sensor_msgs
 	std_msgs
 )
 
@@ -113,7 +115,13 @@ generate_messages(
 catkin_package(
 # 	INCLUDE_DIRS include
 # 	LIBRARIES teach_repeat
-	CATKIN_DEPENDS message_runtime
+	CATKIN_DEPENDS
+		geometry_msgs
+		message_runtime
+		nav_msgs
+		sensor_msgs
+		std_msgs
+		std_srvs
 # 	DEPENDS system_lib
 )
 
