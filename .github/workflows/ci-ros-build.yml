@@ -1,0 +1,91 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI - ROS Build
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  Ros Noetic on Ubuntu 20.04:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+    
+    strategy:
+      matrix:
+        ros_distro: [ noetic ]
+        ros_repo: [ main ]
+    
+    env:
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CATKIN_LINT: pedantic
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout Repo
+      - uses: actions/checkout@v2
+
+      - name: CCache cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          # we always want the ccache cache to be persisted, as we cannot easily
+          # determine whether dependencies have changed, and ccache will manage
+          # updating the cache for us. Adding 'run_id' to the key will force an
+          # upload at the end of the job.
+          key: ccache-${{ matrix.ros_distro }}-${{ matrix.ros_repo }}-${{github.run_id}}
+          restore-keys: |
+            ccache-${{ matrix.ros_distro }}-${{ matrix.ros_repo }}
+            
+      - name: Run industrial_ci
+        uses: ros-industrial/industrial_ci@master
+        env:
+          ROS_DISTRO: ${{ matrix.ros_distro }}
+          ROS_REPO: ${{ matrix.ros_repo }}
+
+  Ros Melodic on Ubuntu 18.04:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-18.04
+    
+    strategy:
+      matrix:
+        ros_distro: [ melodic ]
+        ros_repo: [ main ]
+    
+    env:
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CATKIN_LINT: pedantic
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout Repo
+      - uses: actions/checkout@v2
+
+      - name: CCache cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          # we always want the ccache cache to be persisted, as we cannot easily
+          # determine whether dependencies have changed, and ccache will manage
+          # updating the cache for us. Adding 'run_id' to the key will force an
+          # upload at the end of the job.
+          key: ccache-${{ matrix.ros_distro }}-${{ matrix.ros_repo }}-${{github.run_id}}
+          restore-keys: |
+            ccache-${{ matrix.ros_distro }}-${{ matrix.ros_repo }}
+            
+      - name: Run industrial_ci
+        uses: ros-industrial/industrial_ci@master
+        env:
+          ROS_DISTRO: ${{ matrix.ros_distro }}
+          ROS_REPO: ${{ matrix.ros_repo }}
