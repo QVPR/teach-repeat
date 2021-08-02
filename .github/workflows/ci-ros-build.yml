@@ -33,7 +33,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Repo
-      - uses: actions/checkout@v2
+        uses: actions/checkout@v2
 
       - name: CCache cache
         uses: actions/cache@v2
@@ -70,7 +70,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Repo
-      - uses: actions/checkout@v2
+        uses: actions/checkout@v2
 
       - name: CCache cache
         uses: actions/cache@v2
