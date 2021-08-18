@@ -27,14 +27,14 @@
 	<rosparam param="save_gt_data">true</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 	<arg name="use_corrupted_odom" default="true"/>
-	<arg name="odom_corruption_factor" default="1.0"/>
+	<arg name="odom_corruption_factor"/>
 
 	<!-- Odom corrupter -->
 	<node pkg="teach_repeat" type="odom_corrupter.py" name="odom_corrupter" output="screen" if="$(arg use_corrupted_odom)">
 		<remap from="odom" to="odometry/filtered" />
 		<rosparam param="translation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam>
 		<!--rosparam param="rotation_error_factor" subst_value="True">$(arg odom_corruption_factor)</rosparam-->
-		<rosparam param="rotation_error_factor">0.0</rosparam>
+		<rosparam param="rotation_error_factor">1.0</rosparam>
 	</node>
 
 	<!-- Load image files for matching -->
