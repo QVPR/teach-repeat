@@ -9,13 +9,11 @@ The multimedia material accompanying the paper can be viewed [here](https://qvpr
 If you use code contained in this repository, please cite [our paper](https://arxiv.org/abs/2010.11326):
 
 ```bibtex
-@misc{dallosto2020fast,
-      title={Fast and Robust Bio-inspired Teach and Repeat Navigation}, 
-      author={Dominic Dall'Osto and Tobias Fischer and Michael Milford},
-      year={2020},
-      eprint={2010.11326},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@inproceedings{dall2021fast,
+      title={Fast and Robust Bio-inspired Teach and Repeat Navigation},
+      author={Dall'Osto, Dominic and Fischer, Tobias and Milford, Michael},
+      booktitle={IEEE/RSJ International Conference on Intelligent Robots and Systems},
+      year={2021}
 }
 ```
 
