@@ -11,7 +11,7 @@
 	<rosparam param="image_recognition_threshold">0.1</rosparam>
 	<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_360.yaml</rosparam>
 	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_360.yaml</rosparam>
-	<rosparam param="goal_pose_seperation">0.2</rosparam>
+	<rosparam param="goal_pose_separation">0.2</rosparam>
 	<rosparam param="lookahead_distance_ratio">0.65</rosparam>
 	<rosparam param="turning_target_range_distance_ratio">0.5</rosparam>
 	<rosparam param="goal_theta_tolerance">5</rosparam>

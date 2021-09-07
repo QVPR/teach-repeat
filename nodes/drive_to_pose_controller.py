@@ -51,7 +51,7 @@ class drive_to_pose_controller:
 		self.goal_pos = None
 		self.goal_theta = None
 		self.stop_at_goal = None
-		self.turning_goal_distance = rospy.get_param('/goal_pose_seperation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
+		self.turning_goal_distance = rospy.get_param('/goal_pose_separation', 0.2) * rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 		self.goal_theta_tolerance = math.radians(rospy.get_param('/goal_theta_tolerance', 5))
 
 	def setup_publishers(self):

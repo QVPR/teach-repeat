@@ -142,7 +142,7 @@ class teach_repeat_localiser:
 		self.last_odom_pose = None
 		self.zero_odom_offset = None
 		global GOAL_DISTANCE_SPACING, LOOKAHEAD_DISTANCE_RATIO, TURNING_TARGET_RANGE_DISTANCE_RATIO, GOAL_THETA_TOLERANCE
-		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_seperation', 0.2)
+		GOAL_DISTANCE_SPACING = rospy.get_param('/goal_pose_separation', 0.2)
 		LOOKAHEAD_DISTANCE_RATIO = rospy.get_param('/lookahead_distance_ratio', 0.65)
 		TURNING_TARGET_RANGE_DISTANCE_RATIO = rospy.get_param('/turning_target_range_distance_ratio', 0.5)
 		GOAL_THETA_TOLERANCE = rospy.get_param('/goal_theta_tolerance', 5)

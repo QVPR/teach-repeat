@@ -38,7 +38,7 @@ Essential parameters for these nodes are shown below. Other parameters exist to 
 | /image_resize_width            | width to resize images before comparison                                        | 115                                 |
 | /image_resize_height           | height to resize images before comparison                                       | 44                                  |
 | /patch_size                    | patch size to use for patch normalisation                                       | (9,9)                               |
-| /goal_pose_seperation          | distance between goals, should match `~distance_threshold` in `data_collect.py` | 0.2                                 |
+| /goal_pose_separation          | distance between goals, should match `~distance_threshold` in `data_collect.py` | 0.2                                 |
 | /image_field_of_view_width_deg | horizontal field of view of images (degrees)                                    | 175.2                               |
 
 ### Parameters for `data_collect.py`
