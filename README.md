@@ -1,25 +1,32 @@
 # Fast and Robust Bio-inspired Teach and Repeat Navigation
 
+[![arXiv](https://img.shields.io/badge/arXiv-2010.11326-a.svg?style=flat-square)](https://arxiv.org/abs/2010.11326)
+[![arXiv](https://img.shields.io/badge/DOI-10.1109/IROS51168.2021.9636334-a.svg?style=flat-square)](https://doi.org/10.1109/IROS51168.2021.9636334)
 [![License: BSD-2-Clause](https://img.shields.io/github/license/QVPR/teach-repeat.svg?style=flat-square)](./LICENSE)
 [![stars](https://img.shields.io/github/stars/QVPR/teach-repeat.svg?style=flat-square)](https://github.com/Tobias-Fischer/ensemble-event-vpr/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/QVPR/teach-repeat?style=flat-square)](https://github.com/QVPR/teach-repeat/issues)
 [![GitHub repo size](https://img.shields.io/github/repo-size/QVPR/teach-repeat.svg?style=flat-square)](./README.md)
 [![QUT Centre for Robotics Open Source](https://img.shields.io/badge/collection-QUT%20Robotics-%23043d71?style=flat-square)](https://qcr.github.io)
 
-This repository contains code for a low compute teach and repeat navigation approach which only requires monocular vision and wheel odometry. Teach the robot a route by teleoperation, then the robot will be able to repeat it - robust to lighting variation and moderate environmental changes. For full details see our IROS2021 paper, available on [arXiv](https://arxiv.org/abs/2010.11326). You can view the conference presentation [here](https://qvpr.github.io/teach-repeat/) as well as other multimedia material and a full 550 metre outdoor run.
+This repository contains code for a low compute teach and repeat navigation approach which only requires monocular vision and wheel odometry. Teach the robot a route by teleoperation, then the robot will be able to repeat it - robust to lighting variation and moderate environmental changes. For full details see our [IROS2021 paper](https://doi.org/10.1109/IROS51168.2021.9636334), available on [arXiv](https://arxiv.org/abs/2010.11326). You can view the conference presentation [here](https://qvpr.github.io/teach-repeat/) as well as other multimedia material and a full 550 metre outdoor run.
 
 ![Overview of approach](assets/outdoor-run.gif)
 
 ## License and attribution
 
-If you use the code in this repository, please cite [our paper](https://arxiv.org/abs/2010.11326). The code is available under the [BSD-2-Clause License](./LICENSE).
+If you use the code in this repository, please cite [our paper](https://doi.org/10.1109/IROS51168.2021.9636334). The code is available under the [BSD-2-Clause License](./LICENSE).
 
 ```bibtex
-@inproceedings{dall2021fast,
-      title={Fast and Robust Bio-inspired Teach and Repeat Navigation},
-      author={Dall'Osto, Dominic and Fischer, Tobias and Milford, Michael},
-      booktitle={IEEE/RSJ International Conference on Intelligent Robots and Systems},
-      year={2021}
+@inproceedings{dallostoFastRobustBioinspired2021,
+      title = {Fast and {{Robust Bio-inspired Teach}} and {{Repeat Navigation}}},
+      booktitle = {2021 {{IEEE}}/{{RSJ International Conference}} on {{Intelligent Robots}} and {{Systems}} ({{IROS}})},
+      author = {Dall'Osto, Dominic and Fischer, Tobias and Milford, Michael},
+      year = {2021},
+      month = sep,
+      pages = {500--507},
+      publisher = {{IEEE}},
+      address = {{Prague, Czech Republic}},
+      doi = {10.1109/IROS51168.2021.9636334},
 }
 ```
 
