@@ -44,15 +44,16 @@ Essential parameters for these nodes are shown below. Other parameters exist to 
 
 ### Global parameters
 
-| Parameter                      | Description                                                                     | Default Value                       |
-| ------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------- |
-| /data_load_dir                 | directory in which the teach runs are saved                                     | ~/miro/data                         |
-| /data_save_dir                 | directory in which to save the results of a repeat run                          | ~/miro/data/follow-straight_tests/5 |
-| /image_resize_width            | width to resize images before comparison                                        | 115                                 |
-| /image_resize_height           | height to resize images before comparison                                       | 44                                  |
-| /patch_size                    | patch size to use for patch normalisation                                       | (9,9)                               |
-| /goal_pose_separation          | distance between goals, should match `~distance_threshold` in `data_collect.py` | 0.2                                 |
-| /image_field_of_view_width_deg | horizontal field of view of images (degrees)                                    | 175.2                               |
+| Parameter                      | Description                                                                                                        | Default Value                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| /data_load_dir                 | directory in which the teach runs are saved                                                                        | ~/miro/data                         |
+| /data_save_dir                 | directory in which to save the results of a repeat run                                                             | ~/miro/data/follow-straight_tests/5 |
+| /image_resize_width            | width to resize images before comparison                                                                           | 115                                 |
+| /image_resize_height           | height to resize images before comparison                                                                          | 44                                  |
+| /patch_size                    | patch size to use for patch normalisation                                                                          | (9,9)                               |
+| /goal_pose_separation          | distance between goals, should match `~distance_threshold` in `data_collect.py`                                    | 0.2                                 |
+| /image_field_of_view_width_deg | horizontal field of view of images (degrees)                                                                       | 175.2                               |
+| /wait_for_ready                | whether the localiser waits for a service signal 'ready_localiser' before starting, allowing robot initialisation  | false                               |
 
 ### Parameters for `data_collect.py`
 
