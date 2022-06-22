@@ -26,7 +26,7 @@ class image_matcher:
 		self.setup_subscribers()
 
 	def setup_parameters(self):
-		self.pub_image_match_debug = rospy.Publisher('/miro/match_image_debug', Image, queue_size=0)
+		self.pub_image_match_debug = rospy.Publisher('/match_image_debug', Image, queue_size=0)
 
 		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
