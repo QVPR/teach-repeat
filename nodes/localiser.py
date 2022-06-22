@@ -168,7 +168,7 @@ class teach_repeat_localiser:
 		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
 		self.save_full_res_image_at_goal = rospy.get_param('/save_full_res_image_at_goal', True)
 		self.last_full_res_image = None
-		self.save_gt_data = rospy.get_param('/save_gt_data', True)
+		self.save_gt_data = rospy.get_param('/save_gt_data', False)
 		self.publish_gt_goals = rospy.get_param('/publish_gt_goals', True)
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
