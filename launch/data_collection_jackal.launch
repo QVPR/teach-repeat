@@ -3,6 +3,7 @@
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="save_gt_data">true</rosparam>
 
 	<!-- Collect image data -->
 	<node pkg="teach_repeat" type="data_collect.py" name="data_collect" output="screen">
@@ -18,4 +19,3 @@
 		<rosparam param="timestamp_folder">true</rosparam>
 	</node>
 </launch>
-

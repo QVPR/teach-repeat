@@ -25,7 +25,7 @@ class data_save:
 		self.save_id = 0
 		self.save_dir = os.path.expanduser(rospy.get_param('~save_dir', '~/miro/data'))
 		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
-		self.save_gt_data = rospy.get_param('/save_gt_data', True)
+		self.save_gt_data = rospy.get_param('/save_gt_data', False)
 		self.timestamp_dir = rospy.get_param('~timestamp_folder', False)
 		if self.save_dir[-1] != '/':
 			self.save_dir += '/'
