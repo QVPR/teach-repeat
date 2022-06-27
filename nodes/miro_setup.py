@@ -41,10 +41,11 @@ class miro_setup:
 		rospy.wait_for_service('/miro/control/kinematic_joints/set_fixed_state')
 		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/enable')
 		rospy.wait_for_service('/miro/control/kinematic_joints/fixed/disable')
+
 		for trigger_service in self.trigger_services:
 			rospy.wait_for_service(trigger_service)
 			self.trigger_proxies.append(rospy.ServiceProxy(trigger_service, Trigger, persistent=False))
-		
+
 		self.set_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/set_fixed_state', SetJointState, persistent=False)
 		self.enable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/enable', Trigger, persistent=False)
 		self.disable_fixed_state = rospy.ServiceProxy('/miro/control/kinematic_joints/fixed/disable', Trigger, persistent=False)

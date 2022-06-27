@@ -58,7 +58,7 @@ add_message_files(
 	CompressedImageSynchronised.msg
 	Goal.msg
 )
-	
+
 	## Generate services in the 'srv' folder
 add_service_files(
 	FILES
@@ -189,6 +189,7 @@ catkin_install_python(PROGRAMS
 	nodes/save_ground_truth.py
 	nodes/teleop_joy.py
 	nodes/twist_stamper.py
+	nodes/teleop_mimic.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

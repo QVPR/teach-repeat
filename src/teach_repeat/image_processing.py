@@ -122,7 +122,7 @@ def compressed_msg_to_image(msg):
 		image = bridge.compressed_imgmsg_to_cv2(msg)
 	except cv_bridge.CvBridgeError as e:
 		print(e)
-		return 
+		return
 	return image
 
 def image_to_msg(image, encoding='passthrough'):
@@ -287,7 +287,7 @@ def subpixel_shift_approx(img, x=0, y=0):
 			img = np.vstack((img[-intY:,:], np.zeros((-intY,img.shape[1]))))
 		y = y % 1
 		img = (1-y) * img + y * np.vstack((np.zeros((1,img.shape[1])), img[:-1,:]))
-	
+
 	return img
 
 def normxcorr2_subpixel(image, template, subsamples):
@@ -328,7 +328,7 @@ def normxcorr2_subpixel_fast(image, template, subsamples):
 		best_corr = corrs[best_index]
 
 	return best_offset, best_corr
-	
+
 def running_horizontal_sum_patch(image, patch_width):
 	cumsum = image.sum(axis=0).cumsum()
 	return cumsum[patch_width-1:] - cumsum[:-patch_width+1]
@@ -425,7 +425,25 @@ def camera_info_to_yaml(camera_info):
 	yaml_data['image_width'] = camera_info.width
 	return yaml_data
 
-def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
+def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, extra_pixels=160, blank_pixels=160, camera_half_fov=45, camera_half_offset=27.0):
+	"""
+	Rectify left and right images based on calibrated camera matrices, project them onto a common image and blend them to form an overlayed stereo image.
+	This approach assumes the cameras are mounted in the same plane horizontally with a rotational and/or lateral offset from centre.
+	Defaults parameters are set for the Miro-E robot with 640x480 image resolution. These will need to be changed for other setups.
+	Parameters:
+	image_left (np.ndarray): Image from the left camera
+	image_right (np.ndarray): Image from the right camera
+	info_left (sensor_msgs.msg.CameraInfo): Camera info for the left camera obtained from calibration (camera matrix, projection matrix, distortion).
+	info_right (sensor_msgs.msg.CameraInfo): Camera info for the right camera obtained from calibration (camera matrix, projection matrix, distortion).
+	Keyword Arguments:
+	extra_pixels (int): Number of pixels to increase the width of each side of the stitched image by, relative to the original image size.
+	blank_pixels (int): When undistorting either image with its associated matrix, how many horizontal pixels are left blank?
+	camera_half_fov (float): Half the field of view of each camera (degrees).
+	camera_half_offset (float): Half the rotational offset between the two cameras (degrees).
+	Returns:
+	stitched (np.ndarray): Stitched output image - width is original image width + 2*extra_pixels.
+	fov (float[]): List of approximate angular position for each pixel in the output stitched image (degrees).
+    """
 	cam_left = image_geometry.PinholeCameraModel()
 	cam_left.fromCameraInfo(info_left)
 	cam_right = image_geometry.PinholeCameraModel()
@@ -435,25 +453,29 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right):
 		image_left = grayscale(image_left)
 		image_right = grayscale(image_right)
 
-	extra_space = 200
-	cam_left.P[0,2] += extra_space
+	cam_left.P[0,2] += extra_pixels
 
-	warped_image_size = (image_left.shape[0],image_left.shape[1]+extra_space)
+	warped_image_size = (image_left.shape[0],image_left.shape[1]+extra_pixels)
 	warped_left, left_mapx = rectify_image(cam_left, image_left, warped_image_size)
 	warped_right, right_mapx = rectify_image(cam_right, image_right, warped_image_size)
-	stitched = np.zeros((warped_left.shape[0],warped_left.shape[1]+extra_space))
-	non_overlap_pixels = extra_space+200
-	blank_pixels = 200
+	stitched = np.zeros((warped_left.shape[0],warped_left.shape[1]+extra_pixels))
+
+	# make a blend map for each of the warped images - see #36
+	# |--- non_overlap_pixels ---|--- overlap_pixels ---|--- blank_pixels ---|
+	# non_overlap_pixels - where the other image is blank so this image should have 100% opacity
+	# overlap_pixels - overlap region between the two images - linearly interpolate the opacity from one side to the other
+	# blank_pixels - region where this image is black because of the projection so opacity should be 0%
+	non_overlap_pixels = extra_pixels + blank_pixels
 	overlap_pixels = warped_left.shape[1] - non_overlap_pixels - blank_pixels
 	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(blank_pixels)))
 	stitched[:,:warped_left.shape[1]] = warped_left * blend_map_linear
 	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear, 0)
-	
+
 	stitched = np.asarray(stitched, image_left.dtype) # get the same type out as we put in
 
 	fov = np.zeros((stitched.shape[1]))
-	fl = np.linspace(60.6+27,-60.6+27,image_left.shape[1]).reshape(1,-1)
-	fr = np.linspace(60.6-27,-60.6-27,image_right.shape[1]).reshape(1,-1)
+	fl = np.linspace(camera_half_fov+camera_half_offset,-camera_half_fov+camera_half_offset,image_left.shape[1]).reshape(1,-1)
+	fr = np.linspace(camera_half_fov-camera_half_offset,-camera_half_fov-camera_half_offset,image_right.shape[1]).reshape(1,-1)
 	left_mapx = left_mapx.mean(axis=0)
 	right_mapx = right_mapx.mean(axis=0)
 	fov_l = cv2.remap(fl, left_mapx, np.zeros_like(left_mapx), cv2.INTER_CUBIC).flatten()

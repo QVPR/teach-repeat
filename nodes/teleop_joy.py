@@ -3,7 +3,9 @@
 from enum import Enum
 
 import rospy
-from geometry_msgs.msg import TwistStamped
+#from geometry_msgs.msg import TwistStamped
+#For Miro-B There's no TwistStamped
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from std_srvs.srv import Trigger, TriggerResponse
 
@@ -22,7 +24,8 @@ class teleop_joy:
 		self.scale_angular = rospy.get_param('~scale_angular', 1.0)
 
 	def setup_publishers(self):
-		self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		#self.pub_cmd_vel = rospy.Publisher("cmd_vel", TwistStamped, queue_size=1)
+		self.pub_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
 	def setup_subscribers(self):
 		if not self.ready:
@@ -35,13 +38,17 @@ class teleop_joy:
 			return TriggerResponse(success=True)
 		else:
 			return TriggerResponse(success=False, message="Teleop already started.")
-	
+
 	def process_joy_data(self, msg):
 		if self.ready:
-			motor_command = TwistStamped()
-			motor_command.header.stamp = rospy.Time.now()
-			motor_command.twist.linear.x = msg.axes[self.axis_linear] * self.scale_linear
-			motor_command.twist.angular.z = msg.axes[self.axis_angular] * self.scale_angular
+			#motor_command = TwistStamped()
+			#motor_command.header.stamp = rospy.Time.now()
+			#motor_command.twist.linear.x = msg.axes[self.axis_linear] * self.scale_linear
+			#motor_command.twist.angular.z = msg.axes[self.axis_angular] * self.scale_angular
+
+			motor_command = Twist()
+			motor_command.linear.x = msg.axes[self.axis_linear] * self.scale_linear
+			motor_command.angular.z = msg.axes[self.axis_angular] * self.scale_angular
 
 			self.pub_cmd_vel.publish(motor_command)
 

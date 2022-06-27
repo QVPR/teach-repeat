@@ -1,8 +1,8 @@
 # current calibration is from 1280x720 res, downscaled appropriately
 # commented out calibration is from 640x360
 camera_name: caml
-image_width: 640
-image_height: 360
+image_width: 320
+image_height: 240
 camera_matrix:
   rows: 3
   cols: 3
