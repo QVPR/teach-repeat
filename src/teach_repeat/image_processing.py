@@ -14,6 +14,7 @@ from sensor_msgs.msg import CameraInfo
 bridge = cv_bridge.CvBridge()
 
 def patch_normalise(image, patch_size):
+	assert (patch_size[0] % 2 == 1 and patch_size[1] % 2 == 1), 'Each patch_size dimension for patch normalisation must be odd.'
 	patch_half_size = [(p-1)/2 for p in patch_size]
 	height, width = image.shape
 	out = np.zeros(image.shape, dtype=float)
@@ -32,6 +33,7 @@ def patch_normalise(image, patch_size):
 	return out
 
 def patch_normalise_patch(image, patch_size):
+	assert (patch_size[0] % 2 == 1 and patch_size[1] % 2 == 1), 'Each patch_size dimension for patch normalisation must be odd.'
 	patch_half_size = [(p-1)/2 for p in patch_size]
 	height, width = image.shape
 	out = np.zeros(image.shape, dtype=float)
@@ -60,6 +62,7 @@ def patch_normalise_patch(image, patch_size):
 	return out
 
 def patch_normalise_pad(image, patch_size):
+	assert (patch_size[0] % 2 == 1 and patch_size[1] % 2 == 1), 'Each patch_size dimension for patch normalisation must be odd.'
 	patch_half_size = [int((p-1)/2) for p in patch_size]
 	height, width = image.shape
 
