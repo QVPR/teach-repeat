@@ -166,7 +166,7 @@ class teach_repeat_localiser:
 		# data saving
 		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir', '~/miro/data/follow-straight_tests/5'))
 		self.save_full_res_images = rospy.get_param('/save_full_res_images', True)
-		self.save_full_res_image_at_goal = rospy.get_param('/save_full_res_image_at_goal', True)
+		self.save_full_res_images_at_goal = rospy.get_param('/save_full_res_images_at_goal', True)
 		self.last_full_res_image = None
 		self.save_gt_data = rospy.get_param('/save_gt_data', False)
 		self.publish_gt_goals = rospy.get_param('/publish_gt_goals', True)
@@ -182,7 +182,7 @@ class teach_repeat_localiser:
 			os.makedirs(self.save_dir+'offset/')
 		if not os.path.isdir(self.save_dir+'correction/'):
 			os.makedirs(self.save_dir+'correction/')
-		if self.save_full_res_images or self.save_full_res_image_at_goal:
+		if self.save_full_res_images or self.save_full_res_images_at_goal:
 			if not os.path.isdir(self.save_dir+'full/'):
 				os.makedirs(self.save_dir+'full/')
 		self.goal_number = 0
@@ -324,7 +324,7 @@ class teach_repeat_localiser:
 				pass
 
 		# save full res image at goal
-		if self.save_full_res_image_at_goal:
+		if self.save_full_res_images_at_goal:
 			cv2.imwrite(self.save_dir+('full/goal_%06d.png' % self.goal_number), self.last_full_res_image)
 
 		# save current pose info
@@ -390,7 +390,7 @@ class teach_repeat_localiser:
 
 			self.mutex.acquire()
 			self.last_image = normalised_image
-			if self.save_full_res_image_at_goal:
+			if self.save_full_res_images_at_goal:
 				self.last_full_res_image = full_image
 
 			if not self.discrete_correction:
