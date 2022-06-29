@@ -89,7 +89,7 @@ class data_save:
 				except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
 					print('Could not lookup transform from /map to /base_link')
 					pass
-			
+
 			if self.save_full_res_images:
 				cv2.imwrite(self.save_dir+'full/'+id+'.png', image)
 			cv2.imwrite(self.save_dir+'norm/'+id+'.png', np.uint8(255.0 * (1 + normalised_image) / 2.0))

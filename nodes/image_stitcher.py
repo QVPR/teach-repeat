@@ -28,7 +28,7 @@ class image_stitcher:
 		else:
 			rospy.loginfo('[stitcher] no calibration file specified for left camera. Falling back to uncalibrated image stitching.')
 			self.cam_left_calibration = None
-		
+
 		if self.right_cal_file is not None:
 			with open(self.right_cal_file,'r') as f:
 				self.cam_right_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read(), Loader=yaml.SafeLoader))
@@ -37,7 +37,7 @@ class image_stitcher:
 			self.cam_right_calibration = None
 
 		self.first_img_seq = None
-		
+
 	def setup_publishers(self):
 		self.pub_image = rospy.Publisher('sensors/cam/both', Image, queue_size=10)
 
@@ -50,12 +50,14 @@ class image_stitcher:
 			self.first_img_seq = n
 		n -= self.first_img_seq
 
-		if self.cam_left_calibration is not None and self.cam_right_calibration is not None:
+		#if self.cam_left_calibration is not None and self.cam_right_calibration is not None:
 			# todo: take fov from _ and publish it on a topic (float32array)
-			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
-		else:
-			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
-		
+		#	full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
+		#else:
+		#	full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
+
+		full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
+
 		image_msg = image_processing.image_to_msg(full_image, 'mono8')
 		image_msg.header = msg.left.header
 		image_msg.header.seq = n

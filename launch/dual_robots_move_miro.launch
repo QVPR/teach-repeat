@@ -1,0 +1,25 @@
+<launch>
+	<group ns="miro">
+		<arg name="rob01" value="/miro/rob01/control/cmd_vel" />
+		<arg name="rob02" value="/miro/rob02/control/cmd_vel" />
+
+		<!-- Teleop to control Miro -->
+		<arg name="speed_lin" value="2.0" />
+		<arg name="speed_ang" value="1.0" />
+		<!--<include file="$(find teach_repeat)/launch/teleop.launch">
+			<arg name="cmd_vel_topic" value="rob01/control/cmd_vel" />
+			<arg name="speed_linear" value="$(arg speed_lin)" />
+			<arg name="speed_angular" value="$(arg speed_ang)" />
+		</include> -->
+		<include file="$(find teach_repeat)/launch/teleop_joy.launch">
+			<arg name="cmd_vel_topic" value="rob01/control/cmd_vel" />
+			<arg name="speed_linear" value="$(arg speed_lin)" />
+			<arg name="speed_angular" value="$(arg speed_ang)" />
+			<arg name="wait_for_ready" value="true" />
+		</include>
+
+		<node pkg="topic_tools" type="relay" name="relay" args="/miro/rob01/control/cmd_vel /miro/rob02/control/cmd_vel">
+		</node>
+
+	</group>
+</launch>

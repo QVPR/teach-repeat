@@ -58,7 +58,7 @@ add_message_files(
 	CompressedImageSynchronised.msg
 	Goal.msg
 )
-	
+
 	## Generate services in the 'srv' folder
 add_service_files(
 	FILES

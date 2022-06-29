@@ -125,7 +125,7 @@ def compressed_msg_to_image(msg):
 		image = bridge.compressed_imgmsg_to_cv2(msg)
 	except cv_bridge.CvBridgeError as e:
 		print(e)
-		return 
+		return
 	return image
 
 def image_to_msg(image, encoding='passthrough'):
@@ -290,7 +290,7 @@ def subpixel_shift_approx(img, x=0, y=0):
 			img = np.vstack((img[-intY:,:], np.zeros((-intY,img.shape[1]))))
 		y = y % 1
 		img = (1-y) * img + y * np.vstack((np.zeros((1,img.shape[1])), img[:-1,:]))
-	
+
 	return img
 
 def normxcorr2_subpixel(image, template, subsamples):
@@ -331,7 +331,7 @@ def normxcorr2_subpixel_fast(image, template, subsamples):
 		best_corr = corrs[best_index]
 
 	return best_offset, best_corr
-	
+
 def running_horizontal_sum_patch(image, patch_width):
 	cumsum = image.sum(axis=0).cumsum()
 	return cumsum[patch_width-1:] - cumsum[:-patch_width+1]
@@ -428,6 +428,13 @@ def camera_info_to_yaml(camera_info):
 	yaml_data['image_width'] = camera_info.width
 	return yaml_data
 
+<<<<<<< HEAD
+def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, extra_pixels=160, blank_pixels=160, camera_half_fov=45, camera_half_offset=27.0):
+	"""
+	Rectify left and right images based on calibrated camera matrices, project them onto a common image and blend them to form an overlayed stereo image.
+	This approach assumes the cameras are mounted in the same plane horizontally with a rotational and/or lateral offset from centre.
+	Defaults parameters are set for the Miro-E robot with 640x480 image resolution. These will need to be changed for other setups.
+=======
 def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, extra_pixels=200, blank_pixels=200, camera_half_fov=60.6, camera_half_offset=27.0):
 	"""
 	Rectify left and right images based on calibrated camera matrices, project them onto a common image and blend them to form an overlayed stereo image.
@@ -435,18 +442,25 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, 
 
 	Defaults parameters are set for the Miro-E robot with 640x480 image resolution. These will need to be changed for other setups.
 
+>>>>>>> fdbd94a81c1e8b9369754b386b088e5f6485d955
 	Parameters:
 	image_left (np.ndarray): Image from the left camera
 	image_right (np.ndarray): Image from the right camera
 	info_left (sensor_msgs.msg.CameraInfo): Camera info for the left camera obtained from calibration (camera matrix, projection matrix, distortion).
 	info_right (sensor_msgs.msg.CameraInfo): Camera info for the right camera obtained from calibration (camera matrix, projection matrix, distortion).
+<<<<<<< HEAD
+=======
 
+>>>>>>> fdbd94a81c1e8b9369754b386b088e5f6485d955
 	Keyword Arguments:
 	extra_pixels (int): Number of pixels to increase the width of each side of the stitched image by, relative to the original image size.
 	blank_pixels (int): When undistorting either image with its associated matrix, how many horizontal pixels are left blank?
 	camera_half_fov (float): Half the field of view of each camera (degrees).
 	camera_half_offset (float): Half the rotational offset between the two cameras (degrees).
+<<<<<<< HEAD
+=======
 
+>>>>>>> fdbd94a81c1e8b9369754b386b088e5f6485d955
 	Returns:
 	stitched (np.ndarray): Stitched output image - width is original image width + 2*extra_pixels.
 	fov (float[]): List of approximate angular position for each pixel in the output stitched image (degrees).
@@ -477,7 +491,7 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, 
 	blend_map_linear = np.concatenate((np.ones(non_overlap_pixels),np.arange(1,0,-1.0/(overlap_pixels+1))[1:],np.zeros(blank_pixels)))
 	stitched[:,:warped_left.shape[1]] = warped_left * blend_map_linear
 	stitched[:,-warped_right.shape[1]:] += warped_right * np.flip(blend_map_linear, 0)
-	
+
 	stitched = np.asarray(stitched, image_left.dtype) # get the same type out as we put in
 
 	fov = np.zeros((stitched.shape[1]))
