@@ -221,8 +221,20 @@ def scan_horizontal_SAD_match_patches(image, template):
 	index = np.argmin(differences)
 	return index, differences[index]
 
-def stitch_stereo_image(image_left, image_right):
-	overlap_proportion = 67.2 / 121.2
+def stitch_stereo_image(image_left, image_right, overlap_proportion=67.2/121.2):
+	"""
+	Stitch two stereo images together with a certain proportion of overlap between the two by linearly blending this region.
+
+	Defaults parameters are set for the Miro-E robot with 67.2 degrees of overlap for an image width of 121.2 degrees.
+
+	Parameters:
+	image_left (np.ndarray): Image from the left camera
+	image_right (np.ndarray): Image from the right camera
+	overlap_proportion (float): Proportion of overlap that the two images should be stitched with (between 0 and 1).
+
+	Returns:
+	stitched_image (np.ndarray): Stitched output image - width is original image width * (2-overlap_proportion).
+    """
 	overlap_pixels = int(round(image_left.shape[1] * overlap_proportion))
 	non_overlap_pixels = image_left.shape[1] - overlap_pixels
 	full_width = image_left.shape[1] + image_right.shape[1] - overlap_pixels
@@ -240,17 +252,17 @@ def stitch_stereo_image(image_left, image_right):
 
 	return stitched_image
 
-def stitch_stereo_image_message(msg_left, msg_right, compressed=False):
+def stitch_stereo_image_message(msg_left, msg_right, compressed=False, image_overlap=67.2/121.2):
 	if compressed:
-		return stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right))
+		return stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right), image_overlap)
 	else:
-		return stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right))
+		return stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right), image_overlap)
 
-def rectify_stitch_stereo_image_message(msg_left, msg_right, info_left, info_right, compressed=False):
+def rectify_stitch_stereo_image_message(msg_left, msg_right, info_left, info_right, compressed=False, extra_pixels_proportion=200.0/640, blank_pixels_proportion=200.0/640, half_field_of_view=60.6, half_camera_offset=27.0):
 	if compressed:
-		return rectify_stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right), info_left, info_right)
+		return rectify_stitch_stereo_image(compressed_msg_to_image(msg_left),compressed_msg_to_image(msg_right), info_left, info_right, extra_pixels_proportion, blank_pixels_proportion, half_field_of_view, half_camera_offset)
 	else:
-		return rectify_stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right), info_left, info_right)
+		return rectify_stitch_stereo_image(msg_to_image(msg_left),msg_to_image(msg_right), info_left, info_right, extra_pixels_proportion, blank_pixels_proportion, half_field_of_view, half_camera_offset)
 
 def normxcorr2_horizontal_sweep(image_ref, image_query):
 	# we only implement 'valid' mode
@@ -428,7 +440,7 @@ def camera_info_to_yaml(camera_info):
 	yaml_data['image_width'] = camera_info.width
 	return yaml_data
 
-def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, extra_pixels=200, blank_pixels=200, camera_half_fov=60.6, camera_half_offset=27.0):
+def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, extra_pixels_proportion=200.0/640, blank_pixels_proportion=200.0/640, camera_half_fov=60.6, camera_half_offset=27.0):
 	"""
 	Rectify left and right images based on calibrated camera matrices, project them onto a common image and blend them to form an overlayed stereo image.
 	This approach assumes the cameras are mounted in the same plane horizontally with a rotational and/or lateral offset from centre.
@@ -442,8 +454,8 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, 
 	info_right (sensor_msgs.msg.CameraInfo): Camera info for the right camera obtained from calibration (camera matrix, projection matrix, distortion).
 
 	Keyword Arguments:
-	extra_pixels (int): Number of pixels to increase the width of each side of the stitched image by, relative to the original image size.
-	blank_pixels (int): When undistorting either image with its associated matrix, how many horizontal pixels are left blank?
+	extra_pixels_proportion (float): How much to increase the width of each side of the stitched image by, relative to the original image size (extra_pixels / image_width).
+	blank_pixels_proportion (float): When undistorting either image with its associated matrix, what proportion of horizontal pixels are left blank?
 	camera_half_fov (float): Half the field of view of each camera (degrees).
 	camera_half_offset (float): Half the rotational offset between the two cameras (degrees).
 
@@ -455,6 +467,8 @@ def rectify_stitch_stereo_image(image_left, image_right, info_left, info_right, 
 	cam_left.fromCameraInfo(info_left)
 	cam_right = image_geometry.PinholeCameraModel()
 	cam_right.fromCameraInfo(info_right)
+	extra_pixels = round(extra_pixels_proportion * image_left.shape[1])
+	blank_pixels = round(blank_pixels_proportion * image_left.shape[1])
 
 	if len(image_left.shape) > 2 and image_left.shape[2] > 1:
 		image_left = grayscale(image_left)

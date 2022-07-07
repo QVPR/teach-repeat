@@ -35,7 +35,12 @@
 		</include>
 
 		<!-- Stitch image files for matching -->
-		<node pkg="teach_repeat" type="image_stitcher_miro_b.py" name="image_stitcher" output="screen" />
+		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen">
+			<rosparam param="half_field_of_view">45</rosparam>
+			<rosparam param="half_camera_offset">27</rosparam>
+			<rosparam param="extra_pixels_proportion">0.2</rosparam>
+			<rosparam param="blank_pixels_proportion">0.2</rosparam>
+		</node>
 
 		<!-- Collect image data -->
 		<node pkg="teach_repeat" type="data_collect.py" name="data_collect" output="screen">
