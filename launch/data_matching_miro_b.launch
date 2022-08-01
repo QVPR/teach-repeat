@@ -74,7 +74,7 @@
 		</node> -->
 
 		<!-- Show image matching -->
-		<node pkg="image_view" type="image_view" name="image_match_debug_view" >
+		<node pkg="image_view" type="image_view" name="image_match_debug_view" output="screen">
 			<remap from="image" to="match_image_debug" />
 		</node>
 	</group>

@@ -42,7 +42,7 @@
 			<rosparam param="blank_pixels_proportion">0.2</rosparam>
 		</node>
 
-		<!-- Collect image data -->
+		<!-- Collect image data and append (now only exist in teacher robot file below) -->
 		<node pkg="teach_repeat" type="data_collect.py" name="data_collect" output="screen">
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
