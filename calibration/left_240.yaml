@@ -1,0 +1,22 @@
+# current calibration is from 1280x720 res, downscaled appropriately
+# commented out calibration is from 320x240
+camera_name: caml
+image_width: 320
+image_height: 240
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [168.026507, 0.000000, 161.951724, 0.000000, 169.246356, 81.8166818, 0.000000, 0.000000, 1.000000]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.301687, 0.064733, 0.001619, -0.002541, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [112.179954, 0.000000, 159.415606, 0.000000, 0.000000, 152.413056, 80.1780008, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000]
