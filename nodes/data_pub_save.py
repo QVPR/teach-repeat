@@ -104,8 +104,8 @@ class data_save:
 			print('saved frame %d' % self.save_id)
 
 			# For Multi-Robot System Publishing Data
-			self.pub_full_img.publish(image)
-			self.pub_norm_img.publish(normalised_image)
+			self.pub_full_img.publish(request.image)
+			self.pub_norm_img.publish(image_processing.image_to_msg(normalised_image))
 			self.pub_pose.publish(pose)
 
 			return SaveImageAndPoseResponse(success=True)
