@@ -12,13 +12,11 @@ from std_msgs.msg import Int32MultiArray, Float32MultiArray, MultiArrayDimension
 
 import teach_repeat.image_processing as image_processing
 from teach_repeat.srv import ImageMatch, ImageMatchResponse
-from sensor_msgs.msg import Image
 
-# Do not need for the Multi-robot system
-#def get_image_files_from_dir(file_dir, file_ending):
-#	files = [f for f in os.listdir(file_dir) if f.endswith(file_ending)]
-#	files.sort()
-#	return [file_dir+f for f in files]
+def get_image_files_from_dir(file_dir, file_ending):
+	files = [f for f in os.listdir(file_dir) if f.endswith(file_ending)]
+	files.sort()
+	return [file_dir+f for f in files]
 
 class image_matcher:
 
@@ -47,10 +45,6 @@ class image_matcher:
 			rospy.loginfo('[Image Matcher] no calibration file for right camera specified. Assuming not calibrated')
 			self.cam_right_calibration = CameraInfo()
 
-		self.load_dir = os.path.expanduser(rospy.get_param('/data_load_dir', '~/miro/data'))
-		if self.load_dir[-1] != '/':
-			self.load_dir += '/'
-
 		self.resize = image_processing.make_size(height=rospy.get_param('/image_resize_height', None), width=rospy.get_param('/image_resize_width', None))
 		if self.resize[0] is None and self.resize[1] is None:
 			self.resize = None
@@ -62,40 +56,12 @@ class image_matcher:
 		self.use_depth = rospy.get_param('~use_depth', False)
 		self.use_middle_weighting = rospy.get_param('~use_middle_weighting', False)
 
-		self.full_images = []
-		self.norm_images = []
-
-		# Do not need this for Multi-Robot (Maybe)
-		#print('loading images...')
-		#if self.use_old_dataset_format:
-		#	if os.path.isdir(self.load_dir+'left/') and os.path.isdir(self.load_dir+'right/'):
-		#		image_files = zip(get_image_files_from_dir(self.load_dir+'left/', '.png'), get_image_files_from_dir(self.load_dir+'right/', '.png'))
-		#		self.images = self.load_images_left_right(image_files)
-		#	else:
-		#		rospy.logerr('[Image matcher] use_old_dataset_format selected, but dataset is not in old format (seperate folders for left and right images)')
-		#else:
-		#	if os.path.exists(self.load_dir+'params.txt'):
-		#		params = json.loads(self.read_file(self.load_dir+'params.txt'))
-		#		# if dataset collection params match what we want, use pre-processed images
-		#		if self.resize == tuple(params['resize']) and self.patch_size == tuple(params['patch_size']):
-		#			rospy.loginfo('[Image matcher] Using cached preprocessed images.')
-		#			image_files = get_image_files_from_dir(self.load_dir+'norm/', '.png')
-		#			self.images = self.load_images_raw(image_files)
-		#		else:
-		#			rospy.loginfo('[Image matcher] Parameters change. Preprocessing loaded images.')
-		#			image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
-		#			self.images = self.load_images_resize_norm(image_files)
-		#	else:
-		#		rospy.loginfo('[Image matcher] Parameters change. Preprocessing loaded images.')
-		#		image_files = get_image_files_from_dir(self.load_dir+'full/', '.png')
-		#		self.images = self.load_images_resize_norm(image_files)
-
-		#if self.use_depth:
+		if self.use_depth:
 			# get depth maps from full images (not patch normed)
-		#	self.images = self.weight_images_depth(self.images, get_image_files_from_dir(self.load_dir+'full/', '.png'))
-		#if self.use_middle_weighting:
-		#	self.images = self.weight_images_middle(self.images)
-		#print('loading complete: %d images' % (len(self.images)))
+			self.images = self.weight_images_depth(self.images, get_image_files_from_dir(self.load_dir+'full/', '.png'))
+		if self.use_middle_weighting:
+			self.images = self.weight_images_middle(self.images)
+		print('loading complete: %d images' % (len(self.images)))
 
 		self.save_dir = os.path.expanduser(rospy.get_param('/data_save_dir','~/miro/data'))
 		if self.save_dir[-1] != '/':
@@ -110,50 +76,43 @@ class image_matcher:
 
 	def setup_subscribers(self):
 		self.service = rospy.Service('match_image', ImageMatch, self.match_image)
-		# For Multi-Robot System
-		self.sub_teacher_full_image = rospy.Subscriber("teacher_full_img", Image, self.append_teacher_full_image, queue_size=1, buff_size=2**22)
-		self.sub_teacher_norm_image = rospy.Subscriber("teacher_norm_img", Image, self.append_teacher_norm_image, queue_size=1, buff_size=2**22)
+		self.sub_full_img = rospy.Subscriber('teacher_full_img', Image, queue_size=1)
+		self.sub_norm_img= rospy.Subscriber('teacher_norm_img', Image, queue_size=1)
+		self.sub_pose = rospy.Subscriber('teacher_odom_pose', Pose, queue_size=1)
 
-	def append_teacher_full_image(self, msg):
-		self.full_images.append(image_processing.msg_to_image(msg))
+	def load_image_left_right(self, file_left, file_right):
+		image_left = image_processing.grayscale(cv2.imread(file_left))
+		image_right = image_processing.grayscale(cv2.imread(file_right))
+		image_both, _ = image_processing.rectify_stitch_stereo_image(image_left, image_right, self.cam_left_calibration, self.cam_right_calibration)
+		return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size)
 
-	def append_teacher_norm_image(self, msg):
-		self.norm_images.append(image_processing.msg_to_image(msg))
+	def load_images_left_right(self, image_files):
+		return [self.load_image_left_right(*image_pair) for image_pair in image_files]
 
-	# Do Not need to load images from directory for Multi-Robot System
-	#def load_image_left_right(self, file_left, file_right):
-	#	image_left = image_processing.grayscale(cv2.imread(file_left))
-	#	image_right = image_processing.grayscale(cv2.imread(file_right))
-	#	image_both, _ = image_processing.rectify_stitch_stereo_image(image_left, image_right, self.cam_left_calibration, self.cam_right_calibration)
-	#	return image_processing.patch_normalise_pad(cv2.resize(image_both,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size)
+	def load_images_resize_norm(self, image_files):
+		images = [cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
+		return [image_processing.patch_normalise_pad(cv2.resize(image,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size) for image in images]
 
-	#def load_images_left_right(self, image_files):
-	#	return [self.load_image_left_right(*image_pair) for image_pair in image_files]
-
-	#def load_images_resize_norm(self, image_files):
-	#	images = [cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
-	#	return [image_processing.patch_normalise_pad(cv2.resize(image,  self.resize[::-1], interpolation=cv2.INTER_AREA), self.patch_size) for image in images]
-
-	#def load_images_raw(self, image_files):
+	def load_images_raw(self, image_files):
 		# these images are already patch normalised (should be -1 -> 1), so convert them from uint8 (0 -> 255)
-	#	return [-1 + 2./255.*cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
+		return [-1 + 2./255.*cv2.imread(image_file, cv2.IMREAD_GRAYSCALE) for image_file in image_files]
 
-	#def weight_images_depth(self, images, image_files):
-	#	depth_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
-	#	depth_images = [np.clip(cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA), 0, 1) for image in depth_images]
+	def weight_images_depth(self, images, image_files):
+		depth_images = [np.load(f[:-4]+'_disp.npy').squeeze() for f in image_files]
+		depth_images = [np.clip(cv2.resize(image, self.resize[::-1], interpolation=cv2.INTER_AREA), 0, 1) for image in depth_images]
 		# depth_images = [np.maximum(image, image > 0.5) for image in depth_images]
-	#	return [image * depth for image, depth in zip(images, depth_images)]
+		return [image * depth for image, depth in zip(images, depth_images)]
 
-	#def weight_images_middle(self, images):
-	#	horizontal_weighting = np.clip(1.0 - 1.0*(np.abs(np.arange(self.resize[1]) - (self.resize[1]/2.)).reshape((1,-1)) / (self.resize[1]/2.))**2, 0, 1)
-	#	vertical_weighting = np.clip(1.0 + 0*np.linspace(0,1,self.resize[0]).reshape(-1,1)**0.5, 0, 1)
-	#	image_weighting = vertical_weighting * horizontal_weighting
-	#	return [image * image_weighting for image in images]
+	def weight_images_middle(self, images):
+		horizontal_weighting = np.clip(1.0 - 1.0*(np.abs(np.arange(self.resize[1]) - (self.resize[1]/2.)).reshape((1,-1)) / (self.resize[1]/2.))**2, 0, 1)
+		vertical_weighting = np.clip(1.0 + 0*np.linspace(0,1,self.resize[0]).reshape(-1,1)**0.5, 0, 1)
+		image_weighting = vertical_weighting * horizontal_weighting
+		return [image * image_weighting for image in images]
 
-	#def read_file(self, filename):
-	#	with open(filename, 'r') as f:
-	#		data = f.read()
-	#	return data
+	def read_file(self, filename):
+		with open(filename, 'r') as f:
+			data = f.read()
+		return data
 
 	def clamp_search_range_to_bounds(self, index, half_search_range):
 		start_range = max(0, index - half_search_range)
@@ -161,11 +120,6 @@ class image_matcher:
 		return start_range, end_range
 
 	def match_image(self, request):
-		# Added in to wait till there is enough data before proceeding to follow
-		self.images = self.norm_images
-		while(len(self.images) - request.imageIndex.data < 6):
-			self.images == self.norm_images
-
 		image = image_processing.msg_to_image(request.normalisedImage)
 		image_index = request.imageIndex.data
 		start_range, end_range = self.clamp_search_range_to_bounds(image_index, request.searchRange.data)

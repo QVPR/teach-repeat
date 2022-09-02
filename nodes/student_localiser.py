@@ -15,7 +15,7 @@ from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from std_msgs.msg import UInt32
 from std_srvs.srv import Trigger, TriggerResponse
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import PoseStamped
 import tf_conversions
 import tf
 import tf2_ros
@@ -38,15 +38,6 @@ class GOAL_STATE(enum.Enum):
 	normal_goal = 0
 	finished = 1
 	restart = 2
-
-# Do not need for multi-robot system
-#def read_file(filename):
-#	with open(filename, 'r') as f:
-#		data = f.read()
-#		return data
-#
-#def load_poses(pose_files):
-#	return [message_converter.convert_dictionary_to_ros_message('geometry_msgs/Pose',json.loads(read_file(f))) for f in pose_files]
 
 def wrapToPi(x):
 	'''wrap angle to between +pi and -pi'''
@@ -124,18 +115,12 @@ class teach_repeat_localiser:
 		self.mutex = threading.Lock()
 
 		# Odom
-		self.load_dir = os.path.expanduser(rospy.get_param('/data_load_dir', '~/miro/data'))
-		if self.load_dir[-1] != '/':
-			self.load_dir += '/'
 		self.sum_theta_correction = 0.0
 		self.sum_path_correction = 0.0
 		self.stop_at_end = rospy.get_param('~stop_at_end', True)
 		self.discrete_correction = rospy.get_param('~discrete-correction', False)
 
 		# Load pose data
-		# Do Not need the download
-		#pose_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-9:] == '_pose.txt']
-		#pose_files.sort()
 		self.poses = []
 		self.goal_index = 0
 		self.goal = tf_conversions.toMsg(tf_conversions.Frame())
@@ -207,13 +192,6 @@ class teach_repeat_localiser:
 		self.tfBuffer = tf2_ros.Buffer()
 		self.tfListener = tf2_ros.TransformListener(self.tfBuffer)
 
-		# For Multi-Robot System
-		self.sub_teacher_pose = rospy.Subscriber("teacher_pose", Pose, self.append_teacher_pose, queue_size=1)
-
-	def append_teacher_pose(self, msg):
-		'''Append new teacher pose to the student list when ever it arrived'''
-		self.poses.append(msg)
-
 	def save_params(self):
 		params = {
 			'load_dir' : self.load_dir,
@@ -248,8 +226,6 @@ class teach_repeat_localiser:
 			return TriggerResponse(success=False, message="Localiser already started.")
 
 	def start(self):
-		while (len(self.poses) < 6):
-			pass
 		if self.global_localisation_init:
 			if self.last_odom_pose is None or self.last_image is None:
 				print('Global localisation - waiting for first odom and image messages')

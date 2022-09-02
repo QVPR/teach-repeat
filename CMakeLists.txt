@@ -189,12 +189,8 @@ catkin_install_python(PROGRAMS
 	nodes/save_ground_truth.py
 	nodes/teleop_joy.py
 	nodes/twist_stamper.py
-
 	nodes/teleop_joy_miro_b.py
 	nodes/data_pub_save.py
-	nodes/image_sub_matcher.py
-	nodes/student_localiser.py
-
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
