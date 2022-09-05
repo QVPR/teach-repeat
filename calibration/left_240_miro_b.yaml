@@ -1,5 +1,6 @@
-# current calibration is from 1280x720 res, downscaled appropriately
-# commented out calibration is from 320x240
+# Current Calibration is for MIRO-B Robot, 320x240.
+# Calibration done using ROS Package camera_calibration for monocular
+# See ROS.org camera_calibration/Tutorials/ for more info
 camera_name: caml
 image_width: 320
 image_height: 240
