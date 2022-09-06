@@ -14,9 +14,10 @@ distortion_coefficients:
   cols: 5
   data: [-0.321922, 0.113275, 0.002072, 0.000108, 0.000000]
 rectification_matrix:
+  # rectification matrix - rotation of -27 degrees (to the left)
   rows: 3
   cols: 3
-  data: [1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000]
+  data: [0.89100652, 0., -0.4539905, 0.0, 1.0, 0.0, 0.4539905, 0.000000, 0.89100652]
 projection_matrix:
   rows: 3
   cols: 4
