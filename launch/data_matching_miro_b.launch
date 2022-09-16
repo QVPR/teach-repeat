@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
 	<rosparam param="data_load_dir">~/miro/data/indv_test2</rosparam>
-	<rosparam param="data_save_dir">~/miro/data/indv_test2/repeat_teacher</rosparam>
+	<rosparam param="data_save_dir">~/miro/data/indv_test2/repeat_student</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -24,7 +24,7 @@
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
-			<rosparam param="yaw">-10</rosparam>
+			<rosparam param="yaw">10</rosparam>
 			<rosparam param="pitch">0</rosparam>
 			<rosparam param="reset_odom">true</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
@@ -49,7 +49,7 @@
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
 			<rosparam param="extra_pixels_proportion">0.5</rosparam>
-			<rosparam param="blank_pixels_proportion">0.5</rosparam>
+			<rosparam param="blank_pixels_proportion">0.36</rosparam>
 		</node>
 
 		<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
