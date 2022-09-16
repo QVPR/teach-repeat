@@ -6,7 +6,7 @@
 	<rosparam param="image_resize_height">176</rosparam>
 	<rosparam param="image_subsampling">1</rosparam>
 	<rosparam param="image_field_of_view_width_deg">140</rosparam>
-	<rosparam param="patch_size">(9,9)</rosparam>
+	<rosparam param="patch_size">(15,15)</rosparam>
 	<rosparam param="image_recognition_threshold">0.1</rosparam>
 	<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_240_miro_b.yaml</rosparam>
 	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_240_miro_b.yaml</rosparam>
@@ -19,14 +19,14 @@
 	<rosparam param="save_gt_data">false</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 
-	<arg name="save_dir_path" value="~/miro/data/test8" />
+	<arg name="save_dir_path" value="~/miro/data/correct_test7" />
 
 	<group ns="/miro/teacher">
 		<!-- Hold head in place and reset odometry -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
 			<!--<rosparam param="yaw">-15</rosparam> Miro1 Have issue with yaw-->
-			<rosparam param="yaw">-15</rosparam>
+			<rosparam param="yaw">-10</rosparam>
 			<rosparam param="pitch">0</rosparam>
 			<rosparam param="reset_odom">true</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
@@ -58,7 +58,7 @@
 		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen">
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
-			<rosparam param="extra_pixels_proportion">0.0</rosparam>
+			<rosparam param="extra_pixels_proportion">0.5</rosparam>
 			<rosparam param="blank_pixels_proportion">0.36</rosparam>
 		</node>
 
@@ -102,13 +102,15 @@
 			<rosparam param="use_depth">false</rosparam>
 			<rosparam param="use_middle_weighting">false</rosparam>
 			<rosparam param="/data_save_dir" subst_value="True">$(arg save_dir_path)/student/</rosparam>
+
+			<rosparam param="frames_delay">10</rosparam>
 		</node>
 
 		<!-- Stitch image files for matching -->
 		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen">
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
-			<rosparam param="extra_pixels_proportion">0.0</rosparam>
+			<rosparam param="extra_pixels_proportion">0.5</rosparam>
 			<rosparam param="blank_pixels_proportion">0.36</rosparam>
 		</node>
 
@@ -123,6 +125,8 @@
 			<rosparam param="discrete-correction">false</rosparam>
 			<rosparam param="search-range">3</rosparam>
 			<rosparam param="global_localisation_init">true</rosparam>
+
+			<rosparam param="frames_delay">10</rosparam>
 		</node>
 
 		<!-- Drive to goal pose -->

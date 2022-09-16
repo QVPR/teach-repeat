@@ -132,6 +132,9 @@ class teach_repeat_localiser:
 		self.stop_at_end = rospy.get_param('~stop_at_end', True)
 		self.discrete_correction = rospy.get_param('~discrete-correction', False)
 
+		# For Multi-Robot Student Delay
+		self.frames_delay = rospy.get_param('~frames_delay', 10)
+
 		# Load pose data
 		# Do Not need the download
 		#pose_files = [self.load_dir+f for f in os.listdir(self.load_dir) if f[-9:] == '_pose.txt']
@@ -248,7 +251,7 @@ class teach_repeat_localiser:
 			return TriggerResponse(success=False, message="Localiser already started.")
 
 	def start(self):
-		while (len(self.poses) < 6):
+		while (len(self.poses) < self.frames_delay):
 			pass
 		if self.global_localisation_init:
 			if self.last_odom_pose is None or self.last_image is None:

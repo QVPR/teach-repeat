@@ -33,6 +33,9 @@ class image_matcher:
 		self.left_cal_file = rospy.get_param('/calibration_file_left', None)
 		self.right_cal_file = rospy.get_param('/calibration_file_right', None)
 
+		# For Multi-Robot Student Delay
+		self.frames_delay = rospy.get_param('~frames_delay', 10)
+
 		if self.left_cal_file is not None:
 			with open(self.left_cal_file,'r') as f:
 				self.cam_left_calibration = image_processing.yaml_to_camera_info(yaml.load(f.read(), Loader=yaml.SafeLoader))
@@ -163,7 +166,7 @@ class image_matcher:
 	def match_image(self, request):
 		# Added in to wait till there is enough data before proceeding to follow
 		self.images = self.norm_images
-		while(len(self.images) - request.imageIndex.data < 6):
+		while(len(self.images) - request.imageIndex.data < self.frames_delay):
 			self.images == self.norm_images
 
 		image = image_processing.msg_to_image(request.normalisedImage)
