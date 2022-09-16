@@ -3,20 +3,26 @@
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="patch_size">(9,9)</rosparam>
-	<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_240.yaml</rosparam>
-	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_240.yaml</rosparam>
+	<rosparam param="calibration_file_left" subst_value="True">$(find teach_repeat)/calibration/left_240_miro_b.yaml</rosparam>
+	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_240_miro_b.yaml</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
-	<group ns="miro">
+	<group ns="/miro/rob01">
 		<!-- Hold head in place and reset odometry -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
 			<!--<rosparam param="yaw">-15</rosparam> Miro1 Have issue with yaw-->
-			<rosparam param="yaw">0</rosparam>
+			<rosparam param="yaw">-10</rosparam>
 			<rosparam param="pitch">0</rosparam>
 			<rosparam param="reset_odom">true</rosparam>
 			<rosparam param="disable_cliff_sensors">true</rosparam>
 			<rosparam param="trigger_services">ready_data_save,ready_data_collect,ready_teleop</rosparam>
+
+			<remap from='/miro/sensors/odom/reset' to='sensors/odom/reset' />
+			<remap from='/miro/control/kinematic_joints/set_fixed_state' to='control/kinematic_joints/set_fixed_state' />
+			<remap from='/miro/control/kinematic_joints/fixed/enable' to='control/kinematic_joints/fixed/enable' />
+			<remap from='/miro/control/kinematic_joints/fixed/disable' to='control/kinematic_joints/fixed/disable' />
+			<remap from="/miro/control/kinematic_joints/at_set_point" to="control/kinematic_joints/at_set_point" />
 		</node>
 
 		<!-- Teleop to control Miro -->
@@ -28,7 +34,7 @@
 			<arg name="speed_angular" value="$(arg speed_ang)" />
 		</include> -->
 		<include file="$(find teach_repeat)/launch/teleop_joy_miro_b.launch">
-			<arg name="cmd_vel_topic" value="rob01/control/cmd_vel" />
+			<arg name="cmd_vel_topic" value="control/cmd_vel" />
 			<arg name="speed_linear" value="$(arg speed_lin)" />
 			<arg name="speed_angular" value="$(arg speed_ang)" />
 			<arg name="wait_for_ready" value="true" />
@@ -38,8 +44,8 @@
 		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen">
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
-			<rosparam param="extra_pixels_proportion">0.2</rosparam>
-			<rosparam param="blank_pixels_proportion">0.2</rosparam>
+			<rosparam param="extra_pixels_proportion">0.0</rosparam>
+			<rosparam param="blank_pixels_proportion">0.0</rosparam>
 		</node>
 
 		<!-- Collect image data and append (now only exist in teacher robot file below) -->
