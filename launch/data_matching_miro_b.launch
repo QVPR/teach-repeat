@@ -49,7 +49,7 @@
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
 			<rosparam param="extra_pixels_proportion">0.5</rosparam>
-			<rosparam param="blank_pixels_proportion">0.5</rosparam>
+			<rosparam param="blank_pixels_proportion">0.36</rosparam>
 		</node>
 
 		<!-- Follow the previous poses using odometry, but use images to correct for odometry drift -->
