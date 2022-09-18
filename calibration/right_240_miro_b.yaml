@@ -1,0 +1,24 @@
+# Current Calibration is for MIRO-B Robot, 320x240.
+# Calibration done using ROS Package camera_calibration for monocular
+# See ROS.org camera_calibration/Tutorials/ for more info
+camera_name: camr
+image_width: 320
+image_height: 240
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [226.16107, 0.0, 151.30652, 0.0, 225.86686, 108.52416, 0.0, 0.0, 1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.353465, 0.111591, 0.008140, 0.005988, 0.000000]
+rectification_matrix:
+  # rectification matrix - rotation of 27 degrees (to the right)
+  rows: 3
+  cols: 3
+  data: [0.89100652, 0., 0.4539905, 0.0, 1.0, 0.0, -0.4539905, 0.000000, 0.89100652]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [178.30531, 0.0, 151.0717 , 0.0, 0.0, 199.84467, 107.39089, 0.0, 0.0, 0.0, 1.0, 0.0]

@@ -36,6 +36,16 @@ class image_stitcher:
 			rospy.loginfo('[stitcher] no calibration file specified for right camera. Falling back to uncalibrated image stitching.')
 			self.cam_right_calibration = None
 
+		if self.cam_left_calibration is not None and self.cam_right_calibration is not None:
+			# get rectification parameters - defaults are for Miro-E with 640x480 image resolution
+			self.half_field_of_view = rospy.get_param('~half_field_of_view', 60.6)
+			self.half_camera_offset = rospy.get_param('~half_camera_offset', 27.0)
+			self.extra_pixels_proportion = rospy.get_param('~extra_pixels_proportion', 200.0/640)
+			self.blank_pixels_proportion = rospy.get_param('~blank_pixels_proportion', 200.0/640)
+		else:
+			# get stitching parameters without rectification - defaults are for Miro-E with 640x480 image resolution
+			self.image_overlap = 1 - rospy.get_param('~half_camera_offset', 27.0)/rospy.get_param('~half_field_of_view', 60.6)
+
 		self.first_img_seq = None
 		
 	def setup_publishers(self):
@@ -52,9 +62,9 @@ class image_stitcher:
 
 		if self.cam_left_calibration is not None and self.cam_right_calibration is not None:
 			# todo: take fov from _ and publish it on a topic (float32array)
-			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True)
+			full_image, _ = image_processing.rectify_stitch_stereo_image_message(msg.left, msg.right, self.cam_left_calibration, self.cam_right_calibration, compressed=True, extra_pixels_proportion=self.extra_pixels_proportion, blank_pixels_proportion=self.blank_pixels_proportion, half_field_of_view=self.half_field_of_view, half_camera_offset=self.half_camera_offset)
 		else:
-			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True)
+			full_image = image_processing.stitch_stereo_image_message(msg.left, msg.right, compressed=True, image_overlap=self.image_overlap)
 		
 		image_msg = image_processing.image_to_msg(full_image, 'mono8')
 		image_msg.header = msg.left.header

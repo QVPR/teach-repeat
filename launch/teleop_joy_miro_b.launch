@@ -1,0 +1,26 @@
+<launch>
+	<arg name="speed_linear" default="0.2" />
+	<arg name="speed_angular" default="1.0" />
+	<arg name="wait_for_ready" default="false" />
+	<arg name="cmd_vel_topic" default="/miro/control/cmd_vel" />
+
+	<group unless="$(arg wait_for_ready)">
+		<rosparam param="wait_for_ready">false</rosparam>
+	</group>
+
+	<!-- upgrade paramiko: https://answers.ros.org/question/250262/incompatible-ssh-peer-when-launching-a-remote-node/ -->
+	<!-- <machine name="miro" address="miropi" env-loader="/home/miro/mdk/catkin_ws/src/miro_onboard/scripts/env.sh" user="miro" password="miro" /> -->
+	<!-- Teleop to control Miro -->
+	<node pkg="joy" type="joy_node" name="joy">
+		<rosparam param="joy">/dev/input/js0</rosparam>
+		<rosparam param="autorepeat_rate">25</rosparam>
+	</node>
+
+	<!-- Convert to cmd_vel -->
+	<node pkg="teach_repeat" type="teleop_joy_miro_b.py" name="teleop_joy" >
+		<rosparam command="load" file="$(find teach_repeat)/config/xbox_one.yaml" />
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
+		<rosparam param="scale_linear" subst_value="true">$(arg speed_linear)</rosparam>
+		<rosparam param="scale_angular" subst_value="true">$(arg speed_angular)</rosparam>
+	</node>
+</launch>

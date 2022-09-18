@@ -53,7 +53,7 @@ class data_collect:
 			self.current_odom = self.subtract_odom(msg, self.zero_odom_offset)
 
 	def subtract_odom(self, odom, odom_frame_to_subtract):
-		odom_frame = tf_conversions.fromMsg(odom.pose.pose) 
+		odom_frame = tf_conversions.fromMsg(odom.pose.pose)
 		subtracted_odom = odom_frame_to_subtract.Inverse() * odom_frame
 		odom.pose.pose = tf_conversions.toMsg(subtracted_odom)
 		return odom
