@@ -2,8 +2,8 @@
 	<!-- Global params -->
 	<!--<rosparam param="data_load_dir">~/miro/data/test1</rosparam>-->
 	<rosparam param="wait_for_ready">true</rosparam>
-	<rosparam param="image_resize_width">460</rosparam>
-	<rosparam param="image_resize_height">176</rosparam>
+	<rosparam param="image_resize_width">115</rosparam>
+	<rosparam param="image_resize_height">44</rosparam>
 	<rosparam param="image_subsampling">1</rosparam>
 	<rosparam param="image_field_of_view_width_deg">140</rosparam>
 	<rosparam param="patch_size">(15,15)</rosparam>
@@ -19,13 +19,15 @@
 	<rosparam param="save_gt_data">false</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 
-	<arg name="save_dir_path" value="~/miro/data/correct_test7" />
+	<!-- Path of the data to be saved -->
+	<arg name="save_dir_path" value="~/miro/data/multi_robot_test/complex_path/test2" />
 
+	<!-- Teacher robot, similar to data_collection_miro_b launch -->
 	<group ns="/miro/teacher">
 		<!-- Hold head in place and reset odometry -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+			<!-- Sensor parameters for the student robot to look straight ahead -->
 			<rosparam param="lift">30</rosparam>
-			<!--<rosparam param="yaw">-15</rosparam> Miro1 Have issue with yaw-->
 			<rosparam param="yaw">-10</rosparam>
 			<rosparam param="pitch">0</rosparam>
 			<rosparam param="reset_odom">true</rosparam>
@@ -40,7 +42,7 @@
 		</node>
 
 		<!-- Teleop to control Miro -->
-		<arg name="speed_lin" value="1.0" />
+		<arg name="speed_lin" value="0.5" />
 		<arg name="speed_ang" value="1.0" />
 		<!--<include file="$(find teach_repeat)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="rob01/control/cmd_vel" />
@@ -73,13 +75,15 @@
 		<!-- Save Images and pose in a directory -->
 		<node pkg="teach_repeat" type="data_pub_save.py" name="data_save" output="screen">
 			<rosparam param="save_dir" subst_value="True">$(arg save_dir_path)/teacher/</rosparam>
-			<rosparam param="timestamp_folder">true</rosparam>
+			<rosparam param="timestamp_folder">false</rosparam>
 		</node>
 	</group>
 
+	<!-- Student robot, similar to data_matching_miro_b launch -->
 	<group ns="/miro/student">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
+			<!-- Sensor parameters for the student robot to look straight ahead -->
 			<rosparam param="lift">30</rosparam>
 			<rosparam param="yaw">10</rosparam>
 			<rosparam param="pitch">0</rosparam>
