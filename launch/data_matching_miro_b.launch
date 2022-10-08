@@ -1,7 +1,7 @@
 <launch>
 	<!-- Global params -->
-	<rosparam param="data_load_dir">~/miro/data/indv_test2</rosparam>
-	<rosparam param="data_save_dir">~/miro/data/indv_test2/repeat_student</rosparam>
+	<rosparam param="data_load_dir">~/miro/data/u_and_left_turn_comparison/teacher_teach_data</rosparam>
+	<rosparam param="data_save_dir">~/miro/data/u_and_left_turn_comparison/student_repeat_7</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 	<rosparam param="image_resize_width">115</rosparam>
 	<rosparam param="image_resize_height">44</rosparam>
@@ -20,7 +20,7 @@
 	<rosparam param="save_gt_data">false</rosparam>
 	<rosparam param="publish_gt_goals">false</rosparam>
 
-	<group ns="/miro/rob01">
+	<group ns="/miro/student">
 		<!-- Hold head in place, reset odometry and disable cliff sensors -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
@@ -70,7 +70,7 @@
 			<remap from="odom" to="sensors/odom/integrated" />
 			<rosparam param="min_omega">0.5</rosparam>
 			<rosparam param="max_omega">1.0</rosparam>
-			<rosparam param="max_v">0.2</rosparam>
+			<rosparam param="max_v">0.1</rosparam>
 		</node>
 		<!-- Convert Twist commands to TwistStamped -->
 		<!--

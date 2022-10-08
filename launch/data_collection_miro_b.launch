@@ -7,7 +7,7 @@
 	<rosparam param="calibration_file_right" subst_value="True">$(find teach_repeat)/calibration/right_240_miro_b.yaml</rosparam>
 	<rosparam param="wait_for_ready">true</rosparam>
 
-	<group ns="/miro/rob01">
+	<group ns="/miro/teacher">
 		<!-- Hold head in place and reset odometry -->
 		<node pkg="teach_repeat" type="miro_setup.py" name="miro_setup" output="screen">
 			<rosparam param="lift">30</rosparam>
@@ -26,7 +26,7 @@
 		</node>
 
 		<!-- Teleop to control Miro -->
-		<arg name="speed_lin" value="2.0" />
+		<arg name="speed_lin" value="1.0" />
 		<arg name="speed_ang" value="1.0" />
 		<!--<include file="$(find teach_repeat)/launch/teleop.launch">
 			<arg name="cmd_vel_topic" value="rob01/control/cmd_vel" />
@@ -44,7 +44,7 @@
 		<node pkg="teach_repeat" type="image_stitcher.py" name="image_stitcher" output="screen">
 			<rosparam param="half_field_of_view">45</rosparam>
 			<rosparam param="half_camera_offset">27</rosparam>
-			<rosparam param="extra_pixels_proportion">0.5</rosparam>
+			<rosparam param="extra_pixels_proportion">0.0</rosparam>
 			<rosparam param="blank_pixels_proportion">0.36</rosparam>
 		</node>
 
@@ -52,14 +52,14 @@
 		<node pkg="teach_repeat" type="data_collect.py" name="data_collect" output="screen">
 			<remap from="odom" to="sensors/odom/integrated" />
 			<remap from="image" to="sensors/cam/both" />
-			<rosparam param="distance_threshold">0.2</rosparam>
-			<rosparam param="angle_threshold_deg">15.0</rosparam>
+			<rosparam param="distance_threshold">0.1</rosparam>
+			<rosparam param="angle_threshold_deg">10.0</rosparam>
 		</node>
 
 		<!-- Save Images and pose in a directory -->
 		<node pkg="teach_repeat" type="data_save.py" name="data_save" output="screen">
-			<rosparam param="save_dir">~/miro/data</rosparam>
-			<rosparam param="timestamp_folder">true</rosparam>
+			<rosparam param="save_dir">~/miro/data/u_and_left_turn_comparison/teacher_teach_data</rosparam>
+			<rosparam param="timestamp_folder">false</rosparam>
 		</node>
 	</group>
 </launch>
