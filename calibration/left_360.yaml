@@ -15,6 +15,7 @@ distortion_coefficients:
   # data: [-0.316511, 0.073440, 0.001488, 0.000318, 0.000000]
   data: [-0.301687, 0.064733, 0.001619, -0.002541, 0.000000]
 rectification_matrix:
+  # rectification matrix - rotation of -27 degrees (to the left)
   rows: 3
   cols: 3
   data: [0.89100652, 0., -0.4539905, 0.0, 1.0, 0.0, 0.4539905, 0.000000, 0.89100652]
